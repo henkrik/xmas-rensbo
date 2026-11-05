@@ -8,13 +8,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "export": "npm run typecheck && node scripts/export-fiddle.mjs"
+    "export": "npm run typecheck && vite build"
   },
   "devDependencies": {
-    "esbuild": "^0.21.5",
     "typescript": "^5.5.4",
     "vite": "^5.4.2",
     "vitest": "^2.0.5"
   }
 }
-
