@@ -9,12 +9,12 @@ A short 2D top-down Christmas adventure game with the look and feel of SNES-era 
 ## 1. Project Overview & Goals
 
 - **Genre & Style:** 2D top-down pixel-art adventure game (SNES 16-bit aesthetic, crisp pixel rendering via `image-rendering: pixelated`).
-- **Tech Stack:** Vanilla TypeScript + HTML5 `<canvas>` (zero external runtime dependencies).
-- **Local Development:** Full modern developer experience—modular TypeScript files, local PNG/audio assets, hot-reloading dev server (`npm start`), and fast unit tests (`npm test`).
+- **Tech Stack:** Vanilla TypeScript + HTML5 `<canvas>` (zero external runtime dependencies, zero injected client scripts).
+- **Local Development:** Modular TypeScript files, local PNG assets, fast unit tests (`npm test`), and a zero-injection static HTTP server (`npm start`) that builds and serves `docs/` with zero background polling or WebSockets.
 - **Release Target (GitHub Pages `/docs`):** Running `npm run export` typechecks and builds three plain, unminified vanilla files into `docs/`:
-  - `docs/index.html`
+  - `docs/index.html` (the single `index.html` in the repository)
   - `docs/style.css`
-  - `docs/game.js` (compiled from `src/main.ts` with all PNG assets inlined as Base64 Data URLs, loaded via a classic `<script src="./game.js"></script>` tag with zero module preloads or external network calls).
+  - `docs/game.js` (compiled from `src/main.ts` with all PNG assets inlined as Base64 Data URLs).
 
 See [export.md](./export.md) for full details on how the export pipeline works and how to publish to GitHub Pages.
 
@@ -24,7 +24,7 @@ See [export.md](./export.md) for full details on how the export pipeline works a
 
 | Command | Description |
 | :--- | :--- |
-| `npm start` | Starts a local Vite development server (rooted at `src/`) with hot-reload so you can play and debug the game in your browser. |
+| `npm start` | Exports `docs/` and starts a minimal local static HTTP server (`http://localhost:5173/`) with zero injected scripts or polling. |
 | `npm test` | Runs the unit test suite via Vitest (`vitest run`). Use `npm run test:watch` during active development. |
 | `npm run typecheck` | Runs `tsc --noEmit` to verify TypeScript types across the project. |
 | `npm run export` | Runs `tsc --noEmit` and `node scripts/export-docs.mjs` to output `docs/index.html`, `docs/style.css`, and `docs/game.js` ready for GitHub Pages (`/docs`). |
@@ -35,16 +35,14 @@ See [export.md](./export.md) for full details on how the export pipeline works a
 
 ```text
 xmas-rensbo/
-├── vite.config.ts          # Vite configuration for local dev (`npm start`) and Vitest (`npm test`)
-├── package.json            # Scripts and devDependencies (esbuild, vite, vitest, typescript)
+├── package.json            # Scripts and devDependencies (esbuild, vitest, typescript)
 ├── tsconfig.json           # Strict TypeScript configuration
 ├── README.md               # Project architecture and development guidelines (this file)
 ├── export.md               # Documentation for exporting and publishing to GitHub Pages
 ├── assets/                 # Raw game assets (spritesheets, tilesets, audio)
 │   ├── sprites/            # Character, projectile, and UI icon PNGs
 │   └── tiles/              # Tilemap PNGs
-├── src/                    # Game source code (TypeScript + dev HTML template)
-│   ├── index.html          # Local dev HTML entry point for `npm start`
+├── src/                    # Game source code (TypeScript)
 │   ├── main.ts             # Browser entry point: initializes canvas, loads assets, starts loop
 │   ├── style.css           # Game styling
 │   ├── types/              # Custom declarations (e.g. *.png module declarations)
@@ -56,7 +54,8 @@ xmas-rensbo/
 │   ├── entities/           # Player, snowball throwers, projectiles
 │   └── rendering/          # Canvas 2D renderer, camera scrolling, UI/dialogue box rendering
 ├── test/                   # Unit tests mirroring src/ structure
-├── scripts/                # Build and asset generation scripts
+├── scripts/                # Build, dev server, and asset generation scripts
+│   ├── dev-server.mjs      # Minimal static HTTP server for `npm start` (no HMR/pinging)
 │   ├── export-docs.mjs     # Exports vanilla docs/index.html, docs/style.css, and docs/game.js
 │   └── generate-placeholders.mjs
 └── docs/                   # Generated vanilla static site for GitHub Pages
@@ -71,8 +70,7 @@ xmas-rensbo/
 
 ### Rule 1: Import Assets via ES Modules
 Always import image/audio assets statically in TypeScript (`import santaSpriteUrl from '../../assets/sprites/santa.png'`) rather than hardcoding file paths.
-- During `npm start`, Vite serves those PNGs locally.
-- During `npm run export`, `scripts/export-docs.mjs` uses `esbuild` (`loader: { '.png': 'dataurl' }`) to inline all PNGs as `data:image/png;base64,...` strings directly inside `docs/game.js`.
+- `scripts/export-docs.mjs` uses `esbuild` (`loader: { '.png': 'dataurl' }`) to inline all PNGs as `data:image/png;base64,...` strings directly inside `docs/game.js`.
 
 ### Rule 2: Separate Game Logic from DOM / Canvas APIs
 To make `npm test` fast, deterministic, and runnable in Node without needing a real browser window:
