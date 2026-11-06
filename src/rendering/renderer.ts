@@ -7,6 +7,11 @@ import {
   GROUND_LADDER_BOUNDS,
   TILE_SIZE,
 } from '../world/tilemap';
+import {
+  drawPixelText,
+  measurePixelText,
+  wrapPixelText,
+} from './pixelFont';
 
 export interface Camera {
   x: number;
@@ -42,36 +47,11 @@ export function computeCamera(
 export const DIALOGUE_FONT = 'bold 10px "Courier New", Courier, monospace';
 
 export function wrapTextLines(
-  ctx: CanvasRenderingContext2D,
+  _ctx: CanvasRenderingContext2D,
   text: string,
   maxWidth: number
 ): string[] {
-  // Support explicit line breaks (\n) and word-wrap within each paragraph
-  const paragraphs = text.split('\n');
-  const lines: string[] = [];
-
-  for (const paragraph of paragraphs) {
-    const trimmed = paragraph.trim();
-    if (!trimmed) {
-      lines.push('');
-      continue;
-    }
-    const words = trimmed.split(/\s+/);
-    let current = '';
-
-    for (const word of words) {
-      const candidate = current ? `${current} ${word}` : word;
-      if (ctx.measureText(candidate).width <= maxWidth) {
-        current = candidate;
-      } else {
-        if (current) lines.push(current);
-        current = word;
-      }
-    }
-    if (current) lines.push(current);
-  }
-
-  return lines;
+  return wrapPixelText(text, maxWidth);
 }
 
 function drawSnesFrame(
@@ -112,10 +92,7 @@ function drawInteractionPrompt(
   zKeySprite: HTMLImageElement
 ): void {
   ctx.save();
-  ctx.font = DIALOGUE_FONT;
-  ctx.textBaseline = 'middle';
-
-  const textWidth = Math.ceil(ctx.measureText(promptText).width);
+  const textWidth = measurePixelText(promptText);
   const iconSize = 16;
   const gap = 6;
   const padX = 8;
@@ -131,13 +108,10 @@ function drawInteractionPrompt(
   const iconY = boxY + Math.round((boxHeight - iconSize) / 2);
   ctx.drawImage(zKeySprite, iconX, iconY, iconSize, iconSize);
 
-  // Draw prompt label with 1px drop shadow
+  // Draw unaliased prompt label with 1px drop shadow
   const textX = iconX + iconSize + gap;
-  const textY = boxY + boxHeight / 2 + 1;
-  ctx.fillStyle = '#0c101a';
-  ctx.fillText(promptText, textX + 1, textY + 1);
-  ctx.fillStyle = '#ffd166';
-  ctx.fillText(promptText, textX, textY);
+  const textY = boxY + Math.round((boxHeight - 8) / 2);
+  drawPixelText(ctx, promptText, textX, textY, '#ffd166', '#0c101a');
   ctx.restore();
 }
 
@@ -151,10 +125,8 @@ function drawDialogueBox(
   const margin = 8;
   const boxWidth = ctx.canvas.width - margin * 2;
 
-  // Wrapped dialogue text with crisp 1px drop shadow
-  ctx.font = DIALOGUE_FONT;
-  ctx.textBaseline = 'top';
-  const lines = wrapTextLines(ctx, text, boxWidth - 24);
+  // Wrapped dialogue text rendered with 100% unaliased integer pixels
+  const lines = wrapPixelText(text, boxWidth - 24);
   const lineHeight = 12;
   const textHeight = lines.length * lineHeight;
   const boxHeight = Math.max(52, textHeight + (showZKey ? 22 : 16));
@@ -166,10 +138,7 @@ function drawDialogueBox(
   lines.forEach((line, idx) => {
     const lx = boxX + 10;
     const ly = boxY + 8 + idx * lineHeight;
-    ctx.fillStyle = '#0c101a';
-    ctx.fillText(line, lx + 1, ly + 1);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(line, lx, ly);
+    drawPixelText(ctx, line, lx, ly, '#ffffff', '#0c101a');
   });
 
   if (showZKey) {

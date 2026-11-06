@@ -12,6 +12,7 @@ import {
   updatePlayer,
 } from '../src/entities/player';
 import { HIT_BLINK_DURATION_SECONDS } from '../src/entities/snowball';
+import { drawPixelText, measurePixelText } from '../src/rendering/pixelFont';
 import { wrapTextLines } from '../src/rendering/renderer';
 import { createGameState, resetAfterSnowballHit, updateGameState } from '../src/world/gameState';
 import {
@@ -645,5 +646,35 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(input.moveVector).not.toBeNull();
     expect(input.moveVector?.x).toBeGreaterThan(0.9);
     expect(input.moveVector?.y).toBeGreaterThan(0.05);
+  });
+
+  it('renders unaliased integer pixels with drop shadow via pixel font', () => {
+    const filledRects: Array<{ x: number; y: number; w: number; h: number; color: string }> = [];
+    let curColor = '';
+
+    const mockCtx = {
+      save: () => {},
+      restore: () => {},
+      set fillStyle(val: string) { curColor = val; },
+      fillRect: (x: number, y: number, w: number, h: number) => {
+        filledRects.push({ x, y, w, h, color: curColor });
+      },
+    } as unknown as CanvasRenderingContext2D;
+
+    drawPixelText(mockCtx, 'Hi!', 10, 20, '#ffffff', '#000000');
+
+    expect(filledRects.length).toBeGreaterThan(0);
+    // Every pixel must be exact 1x1 integer pixels (completely unaliased)
+    for (const r of filledRects) {
+      expect(Number.isInteger(r.x)).toBe(true);
+      expect(Number.isInteger(r.y)).toBe(true);
+      expect(r.w).toBe(1);
+      expect(r.h).toBe(1);
+      expect(['#ffffff', '#000000']).toContain(r.color);
+    }
+
+    // Width measurement is proportional and positive
+    expect(measurePixelText('Hi!')).toBeGreaterThan(0);
+    expect(measurePixelText('W')).toBeGreaterThan(measurePixelText('I'));
   });
 });

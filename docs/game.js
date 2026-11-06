@@ -437,21 +437,113 @@
     return false;
   }
 
-  // src/rendering/renderer.ts
-  function computeCamera(playerX, playerY, playerWidth, playerHeight, viewportWidth, viewportHeight, mapWidthPx, mapHeightPx) {
-    const targetX = playerX + playerWidth / 2 - viewportWidth / 2;
-    const targetY = playerY + playerHeight / 2 - viewportHeight / 2;
-    const maxX = Math.max(0, mapWidthPx - viewportWidth);
-    const maxY = Math.max(0, mapHeightPx - viewportHeight);
-    return {
-      x: Math.round(Math.max(0, Math.min(maxX, targetX))),
-      y: Math.round(Math.max(0, Math.min(maxY, targetY))),
-      width: viewportWidth,
-      height: viewportHeight
-    };
+  // src/rendering/pixelFont.ts
+  function g(top, rows) {
+    let maxWidth = 0;
+    for (const r of rows) {
+      if (r.length > maxWidth) maxWidth = r.length;
+    }
+    return { width: maxWidth, top, rows };
   }
-  var DIALOGUE_FONT = 'bold 10px "Courier New", Courier, monospace';
-  function wrapTextLines(ctx, text, maxWidth) {
+  var GLYPHS = {
+    // Uppercase letters (top = 0, 7px tall)
+    A: g(0, [" 11 ", "1  1", "1  1", "1111", "1  1", "1  1", "1  1"]),
+    B: g(0, ["111 ", "1  1", "1  1", "111 ", "1  1", "1  1", "111 "]),
+    C: g(0, [" 111", "1   ", "1   ", "1   ", "1   ", "1   ", " 111"]),
+    D: g(0, ["111 ", "1  1", "1  1", "1  1", "1  1", "1  1", "111 "]),
+    E: g(0, ["1111", "1   ", "1   ", "111 ", "1   ", "1   ", "1111"]),
+    F: g(0, ["1111", "1   ", "1   ", "111 ", "1   ", "1   ", "1   "]),
+    G: g(0, [" 111", "1   ", "1   ", "1 11", "1  1", "1  1", " 111"]),
+    H: g(0, ["1  1", "1  1", "1  1", "1111", "1  1", "1  1", "1  1"]),
+    I: g(0, ["111", " 1 ", " 1 ", " 1 ", " 1 ", " 1 ", "111"]),
+    J: g(0, ["  11", "   1", "   1", "   1", "   1", "1  1", " 11 "]),
+    K: g(0, ["1  1", "1  1", "1 1 ", "11  ", "1 1 ", "1  1", "1  1"]),
+    L: g(0, ["1   ", "1   ", "1   ", "1   ", "1   ", "1   ", "1111"]),
+    M: g(0, ["1   1", "11 11", "1 1 1", "1 1 1", "1   1", "1   1", "1   1"]),
+    N: g(0, ["1  1", "11 1", "11 1", "1 11", "1 11", "1  1", "1  1"]),
+    O: g(0, [" 11 ", "1  1", "1  1", "1  1", "1  1", "1  1", " 11 "]),
+    P: g(0, ["111 ", "1  1", "1  1", "111 ", "1   ", "1   ", "1   "]),
+    Q: g(0, [" 11 ", "1  1", "1  1", "1  1", "1 11", "1  1", " 111"]),
+    R: g(0, ["111 ", "1  1", "1  1", "111 ", "1 1 ", "1  1", "1  1"]),
+    S: g(0, [" 111", "1   ", "1   ", " 11 ", "   1", "   1", "111 "]),
+    T: g(0, ["11111", "  1  ", "  1  ", "  1  ", "  1  ", "  1  ", "  1  "]),
+    U: g(0, ["1  1", "1  1", "1  1", "1  1", "1  1", "1  1", " 11 "]),
+    V: g(0, ["1   1", "1   1", "1   1", "1   1", " 1 1 ", " 1 1 ", "  1  "]),
+    W: g(0, ["1   1", "1   1", "1   1", "1 1 1", "1 1 1", "11 11", "1   1"]),
+    X: g(0, ["1   1", "1   1", " 1 1 ", "  1  ", " 1 1 ", "1   1", "1   1"]),
+    Y: g(0, ["1   1", "1   1", " 1 1 ", "  1  ", "  1  ", "  1  ", "  1  "]),
+    Z: g(0, ["1111", "   1", "  1 ", " 1  ", "1   ", "1   ", "1111"]),
+    // Lowercase letters (x-height top = 2, ascenders top = 0, descenders top = 2..8)
+    a: g(2, [" 11 ", "   1", " 111", "1  1", " 111"]),
+    b: g(0, ["1   ", "1   ", "111 ", "1  1", "1  1", "1  1", "111 "]),
+    c: g(2, [" 111", "1   ", "1   ", "1   ", " 111"]),
+    d: g(0, ["   1", "   1", " 111", "1  1", "1  1", "1  1", " 111"]),
+    e: g(2, [" 11 ", "1  1", "1111", "1   ", " 111"]),
+    f: g(0, [" 11", "1  ", "111", "1  ", "1  ", "1  ", "1  "]),
+    g: g(2, [" 111", "1  1", "1  1", " 111", "   1", "   1", "111 "]),
+    h: g(0, ["1   ", "1   ", "111 ", "1  1", "1  1", "1  1", "1  1"]),
+    i: g(1, ["1", " ", "1", "1", "1", "1"]),
+    j: g(1, [" 1", "  ", " 1", " 1", " 1", " 1", " 1", "1 "]),
+    k: g(0, ["1   ", "1   ", "1  1", "1 1 ", "11  ", "1 1 ", "1  1"]),
+    l: g(0, ["1", "1", "1", "1", "1", "1", "1"]),
+    m: g(2, ["11 11", "1 1 1", "1 1 1", "1 1 1", "1   1"]),
+    n: g(2, ["111 ", "1  1", "1  1", "1  1", "1  1"]),
+    o: g(2, [" 11 ", "1  1", "1  1", "1  1", " 11 "]),
+    p: g(2, ["111 ", "1  1", "1  1", "111 ", "1   ", "1   ", "1   "]),
+    q: g(2, [" 111", "1  1", "1  1", " 111", "   1", "   1", "   1"]),
+    r: g(2, ["1 1", "11 ", "1  ", "1  ", "1  "]),
+    s: g(2, [" 111", "1   ", " 11 ", "   1", "111 "]),
+    t: g(1, [" 1 ", "111", " 1 ", " 1 ", " 1 ", "  1"]),
+    u: g(2, ["1  1", "1  1", "1  1", "1  1", " 111"]),
+    v: g(2, ["1   1", "1   1", " 1 1 ", " 1 1 ", "  1  "]),
+    w: g(2, ["1   1", "1   1", "1 1 1", "1 1 1", " 1 1 "]),
+    x: g(2, ["1  1", " 11 ", " 11 ", "1  1", "1  1"]),
+    y: g(2, ["1  1", "1  1", "1  1", " 111", "   1", "   1", "111 "]),
+    z: g(2, ["1111", "  1 ", " 1  ", "1   ", "1111"]),
+    // Digits 0-9 (top = 0, 7px tall)
+    "0": g(0, [" 11 ", "1  1", "1  1", "1  1", "1  1", "1  1", " 11 "]),
+    "1": g(0, [" 1 ", "11 ", " 1 ", " 1 ", " 1 ", " 1 ", "111"]),
+    "2": g(0, [" 11 ", "1  1", "   1", "  1 ", " 1  ", "1   ", "1111"]),
+    "3": g(0, ["111 ", "   1", "   1", " 11 ", "   1", "   1", "111 "]),
+    "4": g(0, ["1  1", "1  1", "1  1", "1111", "   1", "   1", "   1"]),
+    "5": g(0, ["1111", "1   ", "1   ", "111 ", "   1", "   1", "111 "]),
+    "6": g(0, [" 11 ", "1   ", "1   ", "111 ", "1  1", "1  1", " 11 "]),
+    "7": g(0, ["1111", "   1", "   1", "  1 ", "  1 ", " 1  ", " 1  "]),
+    "8": g(0, [" 11 ", "1  1", "1  1", " 11 ", "1  1", "1  1", " 11 "]),
+    "9": g(0, [" 11 ", "1  1", "1  1", " 111", "   1", "   1", " 11 "]),
+    // Punctuation & symbols
+    ".": g(6, ["1"]),
+    ",": g(6, [" 1", "1 "]),
+    ":": g(3, ["1", " ", " ", "1"]),
+    ";": g(3, [" 1", "  ", "  ", " 1", "1 "]),
+    "!": g(0, ["1", "1", "1", "1", " ", " ", "1"]),
+    "?": g(0, [" 11 ", "1  1", "   1", "  1 ", " 1  ", "    ", " 1  "]),
+    "'": g(0, ["1", "1"]),
+    '"': g(0, ["1 1", "1 1"]),
+    "-": g(4, ["111"]),
+    "+": g(2, [" 1 ", "111", " 1 "]),
+    "/": g(0, ["   1", "  1 ", "  1 ", " 1  ", " 1  ", "1   ", "1   "]),
+    "(": g(0, [" 1", "1 ", "1 ", "1 ", "1 ", "1 ", " 1"]),
+    ")": g(0, ["1 ", " 1", " 1", " 1", " 1", " 1", "1 "]),
+    "|": g(0, ["1", "1", "1", "1", "1", "1", "1"])
+  };
+  function measurePixelText(text) {
+    let width = 0;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (ch === " ") {
+        width += 3;
+      } else {
+        const glyph = GLYPHS[ch] ?? GLYPHS["?"];
+        width += glyph.width;
+      }
+      if (i < text.length - 1) {
+        width += 1;
+      }
+    }
+    return width;
+  }
+  function wrapPixelText(text, maxWidth) {
     const paragraphs = text.split("\n");
     const lines = [];
     for (const paragraph of paragraphs) {
@@ -464,7 +556,7 @@
       let current = "";
       for (const word of words) {
         const candidate = current ? `${current} ${word}` : word;
-        if (ctx.measureText(candidate).width <= maxWidth) {
+        if (measurePixelText(candidate) <= maxWidth) {
           current = candidate;
         } else {
           if (current) lines.push(current);
@@ -474,6 +566,52 @@
       if (current) lines.push(current);
     }
     return lines;
+  }
+  function drawGlyphPass(ctx, text, startX, startY, color) {
+    ctx.fillStyle = color;
+    let curX = Math.round(startX);
+    const curY = Math.round(startY);
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (ch === " ") {
+        curX += 4;
+        continue;
+      }
+      const glyph = GLYPHS[ch] ?? GLYPHS["?"];
+      const top = curY + glyph.top;
+      for (let r = 0; r < glyph.rows.length; r++) {
+        const row = glyph.rows[r];
+        const y = top + r;
+        for (let c = 0; c < row.length; c++) {
+          if (row[c] === "1") {
+            ctx.fillRect(curX + c, y, 1, 1);
+          }
+        }
+      }
+      curX += glyph.width + 1;
+    }
+  }
+  function drawPixelText(ctx, text, x, y, color, shadowColor) {
+    ctx.save();
+    if (shadowColor) {
+      drawGlyphPass(ctx, text, x + 1, y + 1, shadowColor);
+    }
+    drawGlyphPass(ctx, text, x, y, color);
+    ctx.restore();
+  }
+
+  // src/rendering/renderer.ts
+  function computeCamera(playerX, playerY, playerWidth, playerHeight, viewportWidth, viewportHeight, mapWidthPx, mapHeightPx) {
+    const targetX = playerX + playerWidth / 2 - viewportWidth / 2;
+    const targetY = playerY + playerHeight / 2 - viewportHeight / 2;
+    const maxX = Math.max(0, mapWidthPx - viewportWidth);
+    const maxY = Math.max(0, mapHeightPx - viewportHeight);
+    return {
+      x: Math.round(Math.max(0, Math.min(maxX, targetX))),
+      y: Math.round(Math.max(0, Math.min(maxY, targetY))),
+      width: viewportWidth,
+      height: viewportHeight
+    };
   }
   function drawSnesFrame(ctx, x, y, w, h) {
     ctx.fillStyle = "rgba(8, 12, 20, 0.65)";
@@ -493,9 +631,7 @@
   }
   function drawInteractionPrompt(ctx, promptText, zKeySprite) {
     ctx.save();
-    ctx.font = DIALOGUE_FONT;
-    ctx.textBaseline = "middle";
-    const textWidth = Math.ceil(ctx.measureText(promptText).width);
+    const textWidth = measurePixelText(promptText);
     const iconSize = 16;
     const gap = 6;
     const padX = 8;
@@ -508,20 +644,15 @@
     const iconY = boxY + Math.round((boxHeight - iconSize) / 2);
     ctx.drawImage(zKeySprite, iconX, iconY, iconSize, iconSize);
     const textX = iconX + iconSize + gap;
-    const textY = boxY + boxHeight / 2 + 1;
-    ctx.fillStyle = "#0c101a";
-    ctx.fillText(promptText, textX + 1, textY + 1);
-    ctx.fillStyle = "#ffd166";
-    ctx.fillText(promptText, textX, textY);
+    const textY = boxY + Math.round((boxHeight - 8) / 2);
+    drawPixelText(ctx, promptText, textX, textY, "#ffd166", "#0c101a");
     ctx.restore();
   }
   function drawDialogueBox(ctx, text, zKeySprite, showZKey = true) {
     ctx.save();
     const margin = 8;
     const boxWidth = ctx.canvas.width - margin * 2;
-    ctx.font = DIALOGUE_FONT;
-    ctx.textBaseline = "top";
-    const lines = wrapTextLines(ctx, text, boxWidth - 24);
+    const lines = wrapPixelText(text, boxWidth - 24);
     const lineHeight = 12;
     const textHeight = lines.length * lineHeight;
     const boxHeight = Math.max(52, textHeight + (showZKey ? 22 : 16));
@@ -531,10 +662,7 @@
     lines.forEach((line, idx) => {
       const lx = boxX + 10;
       const ly = boxY + 8 + idx * lineHeight;
-      ctx.fillStyle = "#0c101a";
-      ctx.fillText(line, lx + 1, ly + 1);
-      ctx.fillStyle = "#ffffff";
-      ctx.fillText(line, lx, ly);
+      drawPixelText(ctx, line, lx, ly, "#ffffff", "#0c101a");
     });
     if (showZKey) {
       ctx.drawImage(
