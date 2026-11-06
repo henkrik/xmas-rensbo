@@ -1,5 +1,7 @@
 # xmas-rensbo
 
+**[Play here](https://henkrik.github.io/xmas-rensbo/)**
+
 A short 2D top-down Christmas adventure game with the look and feel of SNES-era *The Legend of Zelda: A Link to the Past*.
 
 > **Note for Contributors & AI Assistants:** Use this document as the foundational context for all architectural decisions, asset loading patterns, testing practices, and build configurations in this repository.
@@ -24,7 +26,7 @@ See [export.md](./export.md) for full details on how the export pipeline works a
 
 | Command | Description |
 | :--- | :--- |
-| `npm start` | Exports `docs/` and starts a minimal local static HTTP server (`http://localhost:5173/`) with zero injected scripts or polling. |
+| `npm start` | Exports `docs/` and starts a minimal local static HTTP server (`http://localhost:8080/`) with zero injected scripts or polling. |
 | `npm test` | Runs the unit test suite via Vitest (`vitest run`). Use `npm run test:watch` during active development. |
 | `npm run typecheck` | Runs `tsc --noEmit` to verify TypeScript types across the project. |
 | `npm run export` | Runs `tsc --noEmit` and `node scripts/export-docs.mjs` to output `docs/index.html`, `docs/style.css`, and `docs/game.js` ready for GitHub Pages (`/docs`). |

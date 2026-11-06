@@ -2,7 +2,11 @@ import { GameAssets } from '../assets';
 import { Dog } from '../entities/dog';
 import { Direction, Footprint } from '../entities/player';
 import { GameState } from '../world/gameState';
-import { DAMAGED_WIRE_HAZARD, TILE_SIZE } from '../world/tilemap';
+import {
+  DAMAGED_WIRE_HAZARD,
+  GROUND_LADDER_BOUNDS,
+  TILE_SIZE,
+} from '../world/tilemap';
 
 export interface Camera {
   x: number;
@@ -275,6 +279,81 @@ function drawDogAndHearts(
 }
 
 /**
+ * Renders the wooden ladder lying on the snow next to the dog before Santa picks it up.
+ */
+function drawGroundLadder(ctx: CanvasRenderingContext2D): void {
+  const x = Math.round(GROUND_LADDER_BOUNDS.x);
+  const y = Math.round(GROUND_LADDER_BOUNDS.y);
+  const w = Math.round(GROUND_LADDER_BOUNDS.width);
+
+  ctx.save();
+  // Soft shadow in the snow
+  ctx.fillStyle = 'rgba(14, 20, 32, 0.35)';
+  ctx.fillRect(x + 1, y + 4, w - 1, 10);
+
+  // Dark pixel outline for both rails
+  ctx.fillStyle = '#181420';
+  ctx.fillRect(x, y + 2, w, 3);
+  ctx.fillRect(x, y + 10, w, 3);
+
+  // Rungs connecting top and bottom rails across the full length of the ladder
+  for (let rx = x + 2; rx <= x + w - 4; rx += 4) {
+    ctx.fillStyle = '#181420';
+    ctx.fillRect(rx, y + 4, 3, 7);
+    ctx.fillStyle = '#c88642';
+    ctx.fillRect(rx + 1, y + 4, 1, 7);
+  }
+
+  // Warm wooden side rails with top highlight
+  ctx.fillStyle = '#9e6228';
+  ctx.fillRect(x + 1, y + 3, w - 2, 1);
+  ctx.fillRect(x + 1, y + 11, w - 2, 1);
+  ctx.fillStyle = '#e4a65c';
+  ctx.fillRect(x + 1, y + 2, w - 2, 1);
+  ctx.fillRect(x + 1, y + 10, w - 2, 1);
+
+  ctx.restore();
+}
+
+/**
+ * Renders the wooden ladder leaning up against the west side of the Main House once placed.
+ */
+function drawPlacedHouseLadder(ctx: CanvasRenderingContext2D): void {
+  const lx = 4 * TILE_SIZE + 2;
+  const topY = 4 * TILE_SIZE + 8;
+  const bottomY = 10 * TILE_SIZE + 8;
+  const height = bottomY - topY;
+  const width = 12;
+
+  ctx.save();
+
+  // Drop shadow against the west house wall
+  ctx.fillStyle = 'rgba(10, 14, 24, 0.42)';
+  ctx.fillRect(lx + 2, topY + 2, width, height);
+
+  // Horizontal wooden rungs every 7px
+  for (let ry = topY + 4; ry <= bottomY - 4; ry += 7) {
+    ctx.fillStyle = '#181420';
+    ctx.fillRect(lx + 2, ry, width - 4, 3);
+    ctx.fillStyle = '#e4a65c';
+    ctx.fillRect(lx + 2, ry, width - 4, 1);
+    ctx.fillStyle = '#9e6228';
+    ctx.fillRect(lx + 2, ry + 1, width - 4, 1);
+  }
+
+  // Left and right vertical wooden rails
+  ctx.fillStyle = '#181420';
+  ctx.fillRect(lx, topY, 3, height);
+  ctx.fillRect(lx + width - 3, topY, 3, height);
+
+  ctx.fillStyle = '#e4a65c';
+  ctx.fillRect(lx + 1, topY + 1, 1, height - 2);
+  ctx.fillRect(lx + width - 2, topY + 1, 1, height - 2);
+
+  ctx.restore();
+}
+
+/**
  * Renders animated electric sparks crackling out of the damaged EV charging cable on the driveway.
  */
 function drawDamagedWireSparks(
@@ -455,7 +534,14 @@ export function renderGame(
   // 2. Draw Santa's fading footprints in the snow
   drawFootprints(ctx, footprints);
 
-  // 3. Draw animated electric sparks on the damaged EV charging cable
+  // 3. Draw the ladder (either lying next to the dog on the ground, or leaning up the west side of the house)
+  if (!state.hasLadder && !state.ladderPlaced) {
+    drawGroundLadder(ctx);
+  } else if (state.ladderPlaced) {
+    drawPlacedHouseLadder(ctx);
+  }
+
+  // 4. Draw animated electric sparks on the damaged EV charging cable
   drawDamagedWireSparks(ctx, elapsedTime);
 
   // 4. Draw snowball thrower NPCs on the driveway (with throwing animation frame)

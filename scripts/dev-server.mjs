@@ -5,7 +5,7 @@ import { execSync } from 'node:child_process';
 
 const rootDir = process.cwd();
 const docsDir = path.join(rootDir, 'docs');
-const port = Number(process.env.PORT) || 5173;
+const port = Number(process.env.PORT) || 8080;
 
 // Build docs/ first so it's immediately ready to serve
 execSync('node scripts/export-docs.mjs', { stdio: 'inherit' });

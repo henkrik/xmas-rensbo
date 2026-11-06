@@ -22,12 +22,23 @@ import {
   Interactable,
 } from './interaction';
 import {
+  CLIMB_DURATION_SECONDS,
   DAMAGED_WIRE_HAZARD,
+  LADDER_BOTTOM_Y,
+  LADDER_CLIMB_X,
   PLAYER_START_X,
   PLAYER_START_Y,
+  ROOF_MAX_X,
+  ROOF_MIN_X,
+  ROOF_WALK_Y,
   STARTER_MAP,
   TileMap,
 } from './tilemap';
+
+export interface ClimbingState {
+  direction: 'up' | 'down';
+  progress: number;
+}
 
 export interface GameState {
   map: TileMap;
@@ -36,10 +47,25 @@ export interface GameState {
   dog: Dog;
   throwers: SnowballThrower[];
   snowballs: Snowball[];
+  hasLadder: boolean;
+  ladderPlaced: boolean;
+  isOnRoof: boolean;
+  climbing: ClimbingState | null;
   interactables: Interactable[];
   nearbyInteractable: Interactable | null;
   activeDialogue: DialogueState | null;
   elapsedTime: number;
+}
+
+function refreshInteractables(state: GameState): void {
+  state.interactables = buildInteractables(state.throwers, {
+    hasLadder: state.hasLadder,
+    ladderPlaced: state.ladderPlaced,
+    isOnRoof: state.isOnRoof,
+  });
+  state.nearbyInteractable = state.climbing
+    ? null
+    : findNearbyInteractable(state.player, state.interactables);
 }
 
 export function createGameState(map: TileMap = STARTER_MAP): GameState {
@@ -48,7 +74,11 @@ export function createGameState(map: TileMap = STARTER_MAP): GameState {
   const dog = createDog();
   const throwers = createDrivewayThrowers();
   const snowballs: Snowball[] = [];
-  const interactables = buildInteractables(throwers);
+  const interactables = buildInteractables(throwers, {
+    hasLadder: false,
+    ladderPlaced: false,
+    isOnRoof: false,
+  });
 
   return {
     map,
@@ -57,6 +87,10 @@ export function createGameState(map: TileMap = STARTER_MAP): GameState {
     dog,
     throwers,
     snowballs,
+    hasLadder: false,
+    ladderPlaced: false,
+    isOnRoof: false,
+    climbing: null,
     interactables,
     nearbyInteractable: null,
     activeDialogue: null,
@@ -68,7 +102,7 @@ export function createGameState(map: TileMap = STARTER_MAP): GameState {
  * Resets the map state when Santa takes damage (from a snowball, the sparking EV wire, or the loving dog):
  * - Teleports Santa back to the bottom of the driveway facing up
  * - Starts Santa's blinking timer
- * - Resets the dog, snowball throwers, footprints, and flying snowballs
+ * - Resets the dog, ladder state, snowball throwers, footprints, and flying snowballs
  */
 export function resetAfterSnowballHit(state: GameState): void {
   state.player.x = PLAYER_START_X;
@@ -84,9 +118,42 @@ export function resetAfterSnowballHit(state: GameState): void {
   state.dog = createDog();
   state.throwers = createDrivewayThrowers();
   state.snowballs = [];
-  state.interactables = buildInteractables(state.throwers);
-  state.nearbyInteractable = null;
+  state.hasLadder = false;
+  state.ladderPlaced = false;
+  state.isOnRoof = false;
+  state.climbing = null;
   state.activeDialogue = null;
+  refreshInteractables(state);
+}
+
+function updateRoofMovement(
+  player: Player,
+  input: InputState,
+  dtSeconds: number
+): void {
+  if (player.blinkTimer > 0) {
+    player.blinkTimer = Math.max(0, player.blinkTimer - dtSeconds);
+  }
+
+  // On the roof, Santa can only walk west (left) or east (right); north/south movement is disabled
+  let dx = 0;
+  if (input.left) dx -= 1;
+  if (input.right) dx += 1;
+
+  player.y = ROOF_WALK_Y;
+
+  if (dx === 0) {
+    player.isMoving = false;
+    player.walkTimer = 0;
+    return;
+  }
+
+  player.isMoving = true;
+  player.walkTimer += dtSeconds;
+  player.facing = dx < 0 ? 'left' : 'right';
+
+  const nextX = player.x + dx * player.speed * dtSeconds;
+  player.x = Math.max(ROOF_MIN_X, Math.min(ROOF_MAX_X, nextX));
 }
 
 export function updateGameState(
@@ -111,53 +178,123 @@ export function updateGameState(
     return;
   }
 
-  // Move player (throwers act as solid obstacles so Santa doesn't walk right through them)
-  updatePlayer(state.player, input, dtSeconds, state.map, state.throwers);
+  // If Santa is currently sliding up or down the ladder
+  if (state.climbing) {
+    state.climbing.progress = Math.min(
+      1,
+      state.climbing.progress + dtSeconds / CLIMB_DURATION_SECONDS
+    );
+    state.player.x = LADDER_CLIMB_X;
+    state.player.isMoving = true;
+    state.player.walkTimer += dtSeconds;
 
-  // Update snow footprints (spawns on snow tiles only and fades out over 3 seconds)
-  updateFootprints(state.footprints, state.player, state.map, dtSeconds);
+    if (state.climbing.direction === 'up') {
+      state.player.facing = 'up';
+      state.player.y =
+        LADDER_BOTTOM_Y +
+        (ROOF_WALK_Y - LADDER_BOTTOM_Y) * state.climbing.progress;
+      if (state.climbing.progress >= 1) {
+        state.player.y = ROOF_WALK_Y;
+        state.player.isMoving = false;
+        state.isOnRoof = true;
+        state.climbing = null;
+      }
+    } else {
+      state.player.facing = 'down';
+      state.player.y =
+        ROOF_WALK_Y +
+        (LADDER_BOTTOM_Y - ROOF_WALK_Y) * state.climbing.progress;
+      if (state.climbing.progress >= 1) {
+        state.player.y = LADDER_BOTTOM_Y;
+        state.player.isMoving = false;
+        state.isOnRoof = false;
+        state.climbing = null;
+      }
+    }
 
-  // Check if Santa stepped on the visibly damaged, sparking EV charging cable
-  if (rectsIntersect(state.player, DAMAGED_WIRE_HAZARD)) {
-    resetAfterSnowballHit(state);
+    refreshInteractables(state);
     return;
   }
 
-  // Update the dog on the east snow field
-  const caughtByDog = updateDog(
-    state.dog,
-    state.player,
-    dtSeconds,
-    state.map,
-    state.throwers
-  );
-  if (caughtByDog) {
-    resetAfterSnowballHit(state);
-    return;
-  }
+  if (state.isOnRoof) {
+    updateRoofMovement(state.player, input, dtSeconds);
+    // Continue aging any existing footprints on the snow below
+    for (let i = state.footprints.length - 1; i >= 0; i--) {
+      state.footprints[i].age += dtSeconds;
+      if (state.footprints[i].age >= state.footprints[i].maxAge) {
+        state.footprints.splice(i, 1);
+      }
+    }
+  } else {
+    // Move player on the ground (throwers act as solid obstacles)
+    updatePlayer(state.player, input, dtSeconds, state.map, state.throwers);
 
-  // Update snowball fight on the driveway
-  const hitBySnowball = updateSnowballFight(
-    state.throwers,
-    state.snowballs,
-    state.player,
-    dtSeconds
-  );
-  if (hitBySnowball) {
-    resetAfterSnowballHit(state);
-    return;
+    // Update snow footprints (spawns on snow tiles only and fades out over 3 seconds)
+    updateFootprints(state.footprints, state.player, state.map, dtSeconds);
+
+    // Check if Santa stepped on the visibly damaged, sparking EV charging cable
+    if (rectsIntersect(state.player, DAMAGED_WIRE_HAZARD)) {
+      resetAfterSnowballHit(state);
+      return;
+    }
+
+    // Update the dog on the east snow field
+    const caughtByDog = updateDog(
+      state.dog,
+      state.player,
+      dtSeconds,
+      state.map,
+      state.throwers
+    );
+    if (caughtByDog) {
+      resetAfterSnowballHit(state);
+      return;
+    }
+
+    // Update snowball fight on the driveway
+    const hitBySnowball = updateSnowballFight(
+      state.throwers,
+      state.snowballs,
+      state.player,
+      dtSeconds
+    );
+    if (hitBySnowball) {
+      resetAfterSnowballHit(state);
+      return;
+    }
   }
 
   // Check if Santa is close enough to an interactable object to show the Z prompt
-  state.nearbyInteractable = findNearbyInteractable(
-    state.player,
-    state.interactables
-  );
+  refreshInteractables(state);
 
   if (zPressed && state.nearbyInteractable) {
-    state.activeDialogue = {
-      lines: state.nearbyInteractable.dialogueLines,
-      currentIndex: 0,
-    };
+    const id = state.nearbyInteractable.id;
+    if (id === 'ground-ladder') {
+      state.hasLadder = true;
+      refreshInteractables(state);
+    } else if (id === 'house-west-place-ladder') {
+      state.hasLadder = false;
+      state.ladderPlaced = true;
+      refreshInteractables(state);
+    } else if (id === 'house-west-climb-ladder') {
+      state.climbing = { direction: 'up', progress: 0 };
+      state.player.x = LADDER_CLIMB_X;
+      state.player.y = LADDER_BOTTOM_Y;
+      state.player.facing = 'up';
+      state.nearbyInteractable = null;
+    } else if (id === 'roof-ladder') {
+      state.climbing = { direction: 'down', progress: 0 };
+      state.player.x = LADDER_CLIMB_X;
+      state.player.y = ROOF_WALK_Y;
+      state.player.facing = 'down';
+      state.nearbyInteractable = null;
+    } else if (id === 'roof-chimney') {
+      // Placeholder: "Z: Climb down chimney" does nothing for now
+    } else if (state.nearbyInteractable.dialogueLines.length > 0) {
+      state.activeDialogue = {
+        lines: state.nearbyInteractable.dialogueLines,
+        currentIndex: 0,
+      };
+    }
   }
 }

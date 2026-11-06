@@ -14,13 +14,20 @@ import {
 import { HIT_BLINK_DURATION_SECONDS } from '../src/entities/snowball';
 import { createGameState, updateGameState } from '../src/world/gameState';
 import {
+  CLIMB_DURATION_SECONDS,
   DAMAGED_WIRE_HAZARD,
+  GROUND_LADDER_BOUNDS,
   HOUSE_DOOR_COL,
   HOUSE_DOOR_ROW,
+  HOUSE_WEST_LADDER_SPOT,
+  LADDER_BOTTOM_Y,
   MAP_COLS,
   MAP_ROWS,
   PLAYER_START_X,
   PLAYER_START_Y,
+  ROOF_MAX_X,
+  ROOF_MIN_X,
+  ROOF_WALK_Y,
   STARTER_MAP,
   TILE_SIZE,
   TileType,
@@ -201,6 +208,125 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(state.player.y).toBe(PLAYER_START_Y);
     expect(state.player.blinkTimer).toBe(HIT_BLINK_DURATION_SECONDS);
     expect(state.dog.mode).toBe('waiting');
+  });
+
+  it('supports inspecting the west house spot, picking up the ladder next to the dog, placing & climbing it to the roof, and walking east/west between ladder and chimney', () => {
+    const state = createGameState();
+    const input = createEmptyInput();
+
+    // 1. Before acquiring the ladder, the snow-free spot on the west side of the house shows "Z: Inspect"
+    state.player.x = HOUSE_WEST_LADDER_SPOT.x + 2;
+    state.player.y = HOUSE_WEST_LADDER_SPOT.y + 4;
+    updateGameState(state, input, 0.01);
+    expect(state.nearbyInteractable?.promptText).toBe('Z: Inspect');
+
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.activeDialogue?.lines[0]).toBe(
+      "Hmm.. looks like there is a chimney up there, but I can't reach it"
+    );
+
+    // Close the inspection dialogue
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.activeDialogue).toBeNull();
+
+    // 2. Walk over the ladder on the ground next to the dog (non-colliding) and pick it up with "Z: Pick up"
+    state.dog.x = 29 * TILE_SIZE; // keep dog slightly to the right while testing pickup
+    state.player.x = GROUND_LADDER_BOUNDS.x;
+    state.player.y = GROUND_LADDER_BOUNDS.y;
+    input.right = true;
+    updateGameState(state, input, 0.05);
+    input.right = false;
+    // Verify Santa moved freely over the ground ladder without collision
+    expect(state.player.x).toBeGreaterThan(GROUND_LADDER_BOUNDS.x);
+    expect(state.nearbyInteractable?.promptText).toBe('Z: Pick up');
+
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.hasLadder).toBe(true);
+    expect(state.nearbyInteractable).toBeNull();
+
+    // 3. Return to the west side of the main house -> "Z: Place ladder"
+    state.player.x = HOUSE_WEST_LADDER_SPOT.x + 2;
+    state.player.y = HOUSE_WEST_LADDER_SPOT.y + 4;
+    updateGameState(state, input, 0.01);
+    expect(state.nearbyInteractable?.promptText).toBe('Z: Place ladder');
+
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.hasLadder).toBe(false);
+    expect(state.ladderPlaced).toBe(true);
+    expect(state.nearbyInteractable?.promptText).toBe('Z: Climb ladder');
+
+    // 4. Press Z to climb the ladder -> Santa slides up onto the roof
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.climbing).not.toBeNull();
+    expect(state.climbing?.direction).toBe('up');
+
+    // Advance partway through the climb -> Santa is sliding upward
+    updateGameState(state, input, CLIMB_DURATION_SECONDS * 0.5);
+    expect(state.player.y).toBeLessThan(LADDER_BOTTOM_Y);
+    expect(state.player.y).toBeGreaterThan(ROOF_WALK_Y);
+
+    // Finish climbing onto the roof
+    updateGameState(state, input, CLIMB_DURATION_SECONDS * 0.6);
+    expect(state.climbing).toBeNull();
+    expect(state.isOnRoof).toBe(true);
+    expect(state.player.y).toBe(ROOF_WALK_Y);
+    expect(state.nearbyInteractable?.promptText).toBe('Z: Climb down ladder');
+
+    // 5. On the roof, Santa cannot walk north or south
+    input.up = true;
+    updateGameState(state, input, 0.2);
+    input.up = false;
+    expect(state.player.y).toBe(ROOF_WALK_Y);
+
+    input.down = true;
+    updateGameState(state, input, 0.2);
+    input.down = false;
+    expect(state.player.y).toBe(ROOF_WALK_Y);
+
+    // 6. Walk east along the roof to the chimney -> "Z: Climb down chimney"
+    input.right = true;
+    for (let i = 0; i < 60; i++) {
+      updateGameState(state, input, 0.05);
+    }
+    input.right = false;
+    expect(state.player.x).toBe(ROOF_MAX_X);
+    expect(state.nearbyInteractable?.promptText).toBe('Z: Climb down chimney');
+
+    // Pressing Z at the chimney is a placeholder and does nothing for now
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.isOnRoof).toBe(true);
+    expect(state.activeDialogue).toBeNull();
+
+    // 7. Walk west back to the ladder and climb down
+    input.left = true;
+    for (let i = 0; i < 60; i++) {
+      updateGameState(state, input, 0.05);
+    }
+    input.left = false;
+    expect(state.player.x).toBe(ROOF_MIN_X);
+    expect(state.nearbyInteractable?.promptText).toBe('Z: Climb down ladder');
+
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.climbing?.direction).toBe('down');
+
+    updateGameState(state, input, CLIMB_DURATION_SECONDS + 0.05);
+    expect(state.climbing).toBeNull();
+    expect(state.isOnRoof).toBe(false);
+    expect(state.player.y).toBe(LADDER_BOTTOM_Y);
   });
 
   it('shows "Z: Talk to" near a snowball thrower and displays "Watch out!" when Z is pressed', () => {

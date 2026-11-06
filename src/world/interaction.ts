@@ -1,6 +1,14 @@
 import { Player, Rect } from '../entities/player';
 import { SnowballThrower } from '../entities/snowball';
-import { HOUSE_DOOR_COL, HOUSE_DOOR_ROW, TILE_SIZE } from './tilemap';
+import {
+  GROUND_LADDER_BOUNDS,
+  HOUSE_DOOR_COL,
+  HOUSE_DOOR_ROW,
+  HOUSE_WEST_LADDER_SPOT,
+  ROOF_CHIMNEY_BOUNDS,
+  ROOF_LADDER_BOUNDS,
+  TILE_SIZE,
+} from './tilemap';
 
 export interface Interactable {
   id: string;
@@ -12,6 +20,12 @@ export interface Interactable {
 export interface DialogueState {
   lines: string[];
   currentIndex: number;
+}
+
+export interface LadderInteractionOptions {
+  hasLadder?: boolean;
+  ladderPlaced?: boolean;
+  isOnRoof?: boolean;
 }
 
 /**
@@ -27,8 +41,32 @@ export function rectEdgeDistance(a: Rect, b: Rect): number {
 }
 
 export function buildInteractables(
-  throwers: readonly SnowballThrower[]
+  throwers: readonly SnowballThrower[],
+  options: LadderInteractionOptions = {}
 ): Interactable[] {
+  const {
+    hasLadder = false,
+    ladderPlaced = false,
+    isOnRoof = false,
+  } = options;
+
+  if (isOnRoof) {
+    return [
+      {
+        id: 'roof-ladder',
+        bounds: { ...ROOF_LADDER_BOUNDS },
+        promptText: 'Z: Climb down ladder',
+        dialogueLines: [],
+      },
+      {
+        id: 'roof-chimney',
+        bounds: { ...ROOF_CHIMNEY_BOUNDS },
+        promptText: 'Z: Climb down chimney',
+        dialogueLines: [],
+      },
+    ];
+  }
+
   const list: Interactable[] = throwers.map((t) => ({
     id: t.id,
     bounds: { x: t.x, y: t.y, width: t.width, height: t.height },
@@ -51,6 +89,37 @@ export function buildInteractables(
     ],
   });
 
+  if (!hasLadder && !ladderPlaced) {
+    list.push({
+      id: 'ground-ladder',
+      bounds: { ...GROUND_LADDER_BOUNDS },
+      promptText: 'Z: Pick up',
+      dialogueLines: [],
+    });
+    list.push({
+      id: 'house-west-inspect',
+      bounds: { ...HOUSE_WEST_LADDER_SPOT },
+      promptText: 'Z: Inspect',
+      dialogueLines: [
+        "Hmm.. looks like there is a chimney up there, but I can't reach it",
+      ],
+    });
+  } else if (hasLadder && !ladderPlaced) {
+    list.push({
+      id: 'house-west-place-ladder',
+      bounds: { ...HOUSE_WEST_LADDER_SPOT },
+      promptText: 'Z: Place ladder',
+      dialogueLines: [],
+    });
+  } else if (ladderPlaced) {
+    list.push({
+      id: 'house-west-climb-ladder',
+      bounds: { ...HOUSE_WEST_LADDER_SPOT },
+      promptText: 'Z: Climb ladder',
+      dialogueLines: [],
+    });
+  }
+
   return list;
 }
 
@@ -72,4 +141,3 @@ export function findNearbyInteractable(
 
   return closest;
 }
-

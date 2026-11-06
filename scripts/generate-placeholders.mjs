@@ -742,14 +742,38 @@ function generateRensboOverworldPng(mapMatrix) {
       canvas.setPixel(hx + hw - indent - 2, py, PAL.trimWhite);
     }
 
-    const chimX = 7 * 16 + 4;
-    const chimY = 2 * 16 + 10;
-    canvas.fillRect(chimX, chimY, 10, 12, PAL.roofDarkest);
-    canvas.fillRect(chimX + 1, chimY + 1, 8, 10, PAL.roofMid);
-    canvas.fillRect(chimX - 1, chimY, 12, 3, PAL.snowBrightest);
-    canvas.drawLine(chimX + 5, chimY - 10, chimX + 5, chimY, PAL.curbLight);
-    canvas.drawLine(chimX + 1, chimY - 8, chimX + 9, chimY - 8, PAL.curbLight);
-    canvas.drawLine(chimX + 2, chimY - 5, chimX + 8, chimY - 5, PAL.curbLight);
+    // Classic Red-Brick Christmas Chimney slightly left of the center of the Main House Roof (col 7.5, rows 3..4)
+    const chimX = 7 * 16 + 8;
+    const chimY = 3 * 16 + 10;
+    const chimW = 16;
+    const chimH = 18;
+
+    // Chimney drop shadow on the slate roof
+    canvas.fillRect(chimX + 2, chimY + 3, chimW + 2, chimH, PAL.deepShadow);
+
+    // Brick body with horizontal & staggered vertical mortar lines
+    for (let py = chimY + 4; py < chimY + chimH; py++) {
+      const isMortarRow = (py - chimY) % 4 === 0;
+      const rowGroup = Math.floor((py - chimY) / 4);
+      for (let px = chimX; px < chimX + chimW; px++) {
+        const isMortarCol = (px - chimX + (rowGroup % 2) * 3) % 6 === 0;
+        let c = PAL.shedRedMid;
+        if (isMortarRow || isMortarCol) {
+          c = PAL.curbDark;
+        } else if (px < chimX + 5) {
+          c = PAL.shedRedBright;
+        } else if (px >= chimX + chimW - 4) {
+          c = PAL.shedRedDark;
+        }
+        canvas.setPixel(px, py, c);
+      }
+    }
+    canvas.strokeRect(chimX, chimY + 3, chimW, chimH - 3, PAL.outline);
+
+    // Snow-rimmed chimney crown & dark flue opening
+    canvas.fillRect(chimX - 1, chimY, chimW + 2, 6, PAL.snowBrightest);
+    canvas.strokeRect(chimX - 1, chimY, chimW + 2, 6, PAL.outline);
+    canvas.fillRect(chimX + 2, chimY + 1, chimW - 4, 3, PAL.outline);
 
     // Central Projecting 2-Story White Veranda / Sunroom & Gable
     const vx = 9 * 16;
@@ -812,8 +836,42 @@ function generateRensboOverworldPng(mapMatrix) {
     }
   }
 
-  // Silver Birch tree standing just left of the Main House terrace (col 3, row 10)
-  drawBirchTree(3 * 16 + 8, 10 * 16 + 14, 42);
+  // Special Snow-Free Ground Spot on the West Side of the Main House (cols 3..4, rows 9..10)
+  // Visible hint that a ladder can be placed here to reach the roof!
+  {
+    const spotX = 3 * 16 + 8;
+    const spotY = 9 * 16 + 15;
+    const spotW = 22;
+    const spotH = 14;
+
+    // Cleared snow rim around the bare earth/stone patch
+    canvas.fillEllipse(spotX + spotW / 2, spotY + spotH / 2, spotW / 2 + 2, spotH / 2 + 2, PAL.snowBrightest);
+    canvas.fillEllipse(spotX + spotW / 2, spotY + spotH / 2, spotW / 2 + 1, spotH / 2 + 1, PAL.curbDark);
+
+    // Snow-free bare earth & cobblestone footing patch
+    for (let py = spotY; py < spotY + spotH; py++) {
+      for (let px = spotX; px < spotX + spotW; px++) {
+        const dx = (px - (spotX + spotW / 2)) / (spotW / 2);
+        const dy = (py - (spotY + spotH / 2)) / (spotH / 2);
+        if (dx * dx + dy * dy <= 1.0) {
+          const n = hash2d(px, py);
+          let c = PAL.trunkDark;
+          if (n > 0.65) c = PAL.trunkMid;
+          else if (n < 0.22) c = PAL.cabinDeep;
+          canvas.setPixel(px, py, c);
+        }
+      }
+    }
+
+    // Two flat stone footing blocks where the ladder legs rest
+    canvas.fillRect(4 * 16 + 1, 10 * 16 + 4, 5, 4, PAL.rockLight);
+    canvas.strokeRect(4 * 16 + 1, 10 * 16 + 4, 5, 4, PAL.outline);
+    canvas.fillRect(4 * 16 + 9, 10 * 16 + 4, 5, 4, PAL.rockLight);
+    canvas.strokeRect(4 * 16 + 9, 10 * 16 + 4, 5, 4, PAL.outline);
+  }
+
+  // Silver Birch tree standing to the left of the Main House lawn (col 2, row 11)
+  drawBirchTree(2 * 16 + 4, 11 * 16 + 12, 42);
 
   // Snow-capped round boxwood bush (klotthuja) in front of the house left wing
   canvas.fillEllipse(6 * 16, 13 * 16 + 9, 13, 4.5, PAL.deepShadow);

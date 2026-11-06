@@ -46,6 +46,45 @@ export const DAMAGED_WIRE_HAZARD: Rect = {
   height: 10,
 };
 
+// Ladder lying on the snow next to the dog on the east side (walkable, non-colliding)
+export const GROUND_LADDER_BOUNDS: Rect = {
+  x: 24 * TILE_SIZE + 6,
+  y: 12 * TILE_SIZE + 4,
+  width: 28,
+  height: 14,
+};
+
+// Snow-free special spot on the west side of the Main House where the ladder can be inspected/placed/climbed
+export const HOUSE_WEST_LADDER_SPOT: Rect = {
+  x: 3 * TILE_SIZE + 8,
+  y: 9 * TILE_SIZE + 6,
+  width: 22,
+  height: 18,
+};
+
+// Ladder & Chimney interaction bounds when Santa is on the Main House roof
+export const ROOF_LADDER_BOUNDS: Rect = {
+  x: 4 * TILE_SIZE,
+  y: 4 * TILE_SIZE,
+  width: 16,
+  height: 16,
+};
+
+// Chimney positioned slightly left of the center (col 10) of the Main House roof
+export const ROOF_CHIMNEY_BOUNDS: Rect = {
+  x: 7 * TILE_SIZE + 8,
+  y: 3 * TILE_SIZE + 10,
+  width: 16,
+  height: 18,
+};
+
+export const LADDER_CLIMB_X = 4 * TILE_SIZE + 2;
+export const LADDER_BOTTOM_Y = 10 * TILE_SIZE;
+export const ROOF_WALK_Y = 4 * TILE_SIZE + 2;
+export const ROOF_MIN_X = 4 * TILE_SIZE + 2;
+export const ROOF_MAX_X = 7 * TILE_SIZE + 6;
+export const CLIMB_DURATION_SECONDS = 0.6;
+
 /**
  * Large 32x28 Winter Rensbo Yard Layout (inspired by inspiration/map.jpeg):
  * - Snow-covered pine/birch forest along the top ridge (rows 0-2)
