@@ -98,7 +98,39 @@ function refreshInteractables(state: GameState): void {
       : findNearbyInteractable(state.player, state.interactables);
 }
 
-export function createGameState(map: TileMap = STARTER_MAP): GameState {
+export interface CreateGameStateOptions {
+  map?: TileMap;
+  isMobile?: boolean;
+  showIntroDialogue?: boolean;
+}
+
+export function createIntroDialogue(isMobile: boolean): DialogueState {
+  const firstLine = isMobile
+    ? 'Use the virtual joystick to move around. To interact with things, move close enough to it and an interaction button will appear. Click anywhere to close this window and start playing.'
+    : 'Use the arrow keys to move around and Z to interact. Press Z to close this window and start playing.';
+
+  return {
+    lines: [firstLine, 'Good luck! Christmas depends on you...'],
+    currentIndex: 0,
+  };
+}
+
+export function createGameState(
+  mapOrOptions: TileMap | CreateGameStateOptions = STARTER_MAP
+): GameState {
+  let map: TileMap = STARTER_MAP;
+  let isMobile = false;
+  let showIntroDialogue = false;
+
+  if (mapOrOptions && 'cols' in mapOrOptions && 'rows' in mapOrOptions) {
+    map = mapOrOptions as TileMap;
+  } else if (mapOrOptions && typeof mapOrOptions === 'object') {
+    const opts = mapOrOptions as CreateGameStateOptions;
+    if (opts.map) map = opts.map;
+    if (opts.isMobile !== undefined) isMobile = opts.isMobile;
+    if (opts.showIntroDialogue !== undefined) showIntroDialogue = opts.showIntroDialogue;
+  }
+
   const player = createPlayer(PLAYER_START_X, PLAYER_START_Y);
   const footprints: Footprint[] = [];
   const dog = createDog();
@@ -128,7 +160,7 @@ export function createGameState(map: TileMap = STARTER_MAP): GameState {
     joystickActive: false,
     interactables,
     nearbyInteractable: null,
-    activeDialogue: null,
+    activeDialogue: showIntroDialogue ? createIntroDialogue(isMobile) : null,
     elapsedTime: 0,
   };
 }

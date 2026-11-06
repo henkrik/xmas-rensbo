@@ -33,6 +33,13 @@ async function startGame(): Promise<void> {
   const assets = await loadAllAssets();
   const input = createEmptyInput();
 
+  // Detect mobile / touch device by default
+  const isMobileDevice =
+    typeof window !== 'undefined' &&
+    ('ontouchstart' in window ||
+      navigator.maxTouchPoints > 0 ||
+      window.matchMedia('(pointer: coarse)').matches);
+
   let joystick: ReturnType<typeof createVirtualJoystick> | null = null;
   if (joystickContainer && joystickStick) {
     joystick = createVirtualJoystick({
@@ -40,13 +47,6 @@ async function startGame(): Promise<void> {
       stick: joystickStick,
       input,
     });
-
-    // Detect mobile / touch device by default
-    const isMobileDevice =
-      typeof window !== 'undefined' &&
-      ('ontouchstart' in window ||
-        navigator.maxTouchPoints > 0 ||
-        window.matchMedia('(pointer: coarse)').matches);
 
     if (isMobileDevice) {
       joystick.show();
@@ -61,7 +61,11 @@ async function startGame(): Promise<void> {
     },
   });
 
-  const state = createGameState();
+  const state = createGameState({
+    isMobile: isMobileDevice,
+    showIntroDialogue: true,
+  });
+  state.joystickActive = isMobileDevice;
 
   if (mobileActionBtn) {
     mobileActionBtn.addEventListener('pointerdown', (e) => {
@@ -95,6 +99,7 @@ async function startGame(): Promise<void> {
       );
     },
     isJoystickActive: () => joystick?.isPointerActive() ?? false,
+    isDialogueActive: () => state.activeDialogue !== null,
   });
 
   let lastTimestamp: number | null = null;

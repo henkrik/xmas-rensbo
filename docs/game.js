@@ -139,7 +139,7 @@
     };
   }
   function attachPointerListeners(options) {
-    const { canvas, input, getCamera, isJoystickActive } = options;
+    const { canvas, input, getCamera, isJoystickActive, isDialogueActive } = options;
     let activePointerId = null;
     let pointerDownTime = 0;
     let startClientX = 0;
@@ -159,7 +159,10 @@
       };
     };
     const onPointerDown = (e) => {
-      if (isJoystickActive?.()) return;
+      const isTargetCanvas = e.target === canvas || canvas.contains(e.target);
+      const dialogueActive = isDialogueActive?.() ?? false;
+      if (!isTargetCanvas && !dialogueActive) return;
+      if (isJoystickActive?.() && !dialogueActive) return;
       e.preventDefault();
       activePointerId = e.pointerId;
       pointerDownTime = performance.now();
@@ -180,12 +183,12 @@
       if (activePointerId !== e.pointerId) return;
       activePointerId = null;
     };
-    canvas.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("pointerup", onPointerUp);
     window.addEventListener("pointercancel", onPointerCancel);
     canvas.style.touchAction = "none";
     return () => {
-      canvas.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("pointercancel", onPointerCancel);
     };
@@ -497,32 +500,36 @@
     ctx.fillText(promptText, textX, textY);
     ctx.restore();
   }
-  function drawDialogueBox(ctx, text, zKeySprite) {
+  function drawDialogueBox(ctx, text, zKeySprite, showZKey = true) {
     ctx.save();
     const margin = 8;
-    const boxHeight = 52;
     const boxWidth = ctx.canvas.width - margin * 2;
-    const boxX = margin;
-    const boxY = ctx.canvas.height - boxHeight - margin;
-    drawSnesFrame(ctx, boxX, boxY, boxWidth, boxHeight);
     ctx.font = 'bold 10px "Courier New", Courier, monospace';
     ctx.textBaseline = "top";
     const lines = wrapTextLines(ctx, text, boxWidth - 24);
+    const lineHeight = 12;
+    const textHeight = lines.length * lineHeight;
+    const boxHeight = Math.max(52, textHeight + (showZKey ? 22 : 16));
+    const boxX = margin;
+    const boxY = ctx.canvas.height - boxHeight - margin;
+    drawSnesFrame(ctx, boxX, boxY, boxWidth, boxHeight);
     lines.forEach((line, idx) => {
       const lx = boxX + 10;
-      const ly = boxY + 10 + idx * 13;
+      const ly = boxY + 8 + idx * lineHeight;
       ctx.fillStyle = "#0c101a";
       ctx.fillText(line, lx + 1, ly + 1);
       ctx.fillStyle = "#ffffff";
       ctx.fillText(line, lx, ly);
     });
-    ctx.drawImage(
-      zKeySprite,
-      boxX + boxWidth - 20,
-      boxY + boxHeight - 20,
-      14,
-      14
-    );
+    if (showZKey) {
+      ctx.drawImage(
+        zKeySprite,
+        boxX + boxWidth - 20,
+        boxY + boxHeight - 20,
+        14,
+        14
+      );
+    }
     ctx.restore();
   }
   function drawFootprints(ctx, footprints) {
@@ -962,7 +969,7 @@
     drawSnowfall(ctx, elapsedTime, camera);
     if (activeDialogue) {
       const line = activeDialogue.lines[activeDialogue.currentIndex] ?? "";
-      drawDialogueBox(ctx, line, assets.zKeySprite);
+      drawDialogueBox(ctx, line, assets.zKeySprite, !state.joystickActive);
     } else if (nearbyInteractable && !state.joystickActive) {
       drawInteractionPrompt(ctx, nearbyInteractable.promptText, assets.zKeySprite);
     }
@@ -1401,7 +1408,25 @@
     });
     state.nearbyInteractable = state.climbing || state.motorcycle.status === "driving" || state.electrocutionTimer > 0 ? null : findNearbyInteractable(state.player, state.interactables);
   }
-  function createGameState(map = STARTER_MAP) {
+  function createIntroDialogue(isMobile) {
+    const firstLine = isMobile ? "Use the virtual joystick to move around. To interact with things, move close enough to it and an interaction button will appear. Click anywhere to close this window and start playing." : "Use the arrow keys to move around and Z to interact. Press Z to close this window and start playing.";
+    return {
+      lines: [firstLine, "Good luck! Christmas depends on you..."],
+      currentIndex: 0
+    };
+  }
+  function createGameState(mapOrOptions = STARTER_MAP) {
+    let map = STARTER_MAP;
+    let isMobile = false;
+    let showIntroDialogue = false;
+    if (mapOrOptions && "cols" in mapOrOptions && "rows" in mapOrOptions) {
+      map = mapOrOptions;
+    } else if (mapOrOptions && typeof mapOrOptions === "object") {
+      const opts = mapOrOptions;
+      if (opts.map) map = opts.map;
+      if (opts.isMobile !== void 0) isMobile = opts.isMobile;
+      if (opts.showIntroDialogue !== void 0) showIntroDialogue = opts.showIntroDialogue;
+    }
     const player = createPlayer(PLAYER_START_X, PLAYER_START_Y);
     const footprints = [];
     const dog = createDog();
@@ -1430,7 +1455,7 @@
       joystickActive: false,
       interactables,
       nearbyInteractable: null,
-      activeDialogue: null,
+      activeDialogue: showIntroDialogue ? createIntroDialogue(isMobile) : null,
       elapsedTime: 0
     };
   }
@@ -1670,6 +1695,7 @@
     const mobileActionBtn = document.getElementById("mobile-action-btn");
     const assets = await loadAllAssets();
     const input = createEmptyInput();
+    const isMobileDevice = typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0 || window.matchMedia("(pointer: coarse)").matches);
     let joystick = null;
     if (joystickContainer && joystickStick) {
       joystick = createVirtualJoystick({
@@ -1677,7 +1703,6 @@
         stick: joystickStick,
         input
       });
-      const isMobileDevice = typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0 || window.matchMedia("(pointer: coarse)").matches);
       if (isMobileDevice) {
         joystick.show();
       } else {
@@ -1689,7 +1714,11 @@
         joystick?.toggle();
       }
     });
-    const state = createGameState();
+    const state = createGameState({
+      isMobile: isMobileDevice,
+      showIntroDialogue: true
+    });
+    state.joystickActive = isMobileDevice;
     if (mobileActionBtn) {
       mobileActionBtn.addEventListener("pointerdown", (e) => {
         e.preventDefault();
@@ -1720,7 +1749,8 @@
           mapHeightPx
         );
       },
-      isJoystickActive: () => joystick?.isPointerActive() ?? false
+      isJoystickActive: () => joystick?.isPointerActive() ?? false,
+      isDialogueActive: () => state.activeDialogue !== null
     });
     let lastTimestamp = null;
     function frame(now) {

@@ -102,6 +102,7 @@ export interface PointerControlsOptions {
   input: InputState;
   getCamera: () => { x: number; y: number };
   isJoystickActive?: () => boolean;
+  isDialogueActive?: () => boolean;
 }
 
 /**
@@ -110,7 +111,7 @@ export interface PointerControlsOptions {
 export function attachPointerListeners(
   options: PointerControlsOptions
 ): () => void {
-  const { canvas, input, getCamera, isJoystickActive } = options;
+  const { canvas, input, getCamera, isJoystickActive, isDialogueActive } = options;
 
   let activePointerId: number | null = null;
   let pointerDownTime = 0;
@@ -133,8 +134,14 @@ export function attachPointerListeners(
   };
 
   const onPointerDown = (e: PointerEvent) => {
-    // If virtual joystick is being used or handle is active, don't conflict
-    if (isJoystickActive?.()) return;
+    const isTargetCanvas = e.target === canvas || canvas.contains(e.target as Node);
+    const dialogueActive = isDialogueActive?.() ?? false;
+
+    // Only accept events outside canvas if dialogue is active
+    if (!isTargetCanvas && !dialogueActive) return;
+
+    // If virtual joystick is being used or handle is active, don't conflict unless dialogue is active
+    if (isJoystickActive?.() && !dialogueActive) return;
 
     // Prevent browser selection / drag triggers when rapidly clicking
     e.preventDefault();
@@ -165,7 +172,7 @@ export function attachPointerListeners(
     activePointerId = null;
   };
 
-  canvas.addEventListener('pointerdown', onPointerDown);
+  window.addEventListener('pointerdown', onPointerDown);
   window.addEventListener('pointerup', onPointerUp);
   window.addEventListener('pointercancel', onPointerCancel);
 
@@ -173,7 +180,7 @@ export function attachPointerListeners(
   canvas.style.touchAction = 'none';
 
   return () => {
-    canvas.removeEventListener('pointerdown', onPointerDown);
+    window.removeEventListener('pointerdown', onPointerDown);
     window.removeEventListener('pointerup', onPointerUp);
     window.removeEventListener('pointercancel', onPointerCancel);
   };

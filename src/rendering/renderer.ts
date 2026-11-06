@@ -131,38 +131,44 @@ function drawInteractionPrompt(
 function drawDialogueBox(
   ctx: CanvasRenderingContext2D,
   text: string,
-  zKeySprite: HTMLImageElement
+  zKeySprite: HTMLImageElement,
+  showZKey: boolean = true
 ): void {
   ctx.save();
   const margin = 8;
-  const boxHeight = 52;
   const boxWidth = ctx.canvas.width - margin * 2;
-  const boxX = margin;
-  const boxY = ctx.canvas.height - boxHeight - margin;
-
-  drawSnesFrame(ctx, boxX, boxY, boxWidth, boxHeight);
 
   // Wrapped dialogue text with crisp 1px drop shadow
   ctx.font = 'bold 10px "Courier New", Courier, monospace';
   ctx.textBaseline = 'top';
   const lines = wrapTextLines(ctx, text, boxWidth - 24);
+  const lineHeight = 12;
+  const textHeight = lines.length * lineHeight;
+  const boxHeight = Math.max(52, textHeight + (showZKey ? 22 : 16));
+  const boxX = margin;
+  const boxY = ctx.canvas.height - boxHeight - margin;
+
+  drawSnesFrame(ctx, boxX, boxY, boxWidth, boxHeight);
+
   lines.forEach((line, idx) => {
     const lx = boxX + 10;
-    const ly = boxY + 10 + idx * 13;
+    const ly = boxY + 8 + idx * lineHeight;
     ctx.fillStyle = '#0c101a';
     ctx.fillText(line, lx + 1, ly + 1);
     ctx.fillStyle = '#ffffff';
     ctx.fillText(line, lx, ly);
   });
 
-  // Small Z key indicator in the bottom-right corner of the dialogue box
-  ctx.drawImage(
-    zKeySprite,
-    boxX + boxWidth - 20,
-    boxY + boxHeight - 20,
-    14,
-    14
-  );
+  if (showZKey) {
+    // Small Z key indicator in the bottom-right corner of the dialogue box
+    ctx.drawImage(
+      zKeySprite,
+      boxX + boxWidth - 20,
+      boxY + boxHeight - 20,
+      14,
+      14
+    );
+  }
   ctx.restore();
 }
 
@@ -801,7 +807,7 @@ export function renderGame(
   // 9. Screen-space UI overlay: Dialogue box OR bottom Z-key interaction prompt
   if (activeDialogue) {
     const line = activeDialogue.lines[activeDialogue.currentIndex] ?? '';
-    drawDialogueBox(ctx, line, assets.zKeySprite);
+    drawDialogueBox(ctx, line, assets.zKeySprite, !state.joystickActive);
   } else if (nearbyInteractable && !state.joystickActive) {
     drawInteractionPrompt(ctx, nearbyInteractable.promptText, assets.zKeySprite);
   }

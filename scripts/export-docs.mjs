@@ -20,7 +20,6 @@ const indexHtml = `<!DOCTYPE html>
   </head>
   <body>
     <div id="game-container">
-      <div class="hud-banner">XMAS RENSBO — Arrow Keys: Walk | Z: Interact</div>
       <canvas id="game-canvas" width="256" height="224"></canvas>
       <div id="virtual-joystick-container" style="display: none;">
         <div id="virtual-joystick-base">

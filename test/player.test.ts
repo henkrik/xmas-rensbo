@@ -12,7 +12,7 @@ import {
   updatePlayer,
 } from '../src/entities/player';
 import { HIT_BLINK_DURATION_SECONDS } from '../src/entities/snowball';
-import { createGameState, updateGameState } from '../src/world/gameState';
+import { createGameState, resetAfterSnowballHit, updateGameState } from '../src/world/gameState';
 import {
   CLIMB_DURATION_SECONDS,
   DAMAGED_WIRE_HAZARD,
@@ -528,5 +528,53 @@ describe('Player walking & 2x Rensbo map layout', () => {
       updateGameState(state, input, 0.05);
       expect(Math.abs(state.dog.vx)).toBeLessThanOrEqual(37.01);
     }
+  });
+
+  it('shows desktop and mobile tutorial dialogues on initial load and clears them on reset', () => {
+    // Desktop initial state
+    const desktopState = createGameState({ isMobile: false, showIntroDialogue: true });
+    expect(desktopState.activeDialogue).not.toBeNull();
+    expect(desktopState.activeDialogue?.lines[0]).toBe(
+      'Use the arrow keys to move around and Z to interact. Press Z to close this window and start playing.'
+    );
+    expect(desktopState.activeDialogue?.lines[1]).toBe(
+      'Good luck! Christmas depends on you...'
+    );
+    expect(desktopState.activeDialogue?.currentIndex).toBe(0);
+
+    const input = createEmptyInput();
+    // Press Z to advance to line 2
+    input.actionJustPressed = true;
+    updateGameState(desktopState, input, 0.016);
+    expect(desktopState.activeDialogue?.currentIndex).toBe(1);
+
+    // Press Z again to close dialogue
+    input.actionJustPressed = true;
+    updateGameState(desktopState, input, 0.016);
+    expect(desktopState.activeDialogue).toBeNull();
+
+    // Mobile initial state
+    const mobileState = createGameState({ isMobile: true, showIntroDialogue: true });
+    expect(mobileState.activeDialogue).not.toBeNull();
+    expect(mobileState.activeDialogue?.lines[0]).toBe(
+      'Use the virtual joystick to move around. To interact with things, move close enough to it and an interaction button will appear. Click anywhere to close this window and start playing.'
+    );
+    expect(mobileState.activeDialogue?.lines[1]).toBe(
+      'Good luck! Christmas depends on you...'
+    );
+
+    // Click anywhere to advance to line 2
+    input.pointerClick = { worldX: 100, worldY: 100 };
+    updateGameState(mobileState, input, 0.016);
+    expect(mobileState.activeDialogue?.currentIndex).toBe(1);
+
+    // Click anywhere again to close dialogue
+    input.pointerClick = { worldX: 100, worldY: 100 };
+    updateGameState(mobileState, input, 0.016);
+    expect(mobileState.activeDialogue).toBeNull();
+
+    // When damage reset occurs, activeDialogue must remain null (not reset to intro dialogue)
+    resetAfterSnowballHit(mobileState);
+    expect(mobileState.activeDialogue).toBeNull();
   });
 });
