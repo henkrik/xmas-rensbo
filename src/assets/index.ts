@@ -17,9 +17,29 @@ export interface GameAssets {
 export function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      if (typeof img.decode === 'function') {
+        img.decode().then(
+          () => resolve(img),
+          () => resolve(img)
+        );
+      } else {
+        resolve(img);
+      }
+    };
+    img.onload = finish;
+    img.onerror = () => {
+      if (settled) return;
+      settled = true;
+      reject(new Error(`Failed to load image: ${src}`));
+    };
     img.src = src;
+    if (img.complete && img.naturalWidth > 0) {
+      finish();
+    }
   });
 }
 

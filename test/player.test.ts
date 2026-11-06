@@ -446,4 +446,12 @@ describe('Player walking & 2x Rensbo map layout', () => {
 
     expect(state.activeDialogue).toBeNull();
   });
+
+  it('clamps negative dtSeconds on cached tab refresh so elapsedTime never goes negative', () => {
+    const state = createGameState();
+    const input = createEmptyInput();
+
+    updateGameState(state, input, -0.004);
+    expect(state.elapsedTime).toBeGreaterThanOrEqual(0);
+  });
 });

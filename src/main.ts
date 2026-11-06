@@ -20,10 +20,13 @@ async function startGame(): Promise<void> {
 
   const state = createGameState();
 
-  let lastTimestamp = performance.now();
+  let lastTimestamp: number | null = null;
 
   function frame(now: number): void {
-    const dtSeconds = Math.min((now - lastTimestamp) / 1000, 0.1);
+    const dtSeconds =
+      lastTimestamp === null
+        ? 0
+        : Math.max(0, Math.min((now - lastTimestamp) / 1000, 0.1));
     lastTimestamp = now;
 
     updateGameState(state, input, dtSeconds);

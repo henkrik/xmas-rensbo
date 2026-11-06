@@ -22,9 +22,29 @@
   function loadImage(src) {
     return new Promise((resolve, reject) => {
       const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        if (typeof img.decode === "function") {
+          img.decode().then(
+            () => resolve(img),
+            () => resolve(img)
+          );
+        } else {
+          resolve(img);
+        }
+      };
+      img.onload = finish;
+      img.onerror = () => {
+        if (settled) return;
+        settled = true;
+        reject(new Error(`Failed to load image: ${src}`));
+      };
       img.src = src;
+      if (img.complete && img.naturalWidth > 0) {
+        finish();
+      }
     });
   }
   async function loadAllAssets() {
@@ -499,7 +519,7 @@
       ctx.fillStyle = "#d2def0";
       ctx.fillRect(mx + 4, my + 11, 12, 2);
       ctx.fillRect(mx + 16, my + 4, 5, 2);
-      const smokeOffset = Math.floor(elapsedTime * 6) % 6;
+      const smokeOffset = Math.max(0, Math.floor(elapsedTime * 6)) % 6;
       ctx.fillStyle = "rgba(200, 212, 228, 0.75)";
       ctx.fillRect(mx + 12, my + 1 - smokeOffset, 3, 3);
       ctx.fillRect(mx + 15, my - 2 - (smokeOffset + 3) % 6, 2, 2);
@@ -512,7 +532,7 @@
       ctx.fillStyle = "#141822";
       ctx.fillRect(mx + 11, my + 11, 2, 3);
     } else {
-      const puff = Math.floor(elapsedTime * 20) % 4;
+      const puff = Math.max(0, Math.floor(elapsedTime * 20)) % 4;
       ctx.fillStyle = "rgba(232, 240, 255, 0.85)";
       ctx.fillRect(mx - 3 - puff, my + 9, 3, 3);
       ctx.fillRect(mx - 7 - puff, my + 8, 2, 2);
@@ -553,7 +573,7 @@
       DAMAGED_WIRE_HAZARD.x + DAMAGED_WIRE_HAZARD.width / 2 - 1
     );
     const cy = Math.round(DAMAGED_WIRE_HAZARD.y + DAMAGED_WIRE_HAZARD.height / 2);
-    const tick = Math.floor(elapsedTime * 16);
+    const tick = Math.max(0, Math.floor(elapsedTime * 16));
     ctx.save();
     if (tick % 3 !== 0) {
       ctx.fillStyle = "rgba(112, 248, 255, 0.28)";
@@ -570,7 +590,7 @@
       [-6, 0, -3, 0]
     ];
     for (let i = 0; i < 4; i++) {
-      const idx = (tick + i * 2) % rayOffsets.length;
+      const idx = ((tick + i * 2) % rayOffsets.length + rayOffsets.length) % rayOffsets.length;
       const [ox1, oy1, ox2, oy2] = rayOffsets[idx];
       ctx.fillStyle = i % 2 === 0 ? "#70f8ff" : "#ffee54";
       ctx.fillRect(cx + ox2, cy + oy2, 2, 2);
@@ -1247,7 +1267,9 @@
     player.x = Math.max(ROOF_MIN_X, Math.min(ROOF_MAX_X, nextX));
   }
   function updateGameState(state, input, dtSeconds) {
-    state.elapsedTime += dtSeconds;
+    const safeDt = Math.max(0, dtSeconds);
+    state.elapsedTime += safeDt;
+    dtSeconds = safeDt;
     const zPressed = consumeActionPress(input);
     if (state.activeDialogue) {
       state.player.isMoving = false;
@@ -1402,9 +1424,9 @@
     const input = createEmptyInput();
     attachKeyboardListeners(window, input);
     const state = createGameState();
-    let lastTimestamp = performance.now();
+    let lastTimestamp = null;
     function frame(now) {
-      const dtSeconds = Math.min((now - lastTimestamp) / 1e3, 0.1);
+      const dtSeconds = lastTimestamp === null ? 0 : Math.max(0, Math.min((now - lastTimestamp) / 1e3, 0.1));
       lastTimestamp = now;
       updateGameState(state, input, dtSeconds);
       renderGame(ctx, state, assets);

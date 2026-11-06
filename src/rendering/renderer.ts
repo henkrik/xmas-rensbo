@@ -398,7 +398,7 @@ function drawMotorcycle(
     ctx.fillRect(mx + 16, my + 4, 5, 2);
 
     // Little puffs of grey smoke rising from the crashed engine
-    const smokeOffset = Math.floor(elapsedTime * 6) % 6;
+    const smokeOffset = Math.max(0, Math.floor(elapsedTime * 6)) % 6;
     ctx.fillStyle = 'rgba(200, 212, 228, 0.75)';
     ctx.fillRect(mx + 12, my + 1 - smokeOffset, 3, 3);
     ctx.fillRect(mx + 15, my - 2 - ((smokeOffset + 3) % 6), 2, 2);
@@ -418,7 +418,7 @@ function drawMotorcycle(
     ctx.fillRect(mx + 11, my + 11, 2, 3);
   } else {
     // Exhaust puffs while driving east
-    const puff = Math.floor(elapsedTime * 20) % 4;
+    const puff = Math.max(0, Math.floor(elapsedTime * 20)) % 4;
     ctx.fillStyle = 'rgba(232, 240, 255, 0.85)';
     ctx.fillRect(mx - 3 - puff, my + 9, 3, 3);
     ctx.fillRect(mx - 7 - puff, my + 8, 2, 2);
@@ -477,7 +477,7 @@ function drawDamagedWireSparks(
     DAMAGED_WIRE_HAZARD.x + DAMAGED_WIRE_HAZARD.width / 2 - 1
   );
   const cy = Math.round(DAMAGED_WIRE_HAZARD.y + DAMAGED_WIRE_HAZARD.height / 2);
-  const tick = Math.floor(elapsedTime * 16);
+  const tick = Math.max(0, Math.floor(elapsedTime * 16));
 
   ctx.save();
 
@@ -502,7 +502,9 @@ function drawDamagedWireSparks(
   ];
 
   for (let i = 0; i < 4; i++) {
-    const idx = (tick + i * 2) % rayOffsets.length;
+    const idx =
+      (((tick + i * 2) % rayOffsets.length) + rayOffsets.length) %
+      rayOffsets.length;
     const [ox1, oy1, ox2, oy2] = rayOffsets[idx];
     ctx.fillStyle = i % 2 === 0 ? '#70f8ff' : '#ffee54';
     ctx.fillRect(cx + ox2, cy + oy2, 2, 2);

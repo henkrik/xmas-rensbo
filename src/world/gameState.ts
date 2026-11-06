@@ -190,7 +190,9 @@ export function updateGameState(
   input: InputState,
   dtSeconds: number
 ): void {
-  state.elapsedTime += dtSeconds;
+  const safeDt = Math.max(0, dtSeconds);
+  state.elapsedTime += safeDt;
+  dtSeconds = safeDt;
   const zPressed = consumeActionPress(input);
 
   // If a dialogue box is currently open, pressing Z advances or closes it
