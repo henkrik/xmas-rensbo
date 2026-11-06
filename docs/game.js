@@ -148,6 +148,7 @@
     width: 14,
     height: 10
   };
+  var ELECTROCUTION_DURATION_SECONDS = 1.25;
   var GROUND_LADDER_BOUNDS = {
     x: 24 * TILE_SIZE + 6,
     y: 12 * TILE_SIZE + 4,
@@ -630,6 +631,51 @@
     left: 2,
     right: 3
   };
+  var ELECTROCUTED_SANTA_GRID = [
+    ".....KKKKKK.....",
+    "....KKKKKKKK....",
+    "...KKKKKKKKKK...",
+    "..KKKKWWWWKKKK..",
+    "..KKWKWWWWKWKK..",
+    "..KKWWWWWWWWKK..",
+    "..KKKWKWWKWKK...",
+    ".KKKKKKWWKKKKK..",
+    ".KKWKKWWWWKKWKK.",
+    ".KKWKKKWWKKKWKK.",
+    ".KKKKKWWWWKKKK..",
+    ".K.KKKKWWKKKK...",
+    "...KKKWWWWKKK...",
+    "...KKWK..KWKK...",
+    "...KKWK..KWKK...",
+    "...KKKK..KKKK..."
+  ];
+  function drawElectrocutedSanta(ctx, drawX, drawY, electrocutionTimer) {
+    const showSkeleton = Math.max(0, Math.floor(electrocutionTimer * 14)) % 2 === 0;
+    const jitterX = Math.max(0, Math.floor(electrocutionTimer * 28)) % 2 === 0 ? -1 : 1;
+    const baseX = drawX + jitterX;
+    ctx.save();
+    ctx.fillStyle = "#000000";
+    for (let r = 0; r < ELECTROCUTED_SANTA_GRID.length; r++) {
+      const row = ELECTROCUTED_SANTA_GRID[r];
+      for (let c = 0; c < row.length; c++) {
+        if (row[c] !== ".") {
+          ctx.fillRect(baseX + c, drawY + r, 1, 1);
+        }
+      }
+    }
+    if (showSkeleton) {
+      ctx.fillStyle = "#ffffff";
+      for (let r = 0; r < ELECTROCUTED_SANTA_GRID.length; r++) {
+        const row = ELECTROCUTED_SANTA_GRID[r];
+        for (let c = 0; c < row.length; c++) {
+          if (row[c] === "W") {
+            ctx.fillRect(baseX + c, drawY + r, 1, 1);
+          }
+        }
+      }
+    }
+    ctx.restore();
+  }
   function renderGame(ctx, state, assets) {
     const {
       map,
@@ -708,8 +754,8 @@
     drawMotorcycle(ctx, state.motorcycle, elapsedTime);
     drawDamagedWireSparks(ctx, elapsedTime);
     for (const thrower of throwers) {
-      const drawX = Math.round(thrower.x - (TILE_SIZE - thrower.width) / 2);
-      const drawY = Math.round(thrower.y - (TILE_SIZE - thrower.height));
+      const drawX2 = Math.round(thrower.x - (TILE_SIZE - thrower.width) / 2);
+      const drawY2 = Math.round(thrower.y - (TILE_SIZE - thrower.height));
       const isThrowingPose = thrower.throwTimer < 0.25 || thrower.throwTimer > thrower.throwInterval - 0.35;
       const frameCol = isThrowingPose ? 1 : 0;
       const dirRow = thrower.facing === "left" ? 1 : 0;
@@ -719,39 +765,43 @@
         dirRow * TILE_SIZE,
         TILE_SIZE,
         TILE_SIZE,
-        drawX,
-        drawY,
+        drawX2,
+        drawY2,
         TILE_SIZE,
         TILE_SIZE
       );
     }
     drawDogAndHearts(ctx, dog, assets.dogSprite);
     for (const sb of snowballs) {
-      const drawX = Math.round(sb.x - (TILE_SIZE - sb.width) / 2);
-      const drawY = Math.round(sb.y - (TILE_SIZE - sb.height) / 2);
-      ctx.drawImage(assets.snowballSprite, drawX, drawY, TILE_SIZE, TILE_SIZE);
+      const drawX2 = Math.round(sb.x - (TILE_SIZE - sb.width) / 2);
+      const drawY2 = Math.round(sb.y - (TILE_SIZE - sb.height) / 2);
+      ctx.drawImage(assets.snowballSprite, drawX2, drawY2, TILE_SIZE, TILE_SIZE);
     }
-    const isBlinkHidden = player.blinkTimer > 0 && Math.floor(player.blinkTimer * 12) % 2 === 1;
-    if (!isBlinkHidden) {
-      const dirRow = DIRECTION_TO_ROW[player.facing] ?? 0;
-      let frameCol = 0;
-      if (player.isMoving) {
-        const stepPhase = Math.floor(player.walkTimer * 8) % 4;
-        frameCol = stepPhase === 1 ? 1 : stepPhase === 3 ? 2 : 0;
+    const drawX = Math.round(player.x - (TILE_SIZE - player.width) / 2);
+    const drawY = Math.round(player.y - (TILE_SIZE - player.height));
+    if (state.electrocutionTimer > 0) {
+      drawElectrocutedSanta(ctx, drawX, drawY, state.electrocutionTimer);
+    } else {
+      const isBlinkHidden = player.blinkTimer > 0 && Math.floor(player.blinkTimer * 12) % 2 === 1;
+      if (!isBlinkHidden) {
+        const dirRow = DIRECTION_TO_ROW[player.facing] ?? 0;
+        let frameCol = 0;
+        if (player.isMoving) {
+          const stepPhase = Math.floor(player.walkTimer * 8) % 4;
+          frameCol = stepPhase === 1 ? 1 : stepPhase === 3 ? 2 : 0;
+        }
+        ctx.drawImage(
+          assets.santaSprite,
+          frameCol * TILE_SIZE,
+          dirRow * TILE_SIZE,
+          TILE_SIZE,
+          TILE_SIZE,
+          drawX,
+          drawY,
+          TILE_SIZE,
+          TILE_SIZE
+        );
       }
-      const drawX = Math.round(player.x - (TILE_SIZE - player.width) / 2);
-      const drawY = Math.round(player.y - (TILE_SIZE - player.height));
-      ctx.drawImage(
-        assets.santaSprite,
-        frameCol * TILE_SIZE,
-        dirRow * TILE_SIZE,
-        TILE_SIZE,
-        TILE_SIZE,
-        drawX,
-        drawY,
-        TILE_SIZE,
-        TILE_SIZE
-      );
     }
     ctx.restore();
     drawSnowfall(ctx, elapsedTime, camera);
@@ -1193,7 +1243,7 @@
       isOnRoof: state.isOnRoof,
       motorcycleStatus: state.motorcycle.status
     });
-    state.nearbyInteractable = state.climbing || state.motorcycle.status === "driving" ? null : findNearbyInteractable(state.player, state.interactables);
+    state.nearbyInteractable = state.climbing || state.motorcycle.status === "driving" || state.electrocutionTimer > 0 ? null : findNearbyInteractable(state.player, state.interactables);
   }
   function createGameState(map = STARTER_MAP) {
     const player = createPlayer(PLAYER_START_X, PLAYER_START_Y);
@@ -1220,6 +1270,7 @@
       ladderPlaced: false,
       isOnRoof: false,
       climbing: null,
+      electrocutionTimer: 0,
       interactables,
       nearbyInteractable: null,
       activeDialogue: null,
@@ -1244,6 +1295,7 @@
     state.ladderPlaced = false;
     state.isOnRoof = false;
     state.climbing = null;
+    state.electrocutionTimer = 0;
     state.activeDialogue = null;
     refreshInteractables(state);
   }
@@ -1278,6 +1330,18 @@
         if (state.activeDialogue.currentIndex >= state.activeDialogue.lines.length) {
           state.activeDialogue = null;
         }
+      }
+      return;
+    }
+    if (state.electrocutionTimer > 0) {
+      state.player.isMoving = false;
+      state.player.walkTimer = 0;
+      state.electrocutionTimer = Math.max(
+        0,
+        state.electrocutionTimer - dtSeconds
+      );
+      if (state.electrocutionTimer <= 0) {
+        resetAfterSnowballHit(state);
       }
       return;
     }
@@ -1346,7 +1410,11 @@
       updatePlayer(state.player, input, dtSeconds, state.map, solidObstacles);
       updateFootprints(state.footprints, state.player, state.map, dtSeconds);
       if (rectsIntersect(state.player, DAMAGED_WIRE_HAZARD)) {
-        resetAfterSnowballHit(state);
+        state.electrocutionTimer = ELECTROCUTION_DURATION_SECONDS;
+        state.player.isMoving = false;
+        state.player.walkTimer = 0;
+        state.nearbyInteractable = null;
+        state.activeDialogue = null;
         return;
       }
       const caughtByDog = updateDog(

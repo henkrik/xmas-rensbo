@@ -59,7 +59,7 @@ xmas-rensbo/
 ├── scripts/                # Build, dev server, and asset generation scripts
 │   ├── dev-server.mjs      # Minimal static HTTP server for `npm start` (no HMR/pinging)
 │   ├── export-docs.mjs     # Exports vanilla docs/index.html, docs/style.css, and docs/game.js
-│   └── generate-placeholders.mjs
+│   └── generate-assets.mjs # Generates the 16-bit SNES pixel-art spritesheets and overworld map PNGs
 └── docs/                   # Generated vanilla static site for GitHub Pages
     ├── index.html
     ├── style.css

@@ -16,6 +16,7 @@ import { createGameState, updateGameState } from '../src/world/gameState';
 import {
   CLIMB_DURATION_SECONDS,
   DAMAGED_WIRE_HAZARD,
+  ELECTROCUTION_DURATION_SECONDS,
   GROUND_LADDER_BOUNDS,
   HOUSE_DOOR_COL,
   HOUSE_DOOR_ROW,
@@ -145,7 +146,7 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(state.snowballs.length).toBe(0);
   });
 
-  it('resets the map and makes Santa blink when stepping on the sparking EV charging wire', () => {
+  it('plays a 1.25-second electrocution animation before resetting the map and making Santa blink when stepping on the sparking EV charging wire', () => {
     const state = createGameState();
     const input = createEmptyInput();
 
@@ -160,7 +161,18 @@ describe('Player walking & 2x Rensbo map layout', () => {
 
     updateGameState(state, input, 0.1);
 
-    // Santa should be zapped, reset to the bottom of the driveway, and blinking
+    // Santa should enter the 1.25-second electrocution animation right at the wire before the map resets
+    expect(state.electrocutionTimer).toBe(ELECTROCUTION_DURATION_SECONDS);
+    expect(state.player.y).not.toBe(PLAYER_START_Y);
+
+    // Partway through the 1.25-second electrocution animation, Santa is still being zapped at the wire
+    updateGameState(state, input, 0.6);
+    expect(state.electrocutionTimer).toBeCloseTo(0.65, 5);
+    expect(state.player.y).not.toBe(PLAYER_START_Y);
+
+    // Once the full 1.25 seconds complete, the map resets and Santa spawns at the start blinking
+    updateGameState(state, input, 0.65);
+    expect(state.electrocutionTimer).toBe(0);
     expect(state.player.x).toBe(PLAYER_START_X);
     expect(state.player.y).toBe(PLAYER_START_Y);
     expect(state.player.blinkTimer).toBe(HIT_BLINK_DURATION_SECONDS);

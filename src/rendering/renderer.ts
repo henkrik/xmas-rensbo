@@ -563,6 +563,71 @@ const DIRECTION_TO_ROW: Record<Direction, number> = {
   right: 3,
 };
 
+/**
+ * 16x16 cartoony electrocuted Santa grid:
+ * - Every non-'.' character ('K' or 'W') is drawn 100% pitch black (#000000) to form Santa's silhouette.
+ * - On skeleton-flash frames, 'W' pixels are drawn in bright bone-white (#ffffff) on top of the black silhouette
+ *   (skull with dark eye sockets & jaw teeth, spine, ribcage, arm bones, pelvis, and leg bones).
+ */
+const ELECTROCUTED_SANTA_GRID: readonly string[] = [
+  '.....KKKKKK.....',
+  '....KKKKKKKK....',
+  '...KKKKKKKKKK...',
+  '..KKKKWWWWKKKK..',
+  '..KKWKWWWWKWKK..',
+  '..KKWWWWWWWWKK..',
+  '..KKKWKWWKWKK...',
+  '.KKKKKKWWKKKKK..',
+  '.KKWKKWWWWKKWKK.',
+  '.KKWKKKWWKKKWKK.',
+  '.KKKKKWWWWKKKK..',
+  '.K.KKKKWWKKKK...',
+  '...KKKWWWWKKK...',
+  '...KKWK..KWKK...',
+  '...KKWK..KWKK...',
+  '...KKKK..KKKK...',
+];
+
+function drawElectrocutedSanta(
+  ctx: CanvasRenderingContext2D,
+  drawX: number,
+  drawY: number,
+  electrocutionTimer: number
+): void {
+  const showSkeleton = Math.max(0, Math.floor(electrocutionTimer * 14)) % 2 === 0;
+  const jitterX =
+    Math.max(0, Math.floor(electrocutionTimer * 28)) % 2 === 0 ? -1 : 1;
+  const baseX = drawX + jitterX;
+
+  ctx.save();
+
+  // 1. 100% pitch-black Santa silhouette
+  ctx.fillStyle = '#000000';
+  for (let r = 0; r < ELECTROCUTED_SANTA_GRID.length; r++) {
+    const row = ELECTROCUTED_SANTA_GRID[r];
+    for (let c = 0; c < row.length; c++) {
+      if (row[c] !== '.') {
+        ctx.fillRect(baseX + c, drawY + r, 1, 1);
+      }
+    }
+  }
+
+  // 2. Blinking cartoony skeleton on top of the 100% black silhouette
+  if (showSkeleton) {
+    ctx.fillStyle = '#ffffff';
+    for (let r = 0; r < ELECTROCUTED_SANTA_GRID.length; r++) {
+      const row = ELECTROCUTED_SANTA_GRID[r];
+      for (let c = 0; c < row.length; c++) {
+        if (row[c] === 'W') {
+          ctx.fillRect(baseX + c, drawY + r, 1, 1);
+        }
+      }
+    }
+  }
+
+  ctx.restore();
+}
+
 export function renderGame(
   ctx: CanvasRenderingContext2D,
   state: GameState,
@@ -696,32 +761,36 @@ export function renderGame(
     ctx.drawImage(assets.snowballSprite, drawX, drawY, TILE_SIZE, TILE_SIZE);
   }
 
-  // 7. Draw Santa (4-directional SNES spritesheet + 3-frame walk cycle + hit blinking)
-  const isBlinkHidden =
-    player.blinkTimer > 0 && Math.floor(player.blinkTimer * 12) % 2 === 1;
+  // 7. Draw Santa (3-second cartoony electrocution OR 4-directional SNES spritesheet + 3-frame walk cycle + hit blinking)
+  const drawX = Math.round(player.x - (TILE_SIZE - player.width) / 2);
+  const drawY = Math.round(player.y - (TILE_SIZE - player.height));
 
-  if (!isBlinkHidden) {
-    const dirRow = DIRECTION_TO_ROW[player.facing] ?? 0;
-    let frameCol = 0;
-    if (player.isMoving) {
-      const stepPhase = Math.floor(player.walkTimer * 8) % 4;
-      frameCol = stepPhase === 1 ? 1 : stepPhase === 3 ? 2 : 0;
+  if (state.electrocutionTimer > 0) {
+    drawElectrocutedSanta(ctx, drawX, drawY, state.electrocutionTimer);
+  } else {
+    const isBlinkHidden =
+      player.blinkTimer > 0 && Math.floor(player.blinkTimer * 12) % 2 === 1;
+
+    if (!isBlinkHidden) {
+      const dirRow = DIRECTION_TO_ROW[player.facing] ?? 0;
+      let frameCol = 0;
+      if (player.isMoving) {
+        const stepPhase = Math.floor(player.walkTimer * 8) % 4;
+        frameCol = stepPhase === 1 ? 1 : stepPhase === 3 ? 2 : 0;
+      }
+
+      ctx.drawImage(
+        assets.santaSprite,
+        frameCol * TILE_SIZE,
+        dirRow * TILE_SIZE,
+        TILE_SIZE,
+        TILE_SIZE,
+        drawX,
+        drawY,
+        TILE_SIZE,
+        TILE_SIZE
+      );
     }
-
-    const drawX = Math.round(player.x - (TILE_SIZE - player.width) / 2);
-    const drawY = Math.round(player.y - (TILE_SIZE - player.height));
-
-    ctx.drawImage(
-      assets.santaSprite,
-      frameCol * TILE_SIZE,
-      dirRow * TILE_SIZE,
-      TILE_SIZE,
-      TILE_SIZE,
-      drawX,
-      drawY,
-      TILE_SIZE,
-      TILE_SIZE
-    );
   }
 
   ctx.restore();

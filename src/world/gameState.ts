@@ -25,6 +25,7 @@ import {
 import {
   CLIMB_DURATION_SECONDS,
   DAMAGED_WIRE_HAZARD,
+  ELECTROCUTION_DURATION_SECONDS,
   LADDER_BOTTOM_Y,
   LADDER_CLIMB_X,
   MOTORCYCLE_CRASH_X,
@@ -74,6 +75,7 @@ export interface GameState {
   ladderPlaced: boolean;
   isOnRoof: boolean;
   climbing: ClimbingState | null;
+  electrocutionTimer: number;
   interactables: Interactable[];
   nearbyInteractable: Interactable | null;
   activeDialogue: DialogueState | null;
@@ -88,7 +90,9 @@ function refreshInteractables(state: GameState): void {
     motorcycleStatus: state.motorcycle.status,
   });
   state.nearbyInteractable =
-    state.climbing || state.motorcycle.status === 'driving'
+    state.climbing ||
+    state.motorcycle.status === 'driving' ||
+    state.electrocutionTimer > 0
       ? null
       : findNearbyInteractable(state.player, state.interactables);
 }
@@ -119,6 +123,7 @@ export function createGameState(map: TileMap = STARTER_MAP): GameState {
     ladderPlaced: false,
     isOnRoof: false,
     climbing: null,
+    electrocutionTimer: 0,
     interactables,
     nearbyInteractable: null,
     activeDialogue: null,
@@ -151,6 +156,7 @@ export function resetAfterSnowballHit(state: GameState): void {
   state.ladderPlaced = false;
   state.isOnRoof = false;
   state.climbing = null;
+  state.electrocutionTimer = 0;
   state.activeDialogue = null;
   refreshInteractables(state);
 }
@@ -205,6 +211,20 @@ export function updateGameState(
       ) {
         state.activeDialogue = null;
       }
+    }
+    return;
+  }
+
+  // If Santa is currently being electrocuted on the sparking wire (3-second cartoony skeleton animation)
+  if (state.electrocutionTimer > 0) {
+    state.player.isMoving = false;
+    state.player.walkTimer = 0;
+    state.electrocutionTimer = Math.max(
+      0,
+      state.electrocutionTimer - dtSeconds
+    );
+    if (state.electrocutionTimer <= 0) {
+      resetAfterSnowballHit(state);
     }
     return;
   }
@@ -294,7 +314,11 @@ export function updateGameState(
 
     // Check if Santa stepped on the visibly damaged, sparking EV charging cable
     if (rectsIntersect(state.player, DAMAGED_WIRE_HAZARD)) {
-      resetAfterSnowballHit(state);
+      state.electrocutionTimer = ELECTROCUTION_DURATION_SECONDS;
+      state.player.isMoving = false;
+      state.player.walkTimer = 0;
+      state.nearbyInteractable = null;
+      state.activeDialogue = null;
       return;
     }
 

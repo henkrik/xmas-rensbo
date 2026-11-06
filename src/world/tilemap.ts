@@ -46,6 +46,8 @@ export const DAMAGED_WIRE_HAZARD: Rect = {
   height: 10,
 };
 
+export const ELECTROCUTION_DURATION_SECONDS = 1.25;
+
 // Ladder lying on the snow next to the dog on the east side (walkable, non-colliding)
 export const GROUND_LADDER_BOUNDS: Rect = {
   x: 24 * TILE_SIZE + 6,
