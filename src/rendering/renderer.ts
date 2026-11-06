@@ -1,7 +1,7 @@
 import { GameAssets } from '../assets';
 import { Dog } from '../entities/dog';
 import { Direction, Footprint } from '../entities/player';
-import { GameState } from '../world/gameState';
+import { GameState, MotorcycleState } from '../world/gameState';
 import {
   DAMAGED_WIRE_HAZARD,
   GROUND_LADDER_BOUNDS,
@@ -354,6 +354,119 @@ function drawPlacedHouseLadder(ctx: CanvasRenderingContext2D): void {
 }
 
 /**
+ * Renders the black motorcycle (either upright when parked/driving, or tipped over after crashing into the trees).
+ */
+function drawMotorcycle(
+  ctx: CanvasRenderingContext2D,
+  motorcycle: MotorcycleState,
+  elapsedTime: number
+): void {
+  const mx = Math.round(motorcycle.x) + 2;
+  const my = Math.round(motorcycle.y) + 1;
+
+  ctx.save();
+
+  if (motorcycle.status === 'crashed') {
+    // Displaced snow and skid marks where it crashed into the trees
+    ctx.fillStyle = 'rgba(18, 24, 36, 0.45)';
+    ctx.fillRect(mx - 4, my + 8, 28, 6);
+    ctx.fillStyle = '#f8fbff';
+    ctx.fillRect(mx + 18, my + 4, 8, 9);
+
+    // Tilted/fallen-over wheels (rear wheel flat, front wheel wedged up at an angle)
+    ctx.fillStyle = '#141822';
+    ctx.fillRect(mx + 1, my + 8, 8, 6);
+    ctx.fillStyle = '#a8b4c6';
+    ctx.fillRect(mx + 3, my + 10, 4, 2);
+
+    ctx.fillStyle = '#141822';
+    ctx.fillRect(mx + 17, my + 3, 8, 6);
+    ctx.fillStyle = '#a8b4c6';
+    ctx.fillRect(mx + 19, my + 5, 4, 2);
+
+    // Bike frame & black tank lying sideways on the ground
+    ctx.fillStyle = '#141822';
+    ctx.fillRect(mx + 5, my + 6, 15, 7);
+    ctx.fillStyle = '#242a38';
+    ctx.fillRect(mx + 10, my + 6, 8, 5);
+    ctx.fillStyle = '#8c9cb8';
+    ctx.fillRect(mx + 11, my + 7, 5, 1);
+
+    // Exposed chrome exhaust & bent front fork
+    ctx.fillStyle = '#d2def0';
+    ctx.fillRect(mx + 4, my + 11, 12, 2);
+    ctx.fillRect(mx + 16, my + 4, 5, 2);
+
+    // Little puffs of grey smoke rising from the crashed engine
+    const smokeOffset = Math.floor(elapsedTime * 6) % 6;
+    ctx.fillStyle = 'rgba(200, 212, 228, 0.75)';
+    ctx.fillRect(mx + 12, my + 1 - smokeOffset, 3, 3);
+    ctx.fillRect(mx + 15, my - 2 - ((smokeOffset + 3) % 6), 2, 2);
+
+    ctx.restore();
+    return;
+  }
+
+  // Upright motorcycle (parked or driving east)
+  // Ground shadow
+  ctx.fillStyle = 'rgba(12, 16, 26, 0.45)';
+  ctx.fillRect(mx + 2, my + 11, 24, 4);
+
+  // Kickstand when parked
+  if (motorcycle.status === 'parked') {
+    ctx.fillStyle = '#141822';
+    ctx.fillRect(mx + 11, my + 11, 2, 3);
+  } else {
+    // Exhaust puffs while driving east
+    const puff = Math.floor(elapsedTime * 20) % 4;
+    ctx.fillStyle = 'rgba(232, 240, 255, 0.85)';
+    ctx.fillRect(mx - 3 - puff, my + 9, 3, 3);
+    ctx.fillRect(mx - 7 - puff, my + 8, 2, 2);
+  }
+
+  // Rear tire (left) & Front tire (right)
+  ctx.fillStyle = '#141822';
+  ctx.fillRect(mx + 1, my + 6, 8, 8);
+  ctx.fillRect(mx + 19, my + 6, 8, 8);
+  ctx.fillStyle = '#a8b4c6';
+  ctx.fillRect(mx + 3, my + 8, 4, 4);
+  ctx.fillRect(mx + 21, my + 8, 4, 4);
+  ctx.fillStyle = '#141822';
+  ctx.fillRect(mx + 4, my + 9, 2, 2);
+  ctx.fillRect(mx + 22, my + 9, 2, 2);
+
+  // Chrome dual exhaust & engine block
+  ctx.fillStyle = '#3e4654';
+  ctx.fillRect(mx + 9, my + 7, 8, 4);
+  ctx.fillStyle = '#d2def0';
+  ctx.fillRect(mx + 4, my + 10, 12, 2);
+
+  // Jet-black frame, tail fender & sculpted fuel tank
+  ctx.fillStyle = '#141822';
+  ctx.fillRect(mx + 4, my + 6, 15, 3);
+  ctx.fillStyle = '#1c202c';
+  ctx.fillRect(mx + 12, my + 4, 8, 4);
+  ctx.fillStyle = '#8c9cb8';
+  ctx.fillRect(mx + 14, my + 5, 4, 1);
+
+  // Dark leather rider seat
+  ctx.fillStyle = '#2e2422';
+  ctx.fillRect(mx + 6, my + 5, 6, 3);
+
+  // Chrome front fork, handlebars, headlight & red taillight
+  ctx.fillStyle = '#cad6e8';
+  ctx.fillRect(mx + 19, my + 3, 2, 6);
+  ctx.fillStyle = '#141822';
+  ctx.fillRect(mx + 17, my + 2, 4, 2);
+  ctx.fillStyle = '#ffee54';
+  ctx.fillRect(mx + 21, my + 4, 2, 2);
+  ctx.fillStyle = '#e02828';
+  ctx.fillRect(mx + 3, my + 6, 2, 2);
+
+  ctx.restore();
+}
+
+/**
  * Renders animated electric sparks crackling out of the damaged EV charging cable on the driveway.
  */
 function drawDamagedWireSparks(
@@ -541,7 +654,10 @@ export function renderGame(
     drawPlacedHouseLadder(ctx);
   }
 
-  // 4. Draw animated electric sparks on the damaged EV charging cable
+  // 4. Draw the black motorcycle (parked, driving east, or crashed into the trees)
+  drawMotorcycle(ctx, state.motorcycle, elapsedTime);
+
+  // 5. Draw animated electric sparks on the damaged EV charging cable
   drawDamagedWireSparks(ctx, elapsedTime);
 
   // 4. Draw snowball thrower NPCs on the driveway (with throwing animation frame)

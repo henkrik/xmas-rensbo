@@ -1242,50 +1242,6 @@ function generateRensboOverworldPng(mapMatrix) {
     // Charging plug & glowing green charging status indicator on the front-left fender
     canvas.fillRect(carX - 1, carY + 14, 4, 4, PAL.outline);
     canvas.fillRect(carX + 3, carY + 15, 2, 2, PAL.ledGreen);
-
-    // 11d. Sleek Black Motorcycle parked on the right side of the car,
-    // outside the white tool shed with the red double doors (cols 25..26, row 21)
-    const motoX = 25 * 16 + 2;
-    const motoY = 21 * 16 + 1;
-
-    // Ground drop shadow + angled kickstand on the gravel
-    canvas.fillEllipse(motoX + 14, motoY + 13, 13, 3.2, PAL.deepShadow);
-    canvas.drawLine(motoX + 13, motoY + 11, motoX + 11, motoY + 14, PAL.outline);
-
-    // Rear tire (left) & Front tire (right) with dark rubber & silver wheel rims
-    canvas.fillEllipse(motoX + 5, motoY + 10, 4.2, 4.2, PAL.outline);
-    canvas.fillEllipse(motoX + 5, motoY + 10, 2.2, 2.2, [168, 180, 198, 255]);
-    canvas.setPixel(motoX + 5, motoY + 10, PAL.outline);
-
-    canvas.fillEllipse(motoX + 23, motoY + 10, 4.2, 4.2, PAL.outline);
-    canvas.fillEllipse(motoX + 23, motoY + 10, 2.2, 2.2, [168, 180, 198, 255]);
-    canvas.setPixel(motoX + 23, motoY + 10, PAL.outline);
-
-    // Chrome dual exhaust pipe & engine block fins
-    canvas.fillRect(motoX + 9, motoY + 7, 8, 4, [62, 70, 84, 255]);
-    canvas.drawLine(motoX + 4, motoY + 11, motoX + 16, motoY + 10, [210, 222, 240, 255]);
-    canvas.drawLine(motoX + 4, motoY + 12, motoX + 15, motoY + 11, [132, 144, 164, 255]);
-
-    // Jet-black motorcycle frame, tail fender & sculpted fuel tank
-    canvas.fillRect(motoX + 4, motoY + 6, 15, 3, PAL.outline);
-    canvas.fillRect(motoX + 12, motoY + 4, 8, 4, [28, 32, 44, 255]);
-    canvas.strokeRect(motoX + 12, motoY + 4, 8, 4, PAL.outline);
-    // Glossy specular highlight on the black fuel tank
-    canvas.drawLine(motoX + 14, motoY + 5, motoX + 18, motoY + 5, [140, 156, 184, 255]);
-
-    // Dark leather rider seat
-    canvas.fillRect(motoX + 6, motoY + 5, 6, 3, [46, 36, 34, 255]);
-    canvas.drawLine(motoX + 7, motoY + 5, motoX + 11, motoY + 5, [78, 62, 58, 255]);
-
-    // Chrome front fork, handlebars, mirror & round headlight
-    canvas.drawLine(motoX + 19, motoY + 3, motoX + 23, motoY + 10, [202, 214, 232, 255]);
-    canvas.drawLine(motoX + 18, motoY + 3, motoX + 22, motoY + 10, PAL.outline);
-    canvas.fillRect(motoX + 17, motoY + 2, 4, 2, PAL.outline);
-    canvas.setPixel(motoX + 19, motoY + 1, [210, 222, 240, 255]); // side mirror
-    // Headlight (right) & red taillight (left)
-    canvas.fillRect(motoX + 21, motoY + 4, 3, 3, PAL.outline);
-    canvas.fillRect(motoX + 22, motoY + 5, 2, 2, PAL.sparkYellow);
-    canvas.fillRect(motoX + 3, motoY + 6, 2, 2, PAL.shedRedBright);
   }
 
   // ==========================================================================

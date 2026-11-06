@@ -5,6 +5,8 @@ import {
   HOUSE_DOOR_COL,
   HOUSE_DOOR_ROW,
   HOUSE_WEST_LADDER_SPOT,
+  MOTORCYCLE_START_X,
+  MOTORCYCLE_START_Y,
   ROOF_CHIMNEY_BOUNDS,
   ROOF_LADDER_BOUNDS,
   TILE_SIZE,
@@ -26,6 +28,7 @@ export interface LadderInteractionOptions {
   hasLadder?: boolean;
   ladderPlaced?: boolean;
   isOnRoof?: boolean;
+  motorcycleStatus?: 'parked' | 'driving' | 'crashed';
 }
 
 /**
@@ -48,6 +51,7 @@ export function buildInteractables(
     hasLadder = false,
     ladderPlaced = false,
     isOnRoof = false,
+    motorcycleStatus = 'parked',
   } = options;
 
   if (isOnRoof) {
@@ -88,6 +92,20 @@ export function buildInteractables(
       'There has to be another way into the house...',
     ],
   });
+
+  if (motorcycleStatus === 'parked') {
+    list.push({
+      id: 'motorcycle',
+      bounds: {
+        x: MOTORCYCLE_START_X,
+        y: MOTORCYCLE_START_Y,
+        width: TILE_SIZE * 2,
+        height: TILE_SIZE,
+      },
+      promptText: 'Z: drive',
+      dialogueLines: [],
+    });
+  }
 
   if (!hasLadder && !ladderPlaced) {
     list.push({

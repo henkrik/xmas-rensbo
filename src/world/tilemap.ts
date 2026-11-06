@@ -85,6 +85,12 @@ export const ROOF_MIN_X = 4 * TILE_SIZE + 2;
 export const ROOF_MAX_X = 7 * TILE_SIZE + 6;
 export const CLIMB_DURATION_SECONDS = 0.6;
 
+// Black motorcycle parked outside the red-door tool shed (cols 25..26, row 21)
+export const MOTORCYCLE_START_X = 25 * TILE_SIZE;
+export const MOTORCYCLE_START_Y = 21 * TILE_SIZE;
+export const MOTORCYCLE_CRASH_X = 29 * TILE_SIZE;
+export const MOTORCYCLE_SPEED = 150;
+
 /**
  * Large 32x28 Winter Rensbo Yard Layout (inspired by inspiration/map.jpeg):
  * - Snow-covered pine/birch forest along the top ridge (rows 0-2)
@@ -139,6 +145,7 @@ export const STARTER_MAP: TileMap = {
 export const WALKABLE_TILES: ReadonlySet<TileType> = new Set([
   TileType.Snow,
   TileType.Road,
+  TileType.Motorcycle,
 ]);
 
 export function isSolidTile(map: TileMap, col: number, row: number): boolean {

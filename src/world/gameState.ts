@@ -4,6 +4,7 @@ import {
   createPlayer,
   Footprint,
   Player,
+  Rect,
   rectsIntersect,
   updateFootprints,
   updatePlayer,
@@ -26,12 +27,17 @@ import {
   DAMAGED_WIRE_HAZARD,
   LADDER_BOTTOM_Y,
   LADDER_CLIMB_X,
+  MOTORCYCLE_CRASH_X,
+  MOTORCYCLE_SPEED,
+  MOTORCYCLE_START_X,
+  MOTORCYCLE_START_Y,
   PLAYER_START_X,
   PLAYER_START_Y,
   ROOF_MAX_X,
   ROOF_MIN_X,
   ROOF_WALK_Y,
   STARTER_MAP,
+  TILE_SIZE,
   TileMap,
 } from './tilemap';
 
@@ -40,11 +46,28 @@ export interface ClimbingState {
   progress: number;
 }
 
+export type MotorcycleStatus = 'parked' | 'driving' | 'crashed';
+
+export interface MotorcycleState extends Rect {
+  status: MotorcycleStatus;
+}
+
+export function createMotorcycle(): MotorcycleState {
+  return {
+    x: MOTORCYCLE_START_X,
+    y: MOTORCYCLE_START_Y,
+    width: TILE_SIZE * 2,
+    height: TILE_SIZE,
+    status: 'parked',
+  };
+}
+
 export interface GameState {
   map: TileMap;
   player: Player;
   footprints: Footprint[];
   dog: Dog;
+  motorcycle: MotorcycleState;
   throwers: SnowballThrower[];
   snowballs: Snowball[];
   hasLadder: boolean;
@@ -62,22 +85,26 @@ function refreshInteractables(state: GameState): void {
     hasLadder: state.hasLadder,
     ladderPlaced: state.ladderPlaced,
     isOnRoof: state.isOnRoof,
+    motorcycleStatus: state.motorcycle.status,
   });
-  state.nearbyInteractable = state.climbing
-    ? null
-    : findNearbyInteractable(state.player, state.interactables);
+  state.nearbyInteractable =
+    state.climbing || state.motorcycle.status === 'driving'
+      ? null
+      : findNearbyInteractable(state.player, state.interactables);
 }
 
 export function createGameState(map: TileMap = STARTER_MAP): GameState {
   const player = createPlayer(PLAYER_START_X, PLAYER_START_Y);
   const footprints: Footprint[] = [];
   const dog = createDog();
+  const motorcycle = createMotorcycle();
   const throwers = createDrivewayThrowers();
   const snowballs: Snowball[] = [];
   const interactables = buildInteractables(throwers, {
     hasLadder: false,
     ladderPlaced: false,
     isOnRoof: false,
+    motorcycleStatus: motorcycle.status,
   });
 
   return {
@@ -85,6 +112,7 @@ export function createGameState(map: TileMap = STARTER_MAP): GameState {
     player,
     footprints,
     dog,
+    motorcycle,
     throwers,
     snowballs,
     hasLadder: false,
@@ -102,7 +130,7 @@ export function createGameState(map: TileMap = STARTER_MAP): GameState {
  * Resets the map state when Santa takes damage (from a snowball, the sparking EV wire, or the loving dog):
  * - Teleports Santa back to the bottom of the driveway facing up
  * - Starts Santa's blinking timer
- * - Resets the dog, ladder state, snowball throwers, footprints, and flying snowballs
+ * - Resets the dog, motorcycle, ladder state, snowball throwers, footprints, and flying snowballs
  */
 export function resetAfterSnowballHit(state: GameState): void {
   state.player.x = PLAYER_START_X;
@@ -116,6 +144,7 @@ export function resetAfterSnowballHit(state: GameState): void {
 
   state.footprints = [];
   state.dog = createDog();
+  state.motorcycle = createMotorcycle();
   state.throwers = createDrivewayThrowers();
   state.snowballs = [];
   state.hasLadder = false;
@@ -178,6 +207,33 @@ export function updateGameState(
     return;
   }
 
+  // If Santa is riding the motorcycle straight east into the trees
+  if (state.motorcycle.status === 'driving') {
+    state.motorcycle.x = Math.min(
+      MOTORCYCLE_CRASH_X,
+      state.motorcycle.x + MOTORCYCLE_SPEED * dtSeconds
+    );
+    state.player.x = state.motorcycle.x + 8;
+    state.player.y = state.motorcycle.y - 2;
+    state.player.facing = 'right';
+    state.player.isMoving = true;
+    state.player.walkTimer += dtSeconds;
+
+    if (state.motorcycle.x >= MOTORCYCLE_CRASH_X) {
+      state.motorcycle.x = MOTORCYCLE_CRASH_X;
+      state.motorcycle.status = 'crashed';
+      // Spawn Santa right next to the crashed motorcycle, blinking, without resetting the map!
+      state.player.x = MOTORCYCLE_CRASH_X - state.player.width - 4;
+      state.player.y = MOTORCYCLE_START_Y + 2;
+      state.player.isMoving = false;
+      state.player.walkTimer = 0;
+      state.player.blinkTimer = HIT_BLINK_DURATION_SECONDS;
+    }
+
+    refreshInteractables(state);
+    return;
+  }
+
   // If Santa is currently sliding up or down the ladder
   if (state.climbing) {
     state.climbing.progress = Math.min(
@@ -226,8 +282,10 @@ export function updateGameState(
       }
     }
   } else {
-    // Move player on the ground (throwers act as solid obstacles)
-    updatePlayer(state.player, input, dtSeconds, state.map, state.throwers);
+    const solidObstacles: Rect[] = [...state.throwers, state.motorcycle];
+
+    // Move player on the ground
+    updatePlayer(state.player, input, dtSeconds, state.map, solidObstacles);
 
     // Update snow footprints (spawns on snow tiles only and fades out over 3 seconds)
     updateFootprints(state.footprints, state.player, state.map, dtSeconds);
@@ -244,7 +302,7 @@ export function updateGameState(
       state.player,
       dtSeconds,
       state.map,
-      state.throwers
+      solidObstacles
     );
     if (caughtByDog) {
       resetAfterSnowballHit(state);
@@ -269,7 +327,14 @@ export function updateGameState(
 
   if (zPressed && state.nearbyInteractable) {
     const id = state.nearbyInteractable.id;
-    if (id === 'ground-ladder') {
+    if (id === 'motorcycle') {
+      state.motorcycle.status = 'driving';
+      state.player.x = state.motorcycle.x + 8;
+      state.player.y = state.motorcycle.y - 2;
+      state.player.facing = 'right';
+      state.player.isMoving = true;
+      state.nearbyInteractable = null;
+    } else if (id === 'ground-ladder') {
       state.hasLadder = true;
       refreshInteractables(state);
     } else if (id === 'house-west-place-ladder') {

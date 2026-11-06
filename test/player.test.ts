@@ -23,6 +23,9 @@ import {
   LADDER_BOTTOM_Y,
   MAP_COLS,
   MAP_ROWS,
+  MOTORCYCLE_CRASH_X,
+  MOTORCYCLE_START_X,
+  MOTORCYCLE_START_Y,
   PLAYER_START_X,
   PLAYER_START_Y,
   ROOF_MAX_X,
@@ -327,6 +330,50 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(state.climbing).toBeNull();
     expect(state.isOnRoof).toBe(false);
     expect(state.player.y).toBe(LADDER_BOTTOM_Y);
+  });
+
+  it('lets Santa "Z: drive" the motorcycle east into the trees where it crashes and Santa spawns next to it blinking without resetting the map', () => {
+    const state = createGameState();
+    const input = createEmptyInput();
+
+    // Suppose Santa already picked up the ladder (to verify the map state does not reset on crash!)
+    state.hasLadder = true;
+
+    // Position Santa just above the parked motorcycle (cols 25..26, row 20)
+    state.player.x = MOTORCYCLE_START_X + 4;
+    state.player.y = MOTORCYCLE_START_Y - state.player.height - 2;
+
+    updateGameState(state, input, 0.01);
+    expect(state.nearbyInteractable?.promptText).toBe('Z: drive');
+
+    // Press Z to drive the motorcycle
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+
+    expect(state.motorcycle.status).toBe('driving');
+
+    // Advance partway -> motorcycle and Santa drive east
+    updateGameState(state, input, 0.15);
+    expect(state.motorcycle.x).toBeGreaterThan(MOTORCYCLE_START_X);
+    expect(state.motorcycle.x).toBeLessThan(MOTORCYCLE_CRASH_X);
+
+    // Advance until it hits the eastern trees and crashes
+    for (let i = 0; i < 20; i++) {
+      updateGameState(state, input, 0.05);
+      if (state.motorcycle.status === 'crashed') {
+        break;
+      }
+    }
+
+    expect(state.motorcycle.status).toBe('crashed');
+    expect(state.motorcycle.x).toBe(MOTORCYCLE_CRASH_X);
+    // Santa spawns next to the crashed motorcycle blinking, and the map does NOT reset
+    expect(state.player.x).toBe(MOTORCYCLE_CRASH_X - state.player.width - 4);
+    expect(state.player.y).toBe(MOTORCYCLE_START_Y + 2);
+    expect(state.player.blinkTimer).toBe(HIT_BLINK_DURATION_SECONDS);
+    expect(state.hasLadder).toBe(true);
+    expect(state.nearbyInteractable).toBeNull();
   });
 
   it('shows "Z: Talk to" near a snowball thrower and displays "Watch out!" when Z is pressed', () => {
