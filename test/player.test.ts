@@ -4,6 +4,7 @@ import { createPlayer, updatePlayer } from '../src/entities/player';
 import { HIT_BLINK_DURATION_SECONDS } from '../src/entities/snowball';
 import { createGameState, updateGameState } from '../src/world/gameState';
 import {
+  DAMAGED_WIRE_HAZARD,
   HOUSE_DOOR_COL,
   HOUSE_DOOR_ROW,
   MAP_COLS,
@@ -92,6 +93,27 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(state.player.y).toBe(PLAYER_START_Y);
     expect(state.player.blinkTimer).toBe(HIT_BLINK_DURATION_SECONDS);
     expect(state.snowballs.length).toBe(0);
+  });
+
+  it('resets the map and makes Santa blink when stepping on the sparking EV charging wire', () => {
+    const state = createGameState();
+    const input = createEmptyInput();
+
+    // Verify the electric car is parked on the driveway at cols 17..19, rows 21..22
+    expect(STARTER_MAP.tiles[21][17]).toBe(TileType.ElectricCar);
+    expect(STARTER_MAP.tiles[22][19]).toBe(TileType.ElectricCar);
+
+    // Position Santa just below the damaged sparking section of the charging wire and walk up into it
+    state.player.x = DAMAGED_WIRE_HAZARD.x;
+    state.player.y = DAMAGED_WIRE_HAZARD.y + DAMAGED_WIRE_HAZARD.height + 2;
+    input.up = true;
+
+    updateGameState(state, input, 0.1);
+
+    // Santa should be zapped, reset to the bottom of the driveway, and blinking
+    expect(state.player.x).toBe(PLAYER_START_X);
+    expect(state.player.y).toBe(PLAYER_START_Y);
+    expect(state.player.blinkTimer).toBe(HIT_BLINK_DURATION_SECONDS);
   });
 
   it('shows "Z: Talk to" near a snowball thrower and displays "Watch out!" when Z is pressed', () => {

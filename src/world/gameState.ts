@@ -1,5 +1,10 @@
 import { consumeActionPress, InputState } from '../core/input';
-import { createPlayer, Player, updatePlayer } from '../entities/player';
+import {
+  createPlayer,
+  Player,
+  rectsIntersect,
+  updatePlayer,
+} from '../entities/player';
 import {
   createDrivewayThrowers,
   HIT_BLINK_DURATION_SECONDS,
@@ -14,6 +19,7 @@ import {
   Interactable,
 } from './interaction';
 import {
+  DAMAGED_WIRE_HAZARD,
   PLAYER_START_X,
   PLAYER_START_Y,
   STARTER_MAP,
@@ -28,6 +34,7 @@ export interface GameState {
   interactables: Interactable[];
   nearbyInteractable: Interactable | null;
   activeDialogue: DialogueState | null;
+  elapsedTime: number;
 }
 
 export function createGameState(map: TileMap = STARTER_MAP): GameState {
@@ -44,11 +51,12 @@ export function createGameState(map: TileMap = STARTER_MAP): GameState {
     interactables,
     nearbyInteractable: null,
     activeDialogue: null,
+    elapsedTime: 0,
   };
 }
 
 /**
- * Resets the map state when Santa gets hit by a snowball:
+ * Resets the map state when Santa takes damage (from a snowball or the sparking EV wire):
  * - Teleports Santa back to the bottom of the driveway facing up
  * - Starts Santa's blinking timer
  * - Resets snowball throwers and clears flying snowballs
@@ -73,6 +81,7 @@ export function updateGameState(
   input: InputState,
   dtSeconds: number
 ): void {
+  state.elapsedTime += dtSeconds;
   const zPressed = consumeActionPress(input);
 
   // If a dialogue box is currently open, pressing Z advances or closes it
@@ -91,6 +100,12 @@ export function updateGameState(
 
   // Move player (throwers act as solid obstacles so Santa doesn't walk right through them)
   updatePlayer(state.player, input, dtSeconds, state.map, state.throwers);
+
+  // Check if Santa stepped on the visibly damaged, sparking EV charging cable
+  if (rectsIntersect(state.player, DAMAGED_WIRE_HAZARD)) {
+    resetAfterSnowballHit(state);
+    return;
+  }
 
   // Update snowball fight on the driveway
   const hitBySnowball = updateSnowballFight(
@@ -117,4 +132,3 @@ export function updateGameState(
     };
   }
 }
-

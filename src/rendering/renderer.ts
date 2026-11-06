@@ -1,7 +1,7 @@
 import { GameAssets } from '../assets';
 import { Direction } from '../entities/player';
 import { GameState } from '../world/gameState';
-import { TILE_SIZE } from '../world/tilemap';
+import { DAMAGED_WIRE_HAZARD, TILE_SIZE } from '../world/tilemap';
 
 export interface Camera {
   x: number;
@@ -161,6 +161,94 @@ function drawDialogueBox(
   ctx.restore();
 }
 
+/**
+ * Renders animated electric sparks crackling out of the damaged EV charging cable on the driveway.
+ */
+function drawDamagedWireSparks(
+  ctx: CanvasRenderingContext2D,
+  elapsedTime: number
+): void {
+  const cx = Math.round(
+    DAMAGED_WIRE_HAZARD.x + DAMAGED_WIRE_HAZARD.width / 2 - 1
+  );
+  const cy = Math.round(DAMAGED_WIRE_HAZARD.y + DAMAGED_WIRE_HAZARD.height / 2);
+  const tick = Math.floor(elapsedTime * 16);
+
+  ctx.save();
+
+  // Pulsing electric glow on the snow around the frayed wire
+  if (tick % 3 !== 0) {
+    ctx.fillStyle = 'rgba(112, 248, 255, 0.28)';
+    ctx.fillRect(cx - 6, cy - 4, 12, 8);
+  }
+
+  // Hot white/yellow spark core
+  ctx.fillStyle = tick % 2 === 0 ? '#ffffff' : '#ffee54';
+  ctx.fillRect(cx - 2, cy - 1, 4, 2);
+
+  // 4 animated jagged spark rays that jump around every 1/16th of a second
+  const rayOffsets = [
+    [-5, -4, -2, -2],
+    [4, -5, 2, -2],
+    [-4, 4, -2, 2],
+    [5, 3, 2, 1],
+    [0, -6, 0, -3],
+    [-6, 0, -3, 0],
+  ];
+
+  for (let i = 0; i < 4; i++) {
+    const idx = (tick + i * 2) % rayOffsets.length;
+    const [ox1, oy1, ox2, oy2] = rayOffsets[idx];
+    ctx.fillStyle = i % 2 === 0 ? '#70f8ff' : '#ffee54';
+    ctx.fillRect(cx + ox2, cy + oy2, 2, 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(cx + ox1, cy + oy1, 1, 1);
+  }
+
+  ctx.restore();
+}
+
+/**
+ * Renders gentle falling snowflakes across the viewport for a festive Christmas atmosphere.
+ */
+function drawSnowfall(
+  ctx: CanvasRenderingContext2D,
+  elapsedTime: number,
+  camera: Camera
+): void {
+  ctx.save();
+  const w = ctx.canvas.width;
+  const h = ctx.canvas.height;
+  const flakeCount = 48;
+
+  for (let i = 0; i < flakeCount; i++) {
+    const speedY = 18 + (i % 5) * 6;
+    const driftAmp = 6 + (i % 4) * 3;
+    const driftFreq = 1.2 + (i % 3) * 0.4;
+    const startX = (i * 53 + 17) % (w * 2);
+    const startY = (i * 79 + 29) % (h * 2);
+
+    // Compute world-space snowflake position wrapped cleanly across the viewport
+    const worldX =
+      startX + Math.sin(elapsedTime * driftFreq + i) * driftAmp - camera.x * 0.6;
+    const worldY = startY + elapsedTime * speedY - camera.y * 0.6;
+
+    const sx = Math.floor(((worldX % w) + w) % w);
+    const sy = Math.floor(((worldY % h) + h) % h);
+
+    const isLargeFlake = i % 3 === 0;
+    ctx.fillStyle =
+      i % 4 === 0 ? 'rgba(255, 255, 255, 0.92)' : 'rgba(232, 244, 255, 0.78)';
+    if (isLargeFlake) {
+      ctx.fillRect(sx, sy, 2, 2);
+    } else {
+      ctx.fillRect(sx, sy, 1, 1);
+    }
+  }
+
+  ctx.restore();
+}
+
 const DIRECTION_TO_ROW: Record<Direction, number> = {
   down: 0,
   up: 1,
@@ -173,8 +261,15 @@ export function renderGame(
   state: GameState,
   assets: GameAssets
 ): void {
-  const { map, player, throwers, snowballs, nearbyInteractable, activeDialogue } =
-    state;
+  const {
+    map,
+    player,
+    throwers,
+    snowballs,
+    nearbyInteractable,
+    activeDialogue,
+    elapsedTime,
+  } = state;
 
   ctx.imageSmoothingEnabled = false;
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -242,7 +337,10 @@ export function renderGame(
     }
   }
 
-  // 2. Draw snowball thrower NPCs on the driveway (with throwing animation frame)
+  // 2. Draw animated electric sparks on the damaged EV charging cable
+  drawDamagedWireSparks(ctx, elapsedTime);
+
+  // 3. Draw snowball thrower NPCs on the driveway (with throwing animation frame)
   for (const thrower of throwers) {
     const drawX = Math.round(thrower.x - (TILE_SIZE - thrower.width) / 2);
     const drawY = Math.round(thrower.y - (TILE_SIZE - thrower.height));
@@ -266,14 +364,14 @@ export function renderGame(
     );
   }
 
-  // 3. Draw flying snowballs
+  // 4. Draw flying snowballs
   for (const sb of snowballs) {
     const drawX = Math.round(sb.x - (TILE_SIZE - sb.width) / 2);
     const drawY = Math.round(sb.y - (TILE_SIZE - sb.height) / 2);
     ctx.drawImage(assets.snowballSprite, drawX, drawY, TILE_SIZE, TILE_SIZE);
   }
 
-  // 4. Draw Santa (4-directional SNES spritesheet + 3-frame walk cycle + hit blinking)
+  // 5. Draw Santa (4-directional SNES spritesheet + 3-frame walk cycle + hit blinking)
   const isBlinkHidden =
     player.blinkTimer > 0 && Math.floor(player.blinkTimer * 12) % 2 === 1;
 
@@ -303,7 +401,10 @@ export function renderGame(
 
   ctx.restore();
 
-  // 5. Screen-space UI overlay: Dialogue box OR bottom Z-key interaction prompt
+  // 6. Gentle falling snow overlay across the screen
+  drawSnowfall(ctx, elapsedTime, camera);
+
+  // 7. Screen-space UI overlay: Dialogue box OR bottom Z-key interaction prompt
   if (activeDialogue) {
     const line = activeDialogue.lines[activeDialogue.currentIndex] ?? '';
     drawDialogueBox(ctx, line, assets.zKeySprite);

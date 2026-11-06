@@ -4,7 +4,7 @@ import zlib from 'node:zlib';
 
 /**
  * Pure-Node RGBA PNG encoder (zero external dependencies).
- * Generates 16-bit SNES-style pixel-art spritesheets and the 512x448 Rensbo overworld map.
+ * Generates 16-bit SNES-style pixel-art spritesheets and the 512x448 Rensbo winter overworld map.
  */
 function crc32(buf) {
   let c = 0xffffffff;
@@ -143,7 +143,6 @@ function hash2d(x, y) {
   return ((n ^ (n >>> 16)) >>> 0) / 0xffffffff;
 }
 
-// Smooth organic 2D value field (no blocky squares!)
 function smoothNoise(x, y) {
   return (
     0.45 * Math.sin(x * 0.055 + y * 0.042) +
@@ -152,58 +151,51 @@ function smoothNoise(x, y) {
   );
 }
 
-// 16-bit SNES Color Palette inspired by A Link to the Past + inspiration/map.jpeg
+// 16-bit SNES Winter Color Palette (Snow-blanketed ground & tree tops + Rensbo landmarks)
 const PAL = {
   outline: [22, 26, 36, 255],
-  shadow: [14, 18, 28, 105],
-  deepShadow: [14, 18, 28, 155],
+  shadow: [26, 40, 68, 95],
+  deepShadow: [20, 32, 56, 145],
 
-  // Lush SNES lawn greens (smoothly shaded, no grid blocks)
-  grassBright: [118, 166, 78, 255],
-  grassLight: [104, 152, 68, 255],
-  grassBase: [90, 138, 58, 255],
-  grassMid: [76, 122, 48, 255],
-  grassDark: [60, 102, 38, 255],
-  grassGold: [132, 148, 68, 255],
-  snowPure: [244, 248, 255, 255],
-  snowMid: [214, 228, 244, 255],
+  // 16-bit SNES Snow-Covered Ground Ramp (soft ice-blue & periwinkle snowdrifts)
+  snowBrightest: [250, 253, 255, 255],
+  snowLight: [238, 245, 254, 255],
+  snowBase: [224, 235, 248, 255],
+  snowMid: [206, 221, 240, 255],
+  snowShade: [184, 204, 228, 255],
+  snowDeep: [158, 182, 212, 255],
 
-  // Rosy-grey & terracotta gravel driveway & terrace (matching map.jpeg)
-  gravelBase: [192, 164, 154, 255],
-  gravelLight: [208, 182, 172, 255],
-  gravelWarm: [178, 148, 138, 255],
-  gravelDark: [156, 126, 116, 255],
-  terracottaBase: [188, 144, 130, 255],
-  terracottaLight: [204, 160, 146, 255],
-  terracottaDark: [164, 120, 108, 255],
-  curbLight: [206, 210, 216, 255],
-  curbDark: [128, 134, 144, 255],
+  // Plowed snowy rosy-terracotta gravel driveway & terrace
+  gravelBase: [196, 174, 168, 255],
+  gravelLight: [214, 196, 192, 255],
+  gravelWarm: [180, 152, 144, 255],
+  gravelDark: [158, 130, 122, 255],
+  terracottaBase: [192, 154, 144, 255],
+  terracottaLight: [210, 176, 168, 255],
+  terracottaDark: [168, 128, 118, 255],
+  curbLight: [228, 236, 246, 255],
+  curbDark: [142, 158, 180, 255],
 
-  // Granite cliff rock (upper left behind main house)
-  rockLight: [164, 170, 176, 255],
-  rockMid: [128, 134, 142, 255],
-  rockDark: [88, 94, 104, 255],
+  // Granite cliff rock (upper left behind main house, snow-topped)
+  rockLight: [172, 180, 192, 255],
+  rockMid: [134, 142, 156, 255],
+  rockDark: [94, 102, 116, 255],
 
-  // Forest & Trees (Scots pine, spruce, birch, thuja)
-  pineDarkest: [18, 48, 36, 255],
-  pineDark: [26, 70, 50, 255],
-  pineMid: [38, 96, 66, 255],
-  pineLight: [56, 126, 82, 255],
-  pineBright: [82, 154, 96, 255],
+  // Forest & Trees (Deep evergreen undersides + heavy snow caps on top)
+  pineDarkest: [18, 46, 38, 255],
+  pineDark: [26, 66, 52, 255],
+  pineMid: [38, 92, 68, 255],
+  pineLight: [58, 120, 86, 255],
 
-  thujaDark: [24, 68, 38, 255],
-  thujaMid: [38, 98, 52, 255],
-  thujaLight: [60, 132, 68, 255],
-  thujaHighlight: [88, 162, 86, 255],
+  thujaDark: [22, 62, 40, 255],
+  thujaMid: [36, 90, 54, 255],
+  thujaLight: [56, 120, 70, 255],
 
   trunkDark: [62, 40, 28, 255],
   trunkMid: [96, 62, 40, 255],
-  pineTrunkRed: [156, 90, 52, 255],
-  birchWhite: [236, 238, 242, 255],
-  birchGrey: [168, 172, 180, 255],
-  autumnBright: [208, 162, 74, 255],
-  autumnLeaf: [182, 132, 58, 255],
-  autumnDark: [138, 92, 40, 255],
+  pineTrunkRed: [152, 88, 52, 255],
+  birchWhite: [238, 240, 246, 255],
+  birchGrey: [168, 174, 186, 255],
 
   // Main House (Light warm-grey Swedish clapboard villa + white veranda + charcoal roof)
   roofDarkest: [30, 36, 46, 255],
@@ -238,7 +230,7 @@ const PAL = {
   garageBlueMid: [82, 124, 160, 255],
   garageBlueDark: [60, 96, 128, 255],
   glassFrame: [216, 226, 236, 255],
-  glassTint: [150, 200, 220, 150],
+  glassTint: [160, 206, 232, 165],
 
   // Red-Door Shed (right) & Playhouse Slide (bottom-right)
   shedRedBright: [212, 44, 44, 255],
@@ -247,17 +239,30 @@ const PAL = {
   slideGreenBright: [76, 204, 92, 255],
   slideGreenDark: [44, 152, 62, 255],
   gold: [255, 212, 92, 255],
+
+  // Electric Car & Charging Cable
+  carBodyBright: [130, 178, 218, 255],
+  carBodyMid: [94, 142, 184, 255],
+  carBodyDark: [62, 102, 142, 255],
+  carGlass: [34, 48, 68, 255],
+  carGlassHighlight: [110, 156, 196, 255],
+  wireBlack: [28, 32, 40, 255],
+  wireHighlight: [64, 72, 86, 255],
+  copperBright: [232, 134, 68, 255],
+  sparkCyan: [112, 248, 255, 255],
+  sparkYellow: [255, 238, 84, 255],
+  ledGreen: [64, 242, 112, 255],
 };
 
 // ============================================================================
-// 1. GENERATE 512x448 SNES OVERWORLD MAP (32x28 tiles of 16x16px)
+// 1. GENERATE 512x448 SNES WINTER OVERWORLD MAP (32x28 tiles of 16x16px)
 // ============================================================================
 function generateRensboOverworldPng(mapMatrix) {
   const W = 32 * 16; // 512
   const H = 28 * 16; // 448
   const canvas = new PixelCanvas(W, H);
 
-  // Step 1: Smooth Organic Terrain Pass (SNES lawn & gravel driveway/terrace)
+  // Step 1: Snow-Covered Ground & Plowed Gravel Driveway Pass
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {
       const col = Math.floor(x / 16);
@@ -266,115 +271,118 @@ function generateRensboOverworldPng(mapMatrix) {
       const n = hash2d(x, y);
       const wave = smoothNoise(x, y);
 
-      if (tile === 2) {
-        // Warmer reddish-terracotta gravel terrace directly under the left/center of Main House
+      if (tile === 2 || tile === 14) {
+        // Plowed gravel road / terrace with snow-dusted edges and wheel tracks
         const isHouseTerrace = row <= 11 && col <= 11;
         let c = isHouseTerrace ? PAL.terracottaBase : PAL.gravelBase;
-        if (wave > 0.25) {
+        if (wave > 0.22) {
           c = isHouseTerrace ? PAL.terracottaLight : PAL.gravelLight;
         } else if (wave < -0.25) {
           c = isHouseTerrace ? PAL.terracottaDark : PAL.gravelWarm;
         }
-        // Subtle 2-pixel pebble texture (no harsh white noise)
-        if (n > 0.88) {
+        // Soft snow patches & pebbles on the plowed road
+        if (wave > 0.42) {
+          c = PAL.snowBase;
+        } else if (n > 0.88) {
           c = isHouseTerrace ? PAL.terracottaDark : PAL.gravelDark;
-        } else if (n < 0.1) {
-          c = isHouseTerrace ? PAL.terracottaLight : PAL.gravelLight;
+        } else if (n < 0.12) {
+          c = PAL.snowLight;
         }
         canvas.setPixel(x, y, c);
       } else {
-        // Smooth SNES meadow grass with natural elevation & forest-edge shading
-        let c = PAL.grassBase;
+        // Lush 16-bit SNES snowfield across the entire yard
+        let c = PAL.snowBase;
         if (row <= 4) {
-          c = wave > 0.1 ? PAL.grassMid : PAL.grassDark;
-        } else if (wave > 0.32) {
-          c = PAL.grassLight;
-        } else if (wave > 0.12 && wave <= 0.32 && (x + y) % 2 === 0) {
-          c = PAL.grassLight; // smooth SNES diagonal dither
+          // Deeper blue-shaded snow under the northern forest shadow
+          c = wave > 0.1 ? PAL.snowMid : PAL.snowShade;
+        } else if (wave > 0.3) {
+          c = PAL.snowBrightest;
+        } else if (wave > 0.1 && wave <= 0.3 && (x + y) % 2 === 0) {
+          c = PAL.snowLight; // smooth SNES diagonal snow drift dither
+        } else if (wave >= -0.1 && wave <= 0.1) {
+          c = PAL.snowLight;
         } else if (wave < -0.32) {
-          c = PAL.grassMid;
+          c = PAL.snowShade;
         } else if (wave < -0.15 && (x + y) % 2 === 0) {
-          c = PAL.grassMid;
+          c = PAL.snowMid;
         }
-        if (n > 0.95) c = PAL.grassDark;
-        else if (n < 0.03) c = PAL.grassBright;
+        if (n > 0.96) c = PAL.snowShade;
+        else if (n < 0.04) c = PAL.snowBrightest;
         canvas.setPixel(x, y, c);
       }
     }
   }
 
-  // Step 1b: Crisp 16-bit Zelda Grass Blade Tufts & Subtle Wildflowers on the Lawn
+  // Step 1b: Delicate SNES Snow-Drift Ripples & Frosted Grass Tips on the Snowfield
   for (let row = 4; row < 27; row++) {
     for (let col = 1; col < 31; col++) {
       if (mapMatrix[row][col] !== 0) continue;
       const seed = hash2d(col * 19 + 3, row * 37 + 7);
       const bx = col * 16 + 3 + Math.floor(seed * 9);
       const by = row * 16 + 4 + ((col * 5 + row * 3) % 8);
-      if (seed < 0.45) {
-        // Classic ALTTP 3-blade grass tuft
-        canvas.setPixel(bx, by, PAL.grassDark);
-        canvas.setPixel(bx - 1, by, PAL.grassDark);
-        canvas.setPixel(bx + 1, by, PAL.grassDark);
-        canvas.setPixel(bx - 2, by - 1, PAL.grassBright);
-        canvas.setPixel(bx, by - 1, PAL.grassBright);
-        canvas.setPixel(bx + 2, by - 1, PAL.grassBright);
-        canvas.setPixel(bx, by - 2, PAL.grassBright);
-      } else if (seed > 0.9) {
-        // Tiny golden-autumn leaf / white clover detail on the lawn
-        canvas.setPixel(bx, by, PAL.grassDark);
-        canvas.setPixel(bx, by - 1, seed > 0.95 ? PAL.snowPure : PAL.grassGold);
-        canvas.setPixel(bx + 1, by, PAL.grassLight);
+      if (seed < 0.42) {
+        // Subtle sculpted snowdrift ripple
+        canvas.drawLine(bx - 2, by, bx + 2, by, PAL.snowBrightest);
+        canvas.drawLine(bx - 1, by + 1, bx + 3, by + 1, PAL.snowShade);
+      } else if (seed > 0.88) {
+        // Tiny frosted grass blades peeking through the snow
+        canvas.setPixel(bx, by, PAL.snowDeep);
+        canvas.setPixel(bx - 1, by - 1, PAL.thujaLight);
+        canvas.setPixel(bx + 1, by - 1, PAL.snowBrightest);
       }
     }
   }
 
-  // Step 1c: Stone Curbing & Wheel Tracks along Gravel Driveway/Terrace
+  // Step 1c: Snow-Banked Stone Curbing & Tire Tracks along Gravel Driveway/Terrace
   for (let row = 1; row < 27; row++) {
     for (let col = 1; col < 31; col++) {
-      if (mapMatrix[row][col] !== 2) continue;
+      const tile = mapMatrix[row][col];
+      if (tile !== 2 && tile !== 14) continue;
       const bx = col * 16;
       const by = row * 16;
 
-      // Subtle wheel tracks along the main driveway (cols 14..16, rows 11..26)
+      // Tire tracks along the main driveway (cols 14..16, rows 11..26)
       if ((col === 14 || col === 16) && row >= 11 && row <= 26) {
         for (let py = by; py < by + 16; py++) {
           const wx = bx + (col === 14 ? 6 : 9);
-          if (hash2d(wx, py) > 0.35) {
+          if (hash2d(wx, py) > 0.3) {
             canvas.setPixel(wx, py, PAL.gravelWarm);
             canvas.setPixel(wx + 1, py, PAL.gravelDark);
           }
         }
       }
 
-      // Stone curb edge where gravel meets grass
+      // Snowbank curb where plowed road meets the snowfield
       if (mapMatrix[row][col - 1] === 0) {
         for (let py = by; py < by + 16; py++) {
           canvas.setPixel(bx, py, PAL.curbDark);
-          canvas.setPixel(bx + 1, py, py % 5 === 0 ? PAL.curbDark : PAL.curbLight);
+          canvas.setPixel(bx + 1, py, PAL.snowBrightest);
+          canvas.setPixel(bx + 2, py, PAL.snowMid);
         }
       }
       if (mapMatrix[row][col + 1] === 0) {
         for (let py = by; py < by + 16; py++) {
           canvas.setPixel(bx + 15, py, PAL.curbDark);
-          canvas.setPixel(bx + 14, py, py % 5 === 0 ? PAL.curbDark : PAL.curbLight);
+          canvas.setPixel(bx + 14, py, PAL.snowBrightest);
+          canvas.setPixel(bx + 13, py, PAL.snowMid);
         }
       }
       if (mapMatrix[row + 1]?.[col] === 0) {
         for (let px = bx; px < bx + 16; px++) {
           canvas.setPixel(px, by + 15, PAL.curbDark);
-          canvas.setPixel(px, by + 14, px % 6 === 0 ? PAL.curbDark : PAL.curbLight);
+          canvas.setPixel(px, by + 14, PAL.snowBrightest);
         }
       }
       if (mapMatrix[row - 1]?.[col] === 0) {
         for (let px = bx; px < bx + 16; px++) {
           canvas.setPixel(px, by, PAL.curbDark);
-          canvas.setPixel(px, by + 1, px % 6 === 0 ? PAL.curbDark : PAL.curbLight);
+          canvas.setPixel(px, by + 1, PAL.snowBrightest);
         }
       }
     }
   }
 
-  // Stepping stone path from Left Guest Cottage (stuga) down to the upper driveway
+  // Snow-dusted stepping stones from Left Guest Cottage (stuga) down to the upper driveway
   const steppingStones = [
     [19 * 16 + 14, 9 * 16 + 3],
     [19 * 16 + 4, 9 * 16 + 10],
@@ -383,11 +391,11 @@ function generateRensboOverworldPng(mapMatrix) {
   ];
   for (const [sx, sy] of steppingStones) {
     canvas.fillEllipse(sx, sy + 1, 4, 2.2, PAL.curbDark);
-    canvas.fillEllipse(sx, sy, 3.5, 1.8, PAL.curbLight);
+    canvas.fillEllipse(sx, sy, 3.5, 1.8, PAL.snowBrightest);
   }
 
   // ==========================================================================
-  // Step 2: Granite Rock Cliff Outcrops (Upper-left behind main house, as in map.jpeg)
+  // Step 2: Snow-Capped Granite Cliff Outcrops (Upper-left behind main house)
   // ==========================================================================
   function drawRockOutcrop(x, y, w, h) {
     canvas.fillEllipse(x + w / 2, y + h / 2 + 2, w / 2 + 2, h / 2 + 1, PAL.shadow);
@@ -398,9 +406,9 @@ function generateRensboOverworldPng(mapMatrix) {
         if (dx * dx + dy * dy <= 1.05) {
           const n = hash2d(px, py);
           let c = PAL.rockMid;
-          if (dy < -0.25 || (dx < -0.2 && n > 0.35)) c = PAL.rockLight;
-          if (dy > 0.35 || (px + py) % 11 === 0) c = PAL.rockDark;
-          if (dy < -0.55 && n > 0.4) c = PAL.grassGold;
+          if (dy < -0.3) c = dy < -0.5 ? PAL.snowBrightest : PAL.snowMid; // heavy snow cap on rock
+          else if (dx < -0.2 && n > 0.35) c = PAL.rockLight;
+          else if (dy > 0.35 || (px + py) % 11 === 0) c = PAL.rockDark;
           canvas.setPixel(px, py, c);
         }
       }
@@ -410,10 +418,9 @@ function generateRensboOverworldPng(mapMatrix) {
   drawRockOutcrop(3 * 16 + 6, 1 * 16 + 12, 38, 22);
 
   // ==========================================================================
-  // Step 3: SNES Foliage, Trees, Birch, Conical Thuja & Connected Hedgerows
+  // Step 3: Snow-Covered Trees, Birch, Conical Thuja & Snow-Blanketed Hedgerows
   // ==========================================================================
-  function drawLeafyCluster(cx, cy, rx, ry, paletteRamp, hasFrost = false) {
-    const [darkest, dark, mid, light, bright] = paletteRamp;
+  function drawSnowyFoliageCluster(cx, cy, rx, ry) {
     for (let py = Math.floor(cy - ry); py <= Math.ceil(cy + ry); py++) {
       for (let px = Math.floor(cx - rx); px <= Math.ceil(cx + rx); px++) {
         const dx = (px - cx) / rx;
@@ -421,43 +428,27 @@ function generateRensboOverworldPng(mapMatrix) {
         const d2 = dx * dx + dy * dy;
         if (d2 <= 1.0) {
           const n = hash2d(px, py);
-          let c = mid;
-          if (d2 > 0.82) {
-            c = darkest;
-          } else if (dy < -0.35 && dx < 0.25) {
-            c = n > 0.35 ? bright : light;
-          } else if (dx < -0.2 && dy < 0.25) {
-            c = light;
-          } else if (dy > 0.35 || dx > 0.35) {
-            c = n > 0.45 ? darkest : dark;
-          } else if (n > 0.68) {
-            c = light;
-          } else if (n < 0.25) {
-            c = dark;
-          }
-          if (hasFrost && dy < -0.62 && dx > -0.4 && dx < 0.4 && n > 0.5) {
-            c = PAL.snowPure;
+          // Top 62% of the foliage cluster is blanketed in thick pillow-shaded snow!
+          const snowLine = 0.22 + 0.18 * Math.sin(px * 0.7);
+          let c = PAL.thujaMid;
+          if (d2 > 0.84) {
+            c = dy < snowLine ? PAL.curbDark : PAL.pineDarkest;
+          } else if (dy < snowLine) {
+            if (dy < -0.3 && dx < 0.25) c = PAL.snowBrightest;
+            else if (dx < 0.15) c = PAL.snowLight;
+            else c = PAL.snowMid;
+          } else {
+            // Evergreen needles peeking out underneath the snow cap
+            if (dy < snowLine + 0.16) c = PAL.snowShade;
+            else if (dx < -0.15 && n > 0.4) c = PAL.thujaLight;
+            else if (dy > 0.55 || dx > 0.35) c = PAL.pineDarkest;
+            else c = PAL.thujaDark;
           }
           canvas.setPixel(px, py, c);
         }
       }
     }
   }
-
-  const GREEN_RAMP = [
-    PAL.pineDarkest,
-    PAL.thujaDark,
-    PAL.thujaMid,
-    PAL.thujaLight,
-    PAL.thujaHighlight,
-  ];
-  const AUTUMN_RAMP = [
-    PAL.outline,
-    PAL.autumnDark,
-    PAL.autumnLeaf,
-    PAL.autumnBright,
-    PAL.grassGold,
-  ];
 
   function drawSnesPineTree(cx, baseY, scale = 1.0, isScotsPine = false) {
     const w = Math.round(22 * scale);
@@ -482,6 +473,7 @@ function generateRensboOverworldPng(mapMatrix) {
       }
     }
 
+    // 3 tiered SNES bough layers heavily laden with snow on top
     const tiers = 3;
     for (let t = 0; t < tiers; t++) {
       const tierBaseY = baseY - trunkH + 2 - t * Math.round(6.5 * scale);
@@ -495,20 +487,22 @@ function generateRensboOverworldPng(mapMatrix) {
           const relX = (px - cx) / Math.max(1, rowHalfW);
           const n = hash2d(px, py);
           const isEdge = Math.abs(px - cx) === rowHalfW || py === tierBaseY;
+          const snowLimit = 0.62 + 0.12 * Math.cos((px - cx) * 0.9);
 
           let c = PAL.pineMid;
           if (isEdge && py === tierBaseY) {
             c = PAL.pineDarkest;
-          } else if (relY < 0.24 && relX < 0.25 && n > 0.35) {
-            c = relY < 0.14 ? PAL.snowPure : PAL.snowMid;
-          } else if (relX < -0.15 && relY < 0.75) {
-            c = n > 0.45 ? PAL.pineBright : PAL.pineLight;
-          } else if (relX > 0.25 || relY > 0.8) {
-            c = n > 0.5 ? PAL.pineDarkest : PAL.pineDark;
-          } else if (n > 0.65) {
-            c = PAL.pineLight;
-          } else if (n < 0.25) {
-            c = PAL.pineDark;
+          } else if (relY < snowLimit) {
+            // Thick snow blanket covering the tree boughs
+            if (isEdge) c = PAL.snowShade;
+            else if (relX < -0.1 && relY < 0.45) c = PAL.snowBrightest;
+            else if (relX < 0.25) c = PAL.snowLight;
+            else c = PAL.snowMid;
+          } else {
+            // Deep evergreen bough shadow peeking out below the snow
+            if (relX < -0.15 && n > 0.4) c = PAL.pineLight;
+            else if (relX > 0.25 || relY > 0.85) c = PAL.pineDarkest;
+            else c = PAL.pineDark;
           }
           canvas.setPixel(px, py, c);
         }
@@ -518,7 +512,6 @@ function generateRensboOverworldPng(mapMatrix) {
 
   function drawBirchTree(cx, baseY, height = 34) {
     canvas.fillEllipse(cx + 2, baseY, 6, 2.5, PAL.shadow);
-    // Slender white birch trunk with dark bark notches and Y-branches
     for (let py = baseY - height; py <= baseY; py++) {
       const t = (py - (baseY - height)) / height;
       const halfW = t > 0.5 ? 1.5 : 1;
@@ -531,16 +524,13 @@ function generateRensboOverworldPng(mapMatrix) {
     canvas.drawLine(cx, baseY - height + 10, cx - 6, baseY - height + 4, PAL.birchWhite);
     canvas.drawLine(cx, baseY - height + 12, cx + 6, baseY - height + 6, PAL.birchGrey);
 
-    // Airy golden-autumn & olive birch crown
-    drawLeafyCluster(cx - 5, baseY - height + 6, 6, 4.5, AUTUMN_RAMP, false);
-    drawLeafyCluster(cx + 5, baseY - height + 5, 6, 4.5, AUTUMN_RAMP, false);
-    drawLeafyCluster(cx, baseY - height + 1, 7, 5, AUTUMN_RAMP, true);
+    drawSnowyFoliageCluster(cx - 5, baseY - height + 6, 6, 4.5);
+    drawSnowyFoliageCluster(cx + 5, baseY - height + 5, 6, 4.5);
+    drawSnowyFoliageCluster(cx, baseY - height + 1, 7, 5);
   }
 
-  // Sprawling Apple/Deciduous Tree on the central lawn (map.jpeg center-left)
   function drawAppleTree(cx, baseY) {
     canvas.fillEllipse(cx + 2, baseY, 11, 4, PAL.shadow);
-    // Crooked dark orchard trunk splitting into wide branches
     for (let py = baseY - 12; py <= baseY; py++) {
       canvas.fillRect(cx - 2, py, 4, 1, PAL.trunkDark);
       canvas.setPixel(cx - 1, py, PAL.trunkMid);
@@ -549,14 +539,13 @@ function generateRensboOverworldPng(mapMatrix) {
     canvas.drawLine(cx + 1, baseY - 10, cx + 9, baseY - 16, PAL.trunkDark);
     canvas.drawLine(cx, baseY - 12, cx, baseY - 20, PAL.trunkMid);
 
-    // Multi-lobed rounded SNES leafy canopy
-    drawLeafyCluster(cx - 8, baseY - 17, 8, 6, GREEN_RAMP, false);
-    drawLeafyCluster(cx + 8, baseY - 16, 8, 6, GREEN_RAMP, false);
-    drawLeafyCluster(cx, baseY - 21, 9, 6.5, GREEN_RAMP, true);
-    drawLeafyCluster(cx, baseY - 14, 9, 5.5, GREEN_RAMP, false);
+    drawSnowyFoliageCluster(cx - 8, baseY - 17, 8, 6);
+    drawSnowyFoliageCluster(cx + 8, baseY - 16, 8, 6);
+    drawSnowyFoliageCluster(cx, baseY - 14, 9, 5.5);
+    drawSnowyFoliageCluster(cx, baseY - 21, 9, 6.5);
   }
 
-  // Tall Slender Conical Thuja (Arborvitae) lining the driveway in map.jpeg
+  // Tall Slender Conical Thuja (Arborvitae) with heavy winter snow cap
   function drawConicalThuja(cx, baseY) {
     canvas.fillEllipse(cx + 2, baseY - 1, 7, 3.5, PAL.deepShadow);
     canvas.fillRect(cx - 2, baseY - 4, 4, 4, PAL.trunkDark);
@@ -569,15 +558,17 @@ function generateRensboOverworldPng(mapMatrix) {
       for (let px = cx - halfW; px <= cx + halfW; px++) {
         const relX = (px - cx) / Math.max(1, halfW);
         const n = hash2d(px, py);
+        // Snow draped down the top and upper ridges of the conical Thuja
+        const isSnowCap = t < 0.42 || (t < 0.68 && Math.abs(relX) > 0.35 && n > 0.3);
         let c = PAL.thujaMid;
         if (Math.abs(px - cx) === halfW) {
-          c = PAL.pineDarkest;
+          c = isSnowCap ? PAL.snowShade : PAL.pineDarkest;
+        } else if (isSnowCap) {
+          c = relX < 0 ? PAL.snowBrightest : PAL.snowMid;
         } else if (relX < -0.2) {
-          c = n > 0.4 ? PAL.thujaHighlight : PAL.thujaLight;
+          c = PAL.thujaLight;
         } else if (relX > 0.25 || t > 0.88) {
           c = PAL.thujaDark;
-        } else if (n > 0.65) {
-          c = PAL.thujaLight;
         }
         canvas.setPixel(px, py, c);
       }
@@ -585,9 +576,8 @@ function generateRensboOverworldPng(mapMatrix) {
   }
 
   // ==========================================================================
-  // Step 4: Draw Forest Border with Natural Organic Offsets (No rigid grid!)
+  // Step 4: Draw Forest Border with Snow-Covered Canopies
   // ==========================================================================
-  // Deep forest canopy base along rows 0..2
   for (let y = 0; y < 3 * 16; y++) {
     for (let x = 0; x < W; x++) {
       if (y < 38) {
@@ -600,7 +590,6 @@ function generateRensboOverworldPng(mapMatrix) {
   for (let row = 0; row < 28; row++) {
     for (let col = 0; col < 32; col++) {
       if (mapMatrix[row][col] === 1) {
-        // Deterministic organic jitter so border trees overlap naturally like ALTTP woods
         const jx = Math.round((hash2d(col * 13, row * 29) - 0.5) * 6);
         const jy = Math.round((hash2d(col * 41, row * 17) - 0.5) * 4);
         const scale = 0.92 + hash2d(col * 7, row * 11) * 0.22;
@@ -618,7 +607,7 @@ function generateRensboOverworldPng(mapMatrix) {
   }
 
   // ==========================================================================
-  // Step 5: Draw THE MAIN HOUSE (cols 4..16, rows 3..9)
+  // Step 5: Draw THE MAIN HOUSE (cols 4..16, rows 3..9) with Snow on Roof
   // ==========================================================================
   {
     const hx = 4 * 16;
@@ -629,11 +618,9 @@ function generateRensboOverworldPng(mapMatrix) {
     const wallY = hy + roofH;
     const wallH = 4 * 16;
 
-    // Soft ambient shadow cast onto the gravel terrace & right lawn
     canvas.fillRect(hx + 4, hy + hh, hw + 4, 6, PAL.deepShadow);
     canvas.fillRect(hx + hw, hy + 12, 6, hh - 6, PAL.shadow);
 
-    // 5a. Main House Clapboard Walls (cols 4..16, rows 6..9)
     for (let py = wallY; py < wallY + wallH; py++) {
       for (let px = hx; px < hx + hw; px++) {
         const isUnderEave = py < wallY + 4;
@@ -655,12 +642,10 @@ function generateRensboOverworldPng(mapMatrix) {
       }
     }
 
-    // White corner trim boards & rain gutter downspouts
     canvas.fillRect(hx, wallY, 3, wallH - 5, PAL.trimWhite);
     canvas.fillRect(hx + hw - 3, wallY, 3, wallH - 5, PAL.trimWhite);
     canvas.strokeRect(hx, wallY, hw, wallH, PAL.outline);
 
-    // 5b. Multi-pane Main House Windows with white frames & striped awnings
     function drawHouseWindow(wx, wy, ww, wh, panes = 3, hasAwning = true) {
       canvas.fillRect(wx + 1, wy + wh, ww, 2, PAL.houseWallShade);
       canvas.fillRect(wx, wy, ww, wh, PAL.trimWhite);
@@ -702,7 +687,7 @@ function generateRensboOverworldPng(mapMatrix) {
     drawHouseWindow(13 * 16 + 4, 6 * 16 + 5, 28, 19, 2, false);
     drawHouseWindow(15 * 16 - 2, 8 * 16 + 8, 16, 16, 1, false);
 
-    // 5c. Front Entrance Door at col 13, row 9 (HOUSE_DOOR_COL = 13, HOUSE_DOOR_ROW = 9)
+    // Front Entrance Door at col 13, row 9
     {
       const dx = 13 * 16 + 1;
       const dy = 8 * 16 + 10;
@@ -714,29 +699,33 @@ function generateRensboOverworldPng(mapMatrix) {
       canvas.fillRect(dx + 3, dy + 3, 8, 7, PAL.windowGlassMid);
       canvas.fillRect(dx + 6, dy + 3, 2, 7, PAL.trimWhite);
       canvas.fillRect(dx + 3, dy + 6, 8, 1, PAL.trimWhite);
-      // Festive Christmas Wreath on the front door
       canvas.fillEllipse(dx + 7, dy + 8, 4, 4, PAL.thujaMid);
-      canvas.fillEllipse(dx + 7, dy + 8, 2.5, 2.5, PAL.thujaHighlight);
+      canvas.fillEllipse(dx + 7, dy + 8, 2.5, 2.5, PAL.thujaLight);
       canvas.fillEllipse(dx + 7, dy + 8, 1.2, 1.2, PAL.windowGlassDark);
       canvas.fillRect(dx + 6, dy + 11, 3, 2, PAL.shedRedBright);
       canvas.fillRect(dx + 10, dy + 14, 2, 2, PAL.gold);
     }
 
-    // 5d. Main Pitched Slate Roof (cols 4..16, rows 3..5)
+    // Main Pitched Slate Roof with snowbanks along ridge and eaves
     for (let py = hy; py < hy + roofH; py++) {
       const relY = (py - hy) / roofH;
       const indent = Math.round((1 - relY) * 8);
       for (let px = hx + indent; px < hx + hw - indent; px++) {
-        const isRidge = py < hy + 3;
-        const isEave = py >= hy + roofH - 4;
+        const isRidge = py < hy + 5;
+        const isEave = py >= hy + roofH - 6;
         const shingleRow = (py - hy) % 5 === 0;
         const shingleCol = ((px + Math.floor((py - hy) / 5) * 3) % 6) === 0;
 
         let c = PAL.roofMid;
         if (isRidge) {
-          c = py === hy ? PAL.outline : PAL.roofHighlight;
+          c = py === hy ? PAL.outline : py <= hy + 2 ? PAL.snowBrightest : PAL.snowMid;
         } else if (isEave) {
-          c = py === hy + roofH - 1 ? PAL.outline : py === hy + roofH - 2 ? PAL.trimWhite : PAL.snowMid;
+          c =
+            py === hy + roofH - 1
+              ? PAL.outline
+              : py >= hy + roofH - 4
+              ? PAL.snowBrightest
+              : PAL.snowMid;
         } else if (shingleRow) {
           c = PAL.roofDarkest;
         } else if (shingleCol) {
@@ -753,21 +742,20 @@ function generateRensboOverworldPng(mapMatrix) {
       canvas.setPixel(hx + hw - indent - 2, py, PAL.trimWhite);
     }
 
-    // Chimney & TV Antenna on the upper-left roof ridge (col 7, rows 2..3)
     const chimX = 7 * 16 + 4;
     const chimY = 2 * 16 + 10;
     canvas.fillRect(chimX, chimY, 10, 12, PAL.roofDarkest);
     canvas.fillRect(chimX + 1, chimY + 1, 8, 10, PAL.roofMid);
-    canvas.fillRect(chimX - 1, chimY, 12, 2, PAL.snowPure);
+    canvas.fillRect(chimX - 1, chimY, 12, 3, PAL.snowBrightest);
     canvas.drawLine(chimX + 5, chimY - 10, chimX + 5, chimY, PAL.curbLight);
     canvas.drawLine(chimX + 1, chimY - 8, chimX + 9, chimY - 8, PAL.curbLight);
     canvas.drawLine(chimX + 2, chimY - 5, chimX + 8, chimY - 5, PAL.curbLight);
 
-    // 5e. Central Projecting 2-Story White Veranda / Sunroom & Gable (cols 9..11, rows 4..9)
+    // Central Projecting 2-Story White Veranda / Sunroom & Gable
     const vx = 9 * 16;
     const vw = 3 * 16;
     const vy = 5 * 16 + 6;
-    const vh = 10 * 16 - vy + 2; // projects 2px forward onto the terrace
+    const vh = 10 * 16 - vy + 2;
 
     canvas.fillRect(vx + vw, vy + 2, 4, vh - 2, PAL.deepShadow);
     canvas.fillRect(vx, vy, vw, vh, PAL.trimWhite);
@@ -815,8 +803,8 @@ function generateRensboOverworldPng(mapMatrix) {
         const distFromEdge = halfSpan - Math.abs(px - gablePeakX);
         let c = PAL.roofMid;
         if (distFromEdge === 0) c = PAL.outline;
-        else if (distFromEdge <= 2) c = PAL.trimWhite;
-        else if (distFromEdge === 3) c = PAL.snowPure;
+        else if (distFromEdge <= 3) c = PAL.snowBrightest;
+        else if (distFromEdge === 4) c = PAL.snowMid;
         else if ((py - gableTopY) % 4 === 0) c = PAL.roofDarkest;
         else if (px < gablePeakX) c = PAL.roofLight;
         canvas.setPixel(px, py, c);
@@ -827,12 +815,12 @@ function generateRensboOverworldPng(mapMatrix) {
   // Silver Birch tree standing just left of the Main House terrace (col 3, row 10)
   drawBirchTree(3 * 16 + 8, 10 * 16 + 14, 42);
 
-  // Lush round manicured boxwood bush (klotthuja) in front of the house left wing (cols 5..6, rows 12..13)
+  // Snow-capped round boxwood bush (klotthuja) in front of the house left wing
   canvas.fillEllipse(6 * 16, 13 * 16 + 9, 13, 4.5, PAL.deepShadow);
-  drawLeafyCluster(6 * 16, 12 * 16 + 15, 13, 11, GREEN_RAMP, true);
+  drawSnowyFoliageCluster(6 * 16, 12 * 16 + 15, 13, 11);
 
   // ==========================================================================
-  // Step 6: Draw TWO GUEST COTTAGES ("STUGOR") (Upper-Right, as in map.jpeg)
+  // Step 6: Draw TWO GUEST COTTAGES ("STUGOR") (Upper-Right)
   // ==========================================================================
   function drawGuestStuga(startCol, startRow) {
     const sx = startCol * 16;
@@ -874,7 +862,6 @@ function generateRensboOverworldPng(mapMatrix) {
     canvas.fillRect(winX + 3, winY + 6, 8, 3, PAL.windowWarmGlow);
     canvas.fillRect(winX + 6, winY + 2, 2, 8, PAL.trimWhite);
 
-    // Front porch posts & balustrade
     const porchY = sy + sh - 14;
     canvas.fillRect(sx + 4, wallY, 2, wallH, PAL.cabinLight);
     canvas.fillRect(sx + sw - 6, wallY, 2, wallH, PAL.cabinLight);
@@ -894,9 +881,9 @@ function generateRensboOverworldPng(mapMatrix) {
         const edgeDist = halfSpan - Math.abs(px - peakX);
         let c = PAL.roofMid;
         if (edgeDist === 0) c = PAL.outline;
-        else if (edgeDist <= 2) c = PAL.trimWhite;
+        else if (edgeDist <= 3) c = PAL.snowBrightest;
         else if (py === roofBaseY) c = PAL.outline;
-        else if (py === roofBaseY - 1) c = PAL.snowPure;
+        else if (py >= roofBaseY - 3) c = PAL.snowBrightest;
         else if ((py - peakY) % 4 === 0) c = PAL.roofDarkest;
         else if (px < peakX) c = PAL.roofLight;
         else c = PAL.roofDark;
@@ -909,10 +896,9 @@ function generateRensboOverworldPng(mapMatrix) {
   drawGuestStuga(19, 5);
   drawGuestStuga(25, 5);
 
-  // Connected shrubs between & below the two cottages (cols 22..24, rows 9..10)
   canvas.fillEllipse(23 * 16 + 8, 10 * 16 + 10, 18, 5, PAL.shadow);
-  drawLeafyCluster(24 * 16, 9 * 16 + 9, 13, 9, AUTUMN_RAMP, false);
-  drawLeafyCluster(23 * 16 + 2, 10 * 16 + 4, 12, 8, GREEN_RAMP, true);
+  drawSnowyFoliageCluster(24 * 16, 9 * 16 + 9, 13, 9);
+  drawSnowyFoliageCluster(23 * 16 + 2, 10 * 16 + 4, 12, 8);
 
   // ==========================================================================
   // Step 7: Draw Outdoor Patio Table & 6 Chairs on Lawn (cols 7..8, rows 14..15)
@@ -925,7 +911,7 @@ function generateRensboOverworldPng(mapMatrix) {
     for (let y = py + 2; y < py + ph - 2; y++) {
       for (let x = px + 2; x < px + pw - 2; x++) {
         const isGrid = (x - px) % 7 === 0 || (y - py) % 7 === 0;
-        canvas.setPixel(x, y, isGrid ? PAL.curbDark : PAL.curbLight);
+        canvas.setPixel(x, y, isGrid ? PAL.curbDark : PAL.snowMid);
       }
     }
     canvas.strokeRect(px + 2, py + 2, pw - 4, ph - 4, PAL.curbDark);
@@ -941,28 +927,28 @@ function generateRensboOverworldPng(mapMatrix) {
     canvas.fillRect(px + 4, py + 11, 24, 12, PAL.shadow);
     canvas.fillRect(px + 4, py + 9, 24, 12, PAL.outline);
     canvas.fillRect(px + 5, py + 10, 22, 10, PAL.roofDark);
-    canvas.fillRect(px + 6, py + 11, 20, 2, PAL.roofLight);
+    // Snow layer on top of the outdoor table
+    canvas.fillRect(px + 6, py + 10, 20, 4, PAL.snowBrightest);
   }
 
   // ==========================================================================
-  // Step 8: Draw Connected Diagonal Hedgerow, Foreground Hedge & Conical Thujas
+  // Step 8: Snow-Capped Diagonal Hedgerow, Foreground Hedge & Conical Thujas
   // ==========================================================================
-  // 8a. Continuous Diagonal Hedgerow on left lawn (cols 4..11, rows 16..23)
-  for (let i = 0; i <= 15; i++) {
-    const t = i / 15;
-    const hx = 4 * 16 + 10 + t * (7 * 16);
-    const hy = 16 * 16 + 8 + t * (7 * 16);
+  // 8a. Diagonal Hedgerow on left lawn (cols 4..9, rows 16..21)
+  for (let i = 0; i <= 11; i++) {
+    const t = i / 11;
+    const hx = 4 * 16 + 10 + t * (5 * 16);
+    const hy = 16 * 16 + 8 + t * (5 * 16);
     canvas.fillEllipse(hx + 2, hy + 7, 11, 4, PAL.shadow);
   }
-  for (let i = 0; i <= 15; i++) {
-    const t = i / 15;
-    const hx = 4 * 16 + 10 + t * (7 * 16) + (i % 2 === 0 ? -2 : 2);
-    const hy = 16 * 16 + 6 + t * (7 * 16);
-    const ramp = i % 4 === 2 ? AUTUMN_RAMP : GREEN_RAMP;
-    drawLeafyCluster(hx, hy, 10, 7.5, ramp, i % 3 === 0);
+  for (let i = 0; i <= 11; i++) {
+    const t = i / 11;
+    const hx = 4 * 16 + 10 + t * (5 * 16) + (i % 2 === 0 ? -2 : 2);
+    const hy = 16 * 16 + 6 + t * (5 * 16);
+    drawSnowyFoliageCluster(hx, hy, 10, 7.5);
   }
 
-  // 8b. Continuous Foreground Hedgerow below gravel turnaround (cols 18..21, rows 24..25)
+  // 8b. Foreground Hedgerow below gravel turnaround (cols 18..21, rows 24..25)
   for (let i = 0; i <= 8; i++) {
     const hx = 18 * 16 + 8 + i * 7;
     const hy = 24 * 16 + 15 + (i % 2) * 3;
@@ -971,11 +957,10 @@ function generateRensboOverworldPng(mapMatrix) {
   for (let i = 0; i <= 8; i++) {
     const hx = 18 * 16 + 8 + i * 7;
     const hy = 24 * 16 + 14 + (i % 2) * 3;
-    const ramp = i % 3 === 1 ? AUTUMN_RAMP : GREEN_RAMP;
-    drawLeafyCluster(hx, hy, 9.5, 8, ramp, i % 2 === 0);
+    drawSnowyFoliageCluster(hx, hy, 9.5, 8);
   }
 
-  // 8c. Draw the tall conical Thuja trees lining the driveway (type 3 in mapMatrix)
+  // 8c. Tall conical Thuja trees lining the driveway
   for (let row = 0; row < 28; row++) {
     for (let col = 0; col < 32; col++) {
       if (mapMatrix[row][col] === 3) {
@@ -985,7 +970,7 @@ function generateRensboOverworldPng(mapMatrix) {
     }
   }
 
-  // 8d. Sprawling Apple/Deciduous Tree on the central lawn (between patio table & driveway)
+  // 8d. Sprawling snow-topped Apple Tree on the central lawn
   drawAppleTree(10 * 16 + 12, 16 * 16 + 4);
 
   // ==========================================================================
@@ -1026,8 +1011,8 @@ function generateRensboOverworldPng(mapMatrix) {
       for (let px = sx + indent; px < sx + sw - indent; px++) {
         let c = PAL.roofMid;
         if (py === sy + roofH - 1) c = PAL.outline;
-        else if (py === sy + roofH - 2) c = PAL.trimWhite;
-        else if (py === sy + roofH - 3) c = PAL.snowPure;
+        else if (py >= sy + roofH - 4) c = PAL.snowBrightest;
+        else if (py <= sy + 7) c = PAL.snowLight;
         else if ((py - sy) % 4 === 0) c = PAL.roofDarkest;
         else if (px < sx + sw / 2) c = PAL.roofLight;
         else c = PAL.roofDark;
@@ -1080,7 +1065,7 @@ function generateRensboOverworldPng(mapMatrix) {
       for (let px = gx; px < gx + gw; px++) {
         let c = (py - gy) % 4 === 0 ? PAL.roofDarkest : PAL.roofDark;
         if (py === gy) c = PAL.outline;
-        if (py >= gy + roofH - 2) c = PAL.trimWhite;
+        if (py >= gy + roofH - 3) c = PAL.snowBrightest;
         canvas.setPixel(px, py, c);
       }
     }
@@ -1093,11 +1078,17 @@ function generateRensboOverworldPng(mapMatrix) {
         const edgeDist = halfSpan - Math.abs(px - gPeakX);
         let c = (px - gx) % 4 === 0 ? PAL.garageBlueDark : PAL.garageBlueLight;
         if (edgeDist === 0) c = PAL.outline;
-        else if (edgeDist <= 3) c = PAL.trimWhite;
-        else if (edgeDist === 4) c = PAL.snowPure;
+        else if (edgeDist <= 4) c = PAL.snowBrightest;
         canvas.setPixel(px, py, c);
       }
     }
+
+    // Wall-mounted EV Charger Box on the right wall of the Blue Garage (col 7, row 22)
+    const wbX = gx + gw - 2;
+    const wbY = 22 * 16 + 3;
+    canvas.fillRect(wbX, wbY, 6, 9, PAL.outline);
+    canvas.fillRect(wbX + 1, wbY + 1, 4, 7, PAL.roofMid);
+    canvas.fillRect(wbX + 2, wbY + 2, 2, 2, PAL.ledGreen);
 
     // Translucent Glass Greenhouse (Växthus) right beside the blue garage (col 8, rows 24..25)
     const ghX = gx + gw + 2;
@@ -1112,14 +1103,91 @@ function generateRensboOverworldPng(mapMatrix) {
     for (let py = ghY; py < ghY + 8; py++) {
       const span = Math.round(((py - ghY) / 8) * (ghW / 2));
       const mid = ghX + ghW / 2;
-      canvas.drawLine(mid - span, py, mid + span, py, PAL.glassTint);
+      canvas.drawLine(mid - span, py, mid + span, py, PAL.snowLight);
       canvas.setPixel(mid - span, py, PAL.glassFrame);
       canvas.setPixel(mid + span, py, PAL.glassFrame);
     }
   }
 
   // ==========================================================================
-  // Step 11: Draw Wooden Playhouse & Green Slide in Bottom-Right (cols 27..29, rows 24..25)
+  // Step 11: Draw Electric Car & Damaged Charging Cable (cols 7..19, rows 21..22)
+  // Parked on the driveway below the snowball throwers where the road turns right!
+  // ==========================================================================
+  {
+    // 11a. Charging Wire running from the Blue Garage wallbox (col 7, row 22)
+    // across the snow and driveway to the Electric Car (col 17, row 22)
+    const wireStartX = 8 * 16 - 2;
+    const wireEndX = 17 * 16 + 4;
+    const baseWireY = 22 * 16 + 8;
+
+    for (let px = wireStartX; px <= wireEndX; px++) {
+      const sag = Math.round(Math.sin((px - wireStartX) * 0.09) * 2);
+      const wy = baseWireY + sag;
+      // Soft shadow beneath cable
+      canvas.setPixel(px, wy + 2, PAL.shadow);
+      canvas.setPixel(px, wy, PAL.wireBlack);
+      canvas.setPixel(px, wy + 1, PAL.outline);
+      if (px % 3 === 0) {
+        canvas.setPixel(px, wy, PAL.wireHighlight);
+      }
+    }
+
+    // 11b. Visibly Damaged / Frayed Section on the Driveway (col 14..15, row 22)
+    const dmgX = 14 * 16 + 10;
+    const dmgY = baseWireY;
+    // Dark scorch mark on the snowy driveway around the damaged cable
+    canvas.fillEllipse(dmgX, dmgY + 1, 8, 4.5, [40, 36, 38, 160]);
+    canvas.fillEllipse(dmgX, dmgY + 1, 5, 2.5, PAL.outline);
+    // Exposed bright copper strands & static spark core
+    canvas.fillRect(dmgX - 4, dmgY - 1, 8, 3, PAL.copperBright);
+    canvas.setPixel(dmgX - 2, dmgY, PAL.sparkYellow);
+    canvas.setPixel(dmgX + 1, dmgY - 1, PAL.sparkCyan);
+    canvas.setPixel(dmgX, dmgY + 1, PAL.snowBrightest);
+
+    // 11c. Sleek 16-Bit Electric Car parked at cols 17..19, rows 21..22 (48x32px)
+    const carX = 17 * 16 + 2;
+    const carY = 21 * 16 + 4;
+    const carW = 44;
+    const carH = 24;
+
+    // Drop shadow under car
+    canvas.fillEllipse(carX + carW / 2, carY + carH - 1, carW / 2 + 2, 6, PAL.deepShadow);
+
+    // Four dark rubber wheels
+    canvas.fillRect(carX + 6, carY - 1, 8, 3, PAL.outline);
+    canvas.fillRect(carX + carW - 14, carY - 1, 8, 3, PAL.outline);
+    canvas.fillRect(carX + 6, carY + carH - 2, 8, 4, PAL.outline);
+    canvas.fillRect(carX + carW - 14, carY + carH - 2, 8, 4, PAL.outline);
+
+    // Rounded metallic glacier-blue EV body
+    canvas.fillRect(carX + 2, carY + 1, carW - 4, carH - 2, PAL.carBodyMid);
+    canvas.fillRect(carX + 1, carY + 3, carW - 2, carH - 6, PAL.carBodyMid);
+    canvas.fillRect(carX + 3, carY + 2, carW - 6, 5, PAL.carBodyBright);
+    canvas.fillRect(carX + 3, carY + carH - 6, carW - 6, 4, PAL.carBodyDark);
+    canvas.strokeRect(carX + 2, carY + 1, carW - 4, carH - 2, PAL.outline);
+
+    // Panoramic dark glass roof, windshield (left) & rear window (right)
+    canvas.fillRect(carX + 10, carY + 4, 24, carH - 8, PAL.carGlass);
+    canvas.strokeRect(carX + 10, carY + 4, 24, carH - 8, PAL.outline);
+    // Glass reflection & roof pillar bars
+    canvas.drawLine(carX + 13, carY + 6, carX + 18, carY + 6, PAL.carGlassHighlight);
+    canvas.drawLine(carX + 22, carY + 4, carX + 22, carY + carH - 5, PAL.carBodyBright);
+    // Snow dusting on the car roof
+    canvas.fillRect(carX + 24, carY + 6, 7, 4, PAL.snowLight);
+
+    // Bright LED headlights on left front bumper + red taillights on right rear
+    canvas.fillRect(carX + 1, carY + 4, 2, 4, PAL.sparkCyan);
+    canvas.fillRect(carX + 1, carY + carH - 8, 2, 4, PAL.sparkCyan);
+    canvas.fillRect(carX + carW - 3, carY + 4, 2, 4, PAL.shedRedBright);
+    canvas.fillRect(carX + carW - 3, carY + carH - 8, 2, 4, PAL.shedRedBright);
+
+    // Charging plug & glowing green charging status indicator on the front-left fender
+    canvas.fillRect(carX - 1, carY + 14, 4, 4, PAL.outline);
+    canvas.fillRect(carX + 3, carY + 15, 2, 2, PAL.ledGreen);
+  }
+
+  // ==========================================================================
+  // Step 12: Draw Wooden Playhouse & Green Slide in Bottom-Right (cols 27..29, rows 24..25)
   // ==========================================================================
   {
     const px = 28 * 16;
@@ -1127,6 +1195,7 @@ function generateRensboOverworldPng(mapMatrix) {
     canvas.fillRect(px, py + 6, 18, 18, PAL.cabinDark);
     canvas.strokeRect(px, py + 6, 18, 18, PAL.outline);
     canvas.fillRect(px - 1, py, 20, 7, PAL.thujaMid);
+    canvas.fillRect(px, py, 18, 3, PAL.snowBrightest);
     for (let i = 0; i < 18; i++) {
       const sx = px - i;
       const sy = py + 12 + Math.floor(i * 0.65);
@@ -1141,7 +1210,6 @@ function generateRensboOverworldPng(mapMatrix) {
 
 // ============================================================================
 // 2. GENERATE 16-BIT SNES SANTA SPRITESHEET (48x64: 3 frames x 4 directions)
-// Row 0: Down | Row 1: Up | Row 2: Left | Row 3: Right
 // ============================================================================
 function generateSantaSpritesheet() {
   const sheet = new PixelCanvas(48, 64);
@@ -1342,21 +1410,23 @@ function generateSantaSpritesheet() {
     return grid.map((r) => r.split('').reverse().join(''));
   }
 
+  // Keep Santa's iconic front-facing look (hat, face, white beard, gold belt buckle)
+  // visible across all 4 movement directions, with a 3-frame walk cycle and horizontal flip when moving left.
   drawGrid(0, 0, downIdle);
   drawGrid(16, 0, downWalk1);
   drawGrid(32, 0, downWalk2);
 
-  drawGrid(0, 16, upIdle);
-  drawGrid(16, 16, upWalk1);
-  drawGrid(32, 16, upWalk2);
+  drawGrid(0, 16, downIdle);
+  drawGrid(16, 16, downWalk1);
+  drawGrid(32, 16, downWalk2);
 
-  drawGrid(0, 32, leftIdle);
-  drawGrid(16, 32, leftWalk1);
-  drawGrid(32, 32, leftWalk2);
+  drawGrid(0, 32, flipH(downIdle));
+  drawGrid(16, 32, flipH(downWalk1));
+  drawGrid(32, 32, flipH(downWalk2));
 
-  drawGrid(0, 48, flipH(leftIdle));
-  drawGrid(16, 48, flipH(leftWalk1));
-  drawGrid(32, 48, flipH(leftWalk2));
+  drawGrid(0, 48, downIdle);
+  drawGrid(16, 48, downWalk1);
+  drawGrid(32, 48, downWalk2);
 
   return sheet.toPngBuffer();
 }
@@ -1518,6 +1588,7 @@ function generateZKeySprite() {
 
 // ============================================================================
 // 5. RENSBO 32x28 MAP MATRIX (Matches src/world/tilemap.ts)
+// Tile 14 = Electric Car parked on the driveway (cols 17..19, rows 21..22)
 // ============================================================================
 const RENSBO_MAP_MATRIX = [
   //0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
@@ -1542,9 +1613,9 @@ const RENSBO_MAP_MATRIX = [
   [1, 0, 0, 0, 0, 0, 4, 4, 0, 0, 0, 0, 3, 2, 2, 2, 2, 2, 3, 0, 3, 0, 0, 0, 0, 10, 10, 10, 10, 10, 0, 1], // 18
   [1, 0, 0, 0, 0, 0, 0, 4, 4, 0, 0, 0, 3, 2, 2, 2, 2, 2, 3, 0, 3, 0, 0, 0, 0, 10, 10, 10, 10, 10, 0, 1], // 19
   [1, 0, 0, 0, 0, 0, 0, 0, 4, 4, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 1], // 20
-  [1, 0, 5, 5, 5, 5, 5, 5, 0, 4, 4, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 1], // 21
-  [1, 0, 5, 5, 5, 5, 5, 5, 0, 0, 4, 4, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 1], // 22
-  [1, 0, 11, 11, 11, 11, 11, 11, 0, 0, 0, 4, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 1], // 23
+  [1, 0, 5, 5, 5, 5, 5, 5, 0, 4, 4, 0, 0, 2, 2, 2, 2, 14, 14, 14, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 1], // 21: Blue garage roof | Electric Car (17..19)
+  [1, 0, 5, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 2, 2, 2, 2, 14, 14, 14, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 1], // 22: Charging cable runs cols 8..16 to Car (17..19)
+  [1, 0, 11, 11, 11, 11, 11, 11, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 1], // 23
   [1, 0, 11, 11, 11, 11, 11, 11, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], // 24
   [1, 0, 11, 11, 11, 11, 11, 11, 0, 0, 0, 0, 0, 2, 2, 2, 2, 0, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], // 25
   [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], // 26
@@ -1565,4 +1636,4 @@ fs.writeFileSync(
   generateRensboOverworldPng(RENSBO_MAP_MATRIX)
 );
 
-console.log('Generated 16-bit SNES spritesheets and 512x448 Rensbo overworld map!');
+console.log('Generated snow-covered 16-bit SNES Rensbo map with electric car & charging cable!');
