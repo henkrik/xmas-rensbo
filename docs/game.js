@@ -214,13 +214,11 @@
       const dy = clientY - centerY;
       const dist = Math.hypot(dx, dy);
       const maxRadius = rect.width / 2 * 0.72;
-      let clampedX = dx;
-      let clampedY = dy;
-      if (dist > maxRadius) {
-        clampedX = dx / dist * maxRadius;
-        clampedY = dy / dist * maxRadius;
-      }
-      stick.style.transform = `translate(${clampedX.toFixed(1)}px, ${clampedY.toFixed(1)}px)`;
+      const dirX = dist > 0 ? dx / dist : 0;
+      const dirY = dist > 0 ? dy / dist : 0;
+      const clampedDist = Math.min(dist, maxRadius);
+      const intensity = clampedDist / maxRadius;
+      stick.style.transform = `translate(${(dirX * clampedDist).toFixed(1)}px, ${(dirY * clampedDist).toFixed(1)}px)`;
       const deadzone = maxRadius * 0.15;
       if (dist < deadzone) {
         input.left = false;
@@ -231,13 +229,13 @@
         return;
       }
       input.moveVector = {
-        x: clampedX / dist,
-        y: clampedY / dist
+        x: dirX * intensity,
+        y: dirY * intensity
       };
-      input.left = clampedX < 0;
-      input.right = clampedX > 0;
-      input.up = clampedY < 0;
-      input.down = clampedY > 0;
+      input.left = dirX < 0;
+      input.right = dirX > 0;
+      input.up = dirY < 0;
+      input.down = dirY > 0;
     };
     const onPointerDown = (e) => {
       activePointerId = e.pointerId;

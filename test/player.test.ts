@@ -617,7 +617,7 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(player.y).toBeGreaterThan(initialY);
   });
 
-  it('provides analog moveVector and eliminates 0.38 deadband threshold in virtual joystick', () => {
+  it('provides analog moveVector with [0, 1] clamped speed scaling', () => {
     const input = createEmptyInput();
     const listeners: Record<string, (e: unknown) => void> = {};
     const container = {
@@ -630,21 +630,48 @@ describe('Player walking & 2x Rensbo map layout', () => {
 
     createVirtualJoystick({ container, stick, input });
 
-    // Pointer down at center (200, 200) + deflection of (+50, +5)
-    // Client (250, 205) -> dx = 50, dy = 5. Angle is ~5.7 degrees off purely horizontal.
-    // In old code with 0.38 deadband, 5 < 50 * 0.38 (19), so input.down was false!
+    // Center is (200, 200). maxRadius is 200/2 * 0.72 = 72.
+
+    // 1. Move halfway (dx = 36, dy = 0) -> intensity = 36 / 72 = 0.5 (50% speed)
     listeners['pointerdown']?.({
       pointerId: 1,
-      clientX: 250,
-      clientY: 205,
+      clientX: 236,
+      clientY: 200,
       preventDefault: () => {},
     });
-
     expect(input.right).toBe(true);
-    // With threshold removed, the 5.7-degree tilt is NOT killed:
-    expect(input.down).toBe(true);
     expect(input.moveVector).not.toBeNull();
-    expect(input.moveVector?.x).toBeGreaterThan(0.9);
+    expect(input.moveVector?.x).toBeCloseTo(0.5, 2);
+    expect(input.moveVector?.y).toBe(0);
+
+    // 2. Move at max border (dx = 72, dy = 0) -> intensity = 1.0 (100% speed)
+    listeners['pointerdown']?.({
+      pointerId: 1,
+      clientX: 272,
+      clientY: 200,
+      preventDefault: () => {},
+    });
+    expect(input.moveVector?.x).toBeCloseTo(1.0, 2);
+
+    // 3. Move FAR outside (dx = 300, dy = 0) -> intensity must stay 1.0 (100% speed), NOT slow down!
+    listeners['pointerdown']?.({
+      pointerId: 1,
+      clientX: 500,
+      clientY: 200,
+      preventDefault: () => {},
+    });
+    expect(input.moveVector?.x).toBeCloseTo(1.0, 2);
+
+    // 4. Subtle angle (dx = 100, dy = 10) outside circle: maintains 100% speed and subtle Y deflection
+    listeners['pointerdown']?.({
+      pointerId: 1,
+      clientX: 300,
+      clientY: 210,
+      preventDefault: () => {},
+    });
+    expect(input.right).toBe(true);
+    expect(input.down).toBe(true);
+    expect(input.moveVector?.x).toBeGreaterThan(0.95);
     expect(input.moveVector?.y).toBeGreaterThan(0.05);
   });
 

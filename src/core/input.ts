@@ -234,14 +234,12 @@ export function createVirtualJoystick(
     // Container radius minus half of stick radius
     const maxRadius = (rect.width / 2) * 0.72;
 
-    let clampedX = dx;
-    let clampedY = dy;
-    if (dist > maxRadius) {
-      clampedX = (dx / dist) * maxRadius;
-      clampedY = (dy / dist) * maxRadius;
-    }
+    const dirX = dist > 0 ? dx / dist : 0;
+    const dirY = dist > 0 ? dy / dist : 0;
+    const clampedDist = Math.min(dist, maxRadius);
+    const intensity = clampedDist / maxRadius; // [0, 1] clamped distance from center divided by max travel radius
 
-    stick.style.transform = `translate(${clampedX.toFixed(1)}px, ${clampedY.toFixed(1)}px)`;
+    stick.style.transform = `translate(${(dirX * clampedDist).toFixed(1)}px, ${(dirY * clampedDist).toFixed(1)}px)`;
 
     // Deadzone of 15% to prevent small thumb rests from triggering motion
     const deadzone = maxRadius * 0.15;
@@ -254,18 +252,19 @@ export function createVirtualJoystick(
       return;
     }
 
-    // Continuous analog direction vector enables slippery sliding against obstacles
-    // based on the subtle angle of the stick without snapping or locking out perpendicular motion
+    // Direction vector scaled by [0, 1] clamped distance from center:
+    // - Whenever pointer is at or outside the circle (clampedDist == maxRadius), intensity is 1.0 (100% speed)
+    // - When pointer is halfway, intensity is 0.5 (50% speed)
     input.moveVector = {
-      x: clampedX / dist,
-      y: clampedY / dist,
+      x: dirX * intensity,
+      y: dirY * intensity,
     };
 
     // Digital directional booleans without any restrictive angle deadbands
-    input.left = clampedX < 0;
-    input.right = clampedX > 0;
-    input.up = clampedY < 0;
-    input.down = clampedY > 0;
+    input.left = dirX < 0;
+    input.right = dirX > 0;
+    input.up = dirY < 0;
+    input.down = dirY > 0;
   };
 
   const onPointerDown = (e: PointerEvent) => {
