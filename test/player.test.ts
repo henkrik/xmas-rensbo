@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyKeyEvent, createEmptyInput } from '../src/core/input';
+import { applyKeyEvent, createEmptyInput, createVirtualJoystick } from '../src/core/input';
 import {
   DOG_AGGRO_DISTANCE,
   DOG_DEAGGRO_DISTANCE,
@@ -591,5 +591,59 @@ describe('Player walking & 2x Rensbo map layout', () => {
     );
 
     expect(wrapped).toEqual(['Good luck!', 'Christmas depends on you...']);
+  });
+
+  it('slides slippery against obstacles when colliding at subtle angles', () => {
+    // Place Santa right next to the left wall of the main house (house starts at col 4)
+    // House wall is col 4 -> x = 4 * 16 = 64. Santa width = 12.
+    // Santa at x = 52, y = 140 (house door is row 9 = 144, wall at 140)
+    const player = createPlayer(52, 140);
+    const input = createEmptyInput();
+
+    // Player moves mostly right into the house wall, but slightly down (e.g. angle ~11 degrees)
+    // dx = 0.98, dy = 0.20
+    input.moveVector = { x: 0.98, y: 0.2 };
+
+    const initialY = player.y;
+    // Update player for several frames
+    for (let i = 0; i < 10; i++) {
+      updatePlayer(player, input, 0.05, STARTER_MAP);
+    }
+
+    // Santa is blocked in X by the house wall (cannot move past x = 52)
+    expect(player.x).toBeLessThanOrEqual(52.01);
+    // Santa slid downwards in Y along the wall rather than being completely stuck!
+    expect(player.y).toBeGreaterThan(initialY);
+  });
+
+  it('provides analog moveVector and eliminates 0.38 deadband threshold in virtual joystick', () => {
+    const input = createEmptyInput();
+    const listeners: Record<string, (e: unknown) => void> = {};
+    const container = {
+      getBoundingClientRect: () => ({ left: 100, top: 100, width: 200, height: 200 }),
+      addEventListener: (evt: string, cb: (e: unknown) => void) => { listeners[evt] = cb; },
+      removeEventListener: () => {},
+      style: {},
+    } as unknown as HTMLElement;
+    const stick = { style: { transform: '' } } as unknown as HTMLElement;
+
+    createVirtualJoystick({ container, stick, input });
+
+    // Pointer down at center (200, 200) + deflection of (+50, +5)
+    // Client (250, 205) -> dx = 50, dy = 5. Angle is ~5.7 degrees off purely horizontal.
+    // In old code with 0.38 deadband, 5 < 50 * 0.38 (19), so input.down was false!
+    listeners['pointerdown']?.({
+      pointerId: 1,
+      clientX: 250,
+      clientY: 205,
+      preventDefault: () => {},
+    });
+
+    expect(input.right).toBe(true);
+    // With threshold removed, the 5.7-degree tilt is NOT killed:
+    expect(input.down).toBe(true);
+    expect(input.moveVector).not.toBeNull();
+    expect(input.moveVector?.x).toBeGreaterThan(0.9);
+    expect(input.moveVector?.y).toBeGreaterThan(0.05);
   });
 });

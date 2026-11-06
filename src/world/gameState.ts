@@ -206,12 +206,16 @@ function updateRoofMovement(
 
   // On the roof, Santa can only walk west (left) or east (right); north/south movement is disabled
   let dx = 0;
-  if (input.left) dx -= 1;
-  if (input.right) dx += 1;
+  if (input.moveVector) {
+    dx = input.moveVector.x;
+  } else {
+    if (input.left) dx -= 1;
+    if (input.right) dx += 1;
+  }
 
   player.y = ROOF_WALK_Y;
 
-  if (dx === 0) {
+  if (Math.abs(dx) < 0.001) {
     player.isMoving = false;
     player.walkTimer = 0;
     return;

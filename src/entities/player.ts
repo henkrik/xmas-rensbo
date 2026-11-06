@@ -127,12 +127,24 @@ export function updatePlayer(
   let dx = 0;
   let dy = 0;
 
-  if (input.left) dx -= 1;
-  if (input.right) dx += 1;
-  if (input.up) dy -= 1;
-  if (input.down) dy += 1;
+  if (input.moveVector) {
+    dx = input.moveVector.x;
+    dy = input.moveVector.y;
+  } else {
+    if (input.left) dx -= 1;
+    if (input.right) dx += 1;
+    if (input.up) dy -= 1;
+    if (input.down) dy += 1;
 
-  if (dx === 0 && dy === 0) {
+    const length = Math.hypot(dx, dy);
+    if (length > 0) {
+      dx /= length;
+      dy /= length;
+    }
+  }
+
+  const length = Math.hypot(dx, dy);
+  if (length < 0.001) {
     player.isMoving = false;
     player.walkTimer = 0;
     return;
@@ -141,15 +153,14 @@ export function updatePlayer(
   player.isMoving = true;
   player.walkTimer += dtSeconds;
 
-  if (dy < 0) player.facing = 'up';
-  else if (dy > 0) player.facing = 'down';
-  else if (dx < 0) player.facing = 'left';
-  else if (dx > 0) player.facing = 'right';
+  if (Math.abs(dy) > Math.abs(dx)) {
+    player.facing = dy < 0 ? 'up' : 'down';
+  } else if (Math.abs(dx) > 0) {
+    player.facing = dx < 0 ? 'left' : 'right';
+  }
 
-  // Normalize diagonal speed so diagonal movement isn't faster
-  const length = Math.hypot(dx, dy);
-  const moveX = (dx / length) * player.speed * dtSeconds;
-  const moveY = (dy / length) * player.speed * dtSeconds;
+  const moveX = dx * player.speed * dtSeconds;
+  const moveY = dy * player.speed * dtSeconds;
 
   const collidesAt = (testX: number, testY: number): boolean => {
     if (isRectCollidingWithMap(map, testX, testY, player.width, player.height)) {
@@ -166,12 +177,44 @@ export function updatePlayer(
 
   // Axis-separated collision check so the player slides smoothly along walls
   const nextX = player.x + moveX;
-  if (!collidesAt(nextX, player.y)) {
+  const xBlocked = collidesAt(nextX, player.y);
+  if (!xBlocked) {
     player.x = nextX;
   }
 
   const nextY = player.y + moveY;
-  if (!collidesAt(player.x, nextY)) {
+  const yBlocked = collidesAt(player.x, nextY);
+  if (!yBlocked) {
     player.y = nextY;
+  }
+
+  // Gentle corner sliding: if moving straight into an obstacle corner within 1-4px of clearing,
+  // nudge along the free axis so player slips smoothly around corners instead of getting stuck
+  if (xBlocked && Math.abs(moveY) < 0.01) {
+    const slideStep = player.speed * dtSeconds * 0.75;
+    for (let offset = 1; offset <= 4; offset++) {
+      if (!collidesAt(nextX, player.y - offset) && !collidesAt(player.x, player.y - slideStep)) {
+        player.y = Math.max(0, player.y - slideStep);
+        break;
+      }
+      if (!collidesAt(nextX, player.y + offset) && !collidesAt(player.x, player.y + slideStep)) {
+        player.y = player.y + slideStep;
+        break;
+      }
+    }
+  }
+
+  if (yBlocked && Math.abs(moveX) < 0.01) {
+    const slideStep = player.speed * dtSeconds * 0.75;
+    for (let offset = 1; offset <= 4; offset++) {
+      if (!collidesAt(player.x - offset, nextY) && !collidesAt(player.x - slideStep, player.y)) {
+        player.x = Math.max(0, player.x - slideStep);
+        break;
+      }
+      if (!collidesAt(player.x + offset, nextY) && !collidesAt(player.x + slideStep, player.y)) {
+        player.x = player.x + slideStep;
+        break;
+      }
+    }
   }
 }

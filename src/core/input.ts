@@ -6,6 +6,7 @@ export interface InputState {
   action: boolean;
   actionJustPressed: boolean;
   pointerClick?: { worldX: number; worldY: number } | null;
+  moveVector?: { x: number; y: number } | null;
 }
 
 export function createEmptyInput(): InputState {
@@ -17,6 +18,7 @@ export function createEmptyInput(): InputState {
     action: false,
     actionJustPressed: false,
     pointerClick: null,
+    moveVector: null,
   };
 }
 
@@ -190,6 +192,7 @@ export interface VirtualJoystickOptions {
   container: HTMLElement;
   stick: HTMLElement;
   input: InputState;
+  targetWindow?: EventTarget;
 }
 
 export interface VirtualJoystickController {
@@ -215,6 +218,7 @@ export function createVirtualJoystick(
     input.right = false;
     input.up = false;
     input.down = false;
+    input.moveVector = null;
   };
 
   const handlePointer = (clientX: number, clientY: number) => {
@@ -246,17 +250,22 @@ export function createVirtualJoystick(
       input.right = false;
       input.up = false;
       input.down = false;
+      input.moveVector = null;
       return;
     }
 
-    // 8-directional movement deadband
-    const absX = Math.abs(clampedX);
-    const absY = Math.abs(clampedY);
+    // Continuous analog direction vector enables slippery sliding against obstacles
+    // based on the subtle angle of the stick without snapping or locking out perpendicular motion
+    input.moveVector = {
+      x: clampedX / dist,
+      y: clampedY / dist,
+    };
 
-    input.left = clampedX < 0 && absX > absY * 0.38;
-    input.right = clampedX > 0 && absX > absY * 0.38;
-    input.up = clampedY < 0 && absY > absX * 0.38;
-    input.down = clampedY > 0 && absY > absX * 0.38;
+    // Digital directional booleans without any restrictive angle deadbands
+    input.left = clampedX < 0;
+    input.right = clampedX > 0;
+    input.up = clampedY < 0;
+    input.down = clampedY > 0;
   };
 
   const onPointerDown = (e: PointerEvent) => {
@@ -286,10 +295,12 @@ export function createVirtualJoystick(
     resetStick();
   };
 
+  const win = options.targetWindow ?? (typeof window !== 'undefined' ? window : null);
+
   container.addEventListener('pointerdown', onPointerDown);
-  window.addEventListener('pointermove', onPointerMove);
-  window.addEventListener('pointerup', onPointerUp);
-  window.addEventListener('pointercancel', onPointerCancel);
+  win?.addEventListener('pointermove', onPointerMove as EventListener);
+  win?.addEventListener('pointerup', onPointerUp as EventListener);
+  win?.addEventListener('pointercancel', onPointerCancel as EventListener);
 
   return {
     show: () => {
@@ -315,9 +326,9 @@ export function createVirtualJoystick(
     isPointerActive: () => isDragging,
     destroy: () => {
       container.removeEventListener('pointerdown', onPointerDown);
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
-      window.removeEventListener('pointercancel', onPointerCancel);
+      win?.removeEventListener('pointermove', onPointerMove as EventListener);
+      win?.removeEventListener('pointerup', onPointerUp as EventListener);
+      win?.removeEventListener('pointercancel', onPointerCancel as EventListener);
     },
   };
 }

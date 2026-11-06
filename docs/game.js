@@ -82,7 +82,8 @@
       right: false,
       action: false,
       actionJustPressed: false,
-      pointerClick: null
+      pointerClick: null,
+      moveVector: null
     };
   }
   var KEY_TO_BUTTON = {
@@ -203,6 +204,7 @@
       input.right = false;
       input.up = false;
       input.down = false;
+      input.moveVector = null;
     };
     const handlePointer = (clientX, clientY) => {
       const rect = container.getBoundingClientRect();
@@ -225,14 +227,17 @@
         input.right = false;
         input.up = false;
         input.down = false;
+        input.moveVector = null;
         return;
       }
-      const absX = Math.abs(clampedX);
-      const absY = Math.abs(clampedY);
-      input.left = clampedX < 0 && absX > absY * 0.38;
-      input.right = clampedX > 0 && absX > absY * 0.38;
-      input.up = clampedY < 0 && absY > absX * 0.38;
-      input.down = clampedY > 0 && absY > absX * 0.38;
+      input.moveVector = {
+        x: clampedX / dist,
+        y: clampedY / dist
+      };
+      input.left = clampedX < 0;
+      input.right = clampedX > 0;
+      input.up = clampedY < 0;
+      input.down = clampedY > 0;
     };
     const onPointerDown = (e) => {
       activePointerId = e.pointerId;
@@ -257,10 +262,11 @@
       isDragging = false;
       resetStick();
     };
+    const win = options.targetWindow ?? (typeof window !== "undefined" ? window : null);
     container.addEventListener("pointerdown", onPointerDown);
-    window.addEventListener("pointermove", onPointerMove);
-    window.addEventListener("pointerup", onPointerUp);
-    window.addEventListener("pointercancel", onPointerCancel);
+    win?.addEventListener("pointermove", onPointerMove);
+    win?.addEventListener("pointerup", onPointerUp);
+    win?.addEventListener("pointercancel", onPointerCancel);
     return {
       show: () => {
         container.style.display = "flex";
@@ -285,9 +291,9 @@
       isPointerActive: () => isDragging,
       destroy: () => {
         container.removeEventListener("pointerdown", onPointerDown);
-        window.removeEventListener("pointermove", onPointerMove);
-        window.removeEventListener("pointerup", onPointerUp);
-        window.removeEventListener("pointercancel", onPointerCancel);
+        win?.removeEventListener("pointermove", onPointerMove);
+        win?.removeEventListener("pointerup", onPointerUp);
+        win?.removeEventListener("pointercancel", onPointerCancel);
       }
     };
   }
@@ -1053,24 +1059,35 @@
     }
     let dx = 0;
     let dy = 0;
-    if (input.left) dx -= 1;
-    if (input.right) dx += 1;
-    if (input.up) dy -= 1;
-    if (input.down) dy += 1;
-    if (dx === 0 && dy === 0) {
+    if (input.moveVector) {
+      dx = input.moveVector.x;
+      dy = input.moveVector.y;
+    } else {
+      if (input.left) dx -= 1;
+      if (input.right) dx += 1;
+      if (input.up) dy -= 1;
+      if (input.down) dy += 1;
+      const length2 = Math.hypot(dx, dy);
+      if (length2 > 0) {
+        dx /= length2;
+        dy /= length2;
+      }
+    }
+    const length = Math.hypot(dx, dy);
+    if (length < 1e-3) {
       player.isMoving = false;
       player.walkTimer = 0;
       return;
     }
     player.isMoving = true;
     player.walkTimer += dtSeconds;
-    if (dy < 0) player.facing = "up";
-    else if (dy > 0) player.facing = "down";
-    else if (dx < 0) player.facing = "left";
-    else if (dx > 0) player.facing = "right";
-    const length = Math.hypot(dx, dy);
-    const moveX = dx / length * player.speed * dtSeconds;
-    const moveY = dy / length * player.speed * dtSeconds;
+    if (Math.abs(dy) > Math.abs(dx)) {
+      player.facing = dy < 0 ? "up" : "down";
+    } else if (Math.abs(dx) > 0) {
+      player.facing = dx < 0 ? "left" : "right";
+    }
+    const moveX = dx * player.speed * dtSeconds;
+    const moveY = dy * player.speed * dtSeconds;
     const collidesAt = (testX, testY) => {
       if (isRectCollidingWithMap(map, testX, testY, player.width, player.height)) {
         return true;
@@ -1084,12 +1101,40 @@
       return solidObstacles.some((obs) => rectsIntersect(testRect, obs));
     };
     const nextX = player.x + moveX;
-    if (!collidesAt(nextX, player.y)) {
+    const xBlocked = collidesAt(nextX, player.y);
+    if (!xBlocked) {
       player.x = nextX;
     }
     const nextY = player.y + moveY;
-    if (!collidesAt(player.x, nextY)) {
+    const yBlocked = collidesAt(player.x, nextY);
+    if (!yBlocked) {
       player.y = nextY;
+    }
+    if (xBlocked && Math.abs(moveY) < 0.01) {
+      const slideStep = player.speed * dtSeconds * 0.75;
+      for (let offset = 1; offset <= 4; offset++) {
+        if (!collidesAt(nextX, player.y - offset) && !collidesAt(player.x, player.y - slideStep)) {
+          player.y = Math.max(0, player.y - slideStep);
+          break;
+        }
+        if (!collidesAt(nextX, player.y + offset) && !collidesAt(player.x, player.y + slideStep)) {
+          player.y = player.y + slideStep;
+          break;
+        }
+      }
+    }
+    if (yBlocked && Math.abs(moveX) < 0.01) {
+      const slideStep = player.speed * dtSeconds * 0.75;
+      for (let offset = 1; offset <= 4; offset++) {
+        if (!collidesAt(player.x - offset, nextY) && !collidesAt(player.x - slideStep, player.y)) {
+          player.x = Math.max(0, player.x - slideStep);
+          break;
+        }
+        if (!collidesAt(player.x + offset, nextY) && !collidesAt(player.x + slideStep, player.y)) {
+          player.x = player.x + slideStep;
+          break;
+        }
+      }
     }
   }
 
@@ -1495,10 +1540,14 @@
       player.blinkTimer = Math.max(0, player.blinkTimer - dtSeconds);
     }
     let dx = 0;
-    if (input.left) dx -= 1;
-    if (input.right) dx += 1;
+    if (input.moveVector) {
+      dx = input.moveVector.x;
+    } else {
+      if (input.left) dx -= 1;
+      if (input.right) dx += 1;
+    }
     player.y = ROOF_WALK_Y;
-    if (dx === 0) {
+    if (Math.abs(dx) < 1e-3) {
       player.isMoving = false;
       player.walkTimer = 0;
       return;
