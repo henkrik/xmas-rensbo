@@ -156,6 +156,9 @@ export function attachPointerListeners(
   };
 
   const onPointerDown = (e: PointerEvent) => {
+    // Prevent browser selection / drag triggers when rapidly clicking or dragging
+    e.preventDefault();
+
     activePointerId = e.pointerId;
     pointerDownTime = performance.now();
     startClientX = e.clientX;

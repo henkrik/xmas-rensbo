@@ -181,6 +181,7 @@
       input.down = false;
     };
     const onPointerDown = (e) => {
+      e.preventDefault();
       activePointerId = e.pointerId;
       pointerDownTime = performance.now();
       startClientX = e.clientX;
