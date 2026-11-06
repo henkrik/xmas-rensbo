@@ -466,4 +466,36 @@ describe('Player walking & 2x Rensbo map layout', () => {
     updateGameState(state, input, -0.004);
     expect(state.elapsedTime).toBeGreaterThanOrEqual(0);
   });
+
+  it('allows mobile pointer clicks to interact with nearby objects and advance dialogue', () => {
+    const state = createGameState();
+    const input = createEmptyInput();
+
+    // Position Santa right in front of the house door
+    state.player.x = HOUSE_DOOR_COL * TILE_SIZE + 2;
+    state.player.y = (HOUSE_DOOR_ROW + 1) * TILE_SIZE + 2;
+
+    updateGameState(state, input, 0.01);
+    expect(state.nearbyInteractable?.id).toBe('house-door');
+
+    // Click near the door with touch/mouse
+    input.pointerClick = {
+      worldX: HOUSE_DOOR_COL * TILE_SIZE + 6,
+      worldY: HOUSE_DOOR_ROW * TILE_SIZE + 6,
+    };
+
+    updateGameState(state, input, 0.01);
+    expect(state.activeDialogue).not.toBeNull();
+    expect(state.activeDialogue?.lines[0]).toBe("It's locked.");
+
+    // Click anywhere on screen to advance dialogue
+    input.pointerClick = { worldX: 100, worldY: 100 };
+    updateGameState(state, input, 0.01);
+    expect(state.activeDialogue?.currentIndex).toBe(1);
+
+    // Click again to close dialogue
+    input.pointerClick = { worldX: 100, worldY: 100 };
+    updateGameState(state, input, 0.01);
+    expect(state.activeDialogue).toBeNull();
+  });
 });

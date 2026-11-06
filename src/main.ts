@@ -1,6 +1,10 @@
 import { loadAllAssets } from './assets';
-import { attachKeyboardListeners, createEmptyInput } from './core/input';
-import { renderGame } from './rendering/renderer';
+import {
+  attachKeyboardListeners,
+  attachPointerListeners,
+  createEmptyInput,
+} from './core/input';
+import { computeCamera, renderGame } from './rendering/renderer';
 import { createGameState, updateGameState } from './world/gameState';
 
 async function startGame(): Promise<void> {
@@ -19,6 +23,29 @@ async function startGame(): Promise<void> {
   attachKeyboardListeners(window, input);
 
   const state = createGameState();
+
+  attachPointerListeners({
+    canvas,
+    input,
+    getCamera: () => {
+      const mapWidthPx = state.map.cols * state.map.tileSize;
+      const mapHeightPx = state.map.rows * state.map.tileSize;
+      return computeCamera(
+        state.player.x,
+        state.player.y,
+        state.player.width,
+        state.player.height,
+        canvas.width,
+        canvas.height,
+        mapWidthPx,
+        mapHeightPx
+      );
+    },
+    getPlayerCenter: () => ({
+      x: state.player.x + state.player.width / 2,
+      y: state.player.y + state.player.height / 2,
+    }),
+  });
 
   let lastTimestamp: number | null = null;
 

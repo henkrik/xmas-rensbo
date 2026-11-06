@@ -81,7 +81,8 @@
       left: false,
       right: false,
       action: false,
-      actionJustPressed: false
+      actionJustPressed: false,
+      pointerClick: null
     };
   }
   var KEY_TO_BUTTON = {
@@ -131,6 +132,91 @@
     return () => {
       target.removeEventListener("keydown", onKeyDown);
       target.removeEventListener("keyup", onKeyUp);
+    };
+  }
+  function attachPointerListeners(options) {
+    const { canvas, input, getCamera, getPlayerCenter } = options;
+    let activePointerId = null;
+    let pointerDownTime = 0;
+    let startClientX = 0;
+    let startClientY = 0;
+    const toWorldCoords = (clientX, clientY) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const canvasX = (clientX - rect.left) * scaleX;
+      const canvasY = (clientY - rect.top) * scaleY;
+      const camera = getCamera();
+      return {
+        worldX: canvasX + camera.x,
+        worldY: canvasY + camera.y,
+        canvasX,
+        canvasY
+      };
+    };
+    const updateDirectionalMovement = (clientX, clientY) => {
+      const world = toWorldCoords(clientX, clientY);
+      const player = getPlayerCenter();
+      const dx = world.worldX - player.x;
+      const dy = world.worldY - player.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist < 6) {
+        input.left = false;
+        input.right = false;
+        input.up = false;
+        input.down = false;
+        return;
+      }
+      const absDx = Math.abs(dx);
+      const absDy = Math.abs(dy);
+      input.left = dx < 0 && absDx > absDy * 0.4;
+      input.right = dx > 0 && absDx > absDy * 0.4;
+      input.up = dy < 0 && absDy > absDx * 0.4;
+      input.down = dy > 0 && absDy > absDx * 0.4;
+    };
+    const clearMovement = () => {
+      input.left = false;
+      input.right = false;
+      input.up = false;
+      input.down = false;
+    };
+    const onPointerDown = (e) => {
+      activePointerId = e.pointerId;
+      pointerDownTime = performance.now();
+      startClientX = e.clientX;
+      startClientY = e.clientY;
+      updateDirectionalMovement(e.clientX, e.clientY);
+    };
+    const onPointerMove = (e) => {
+      if (activePointerId !== e.pointerId) return;
+      updateDirectionalMovement(e.clientX, e.clientY);
+    };
+    const onPointerUp = (e) => {
+      if (activePointerId !== e.pointerId) return;
+      activePointerId = null;
+      clearMovement();
+      const duration = performance.now() - pointerDownTime;
+      const moveDist = Math.hypot(e.clientX - startClientX, e.clientY - startClientY);
+      if (duration < 400 && moveDist < 16) {
+        const { worldX, worldY } = toWorldCoords(e.clientX, e.clientY);
+        input.pointerClick = { worldX, worldY };
+      }
+    };
+    const onPointerCancel = (e) => {
+      if (activePointerId !== e.pointerId) return;
+      activePointerId = null;
+      clearMovement();
+    };
+    canvas.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerCancel);
+    canvas.style.touchAction = "none";
+    return () => {
+      canvas.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerCancel);
     };
   }
 
@@ -1322,10 +1408,14 @@
     const safeDt = Math.max(0, dtSeconds);
     state.elapsedTime += safeDt;
     dtSeconds = safeDt;
-    const zPressed = consumeActionPress(input);
+    let zPressed = consumeActionPress(input);
+    const pointerClick = input.pointerClick;
+    if (pointerClick) {
+      input.pointerClick = null;
+    }
     if (state.activeDialogue) {
       state.player.isMoving = false;
-      if (zPressed) {
+      if (zPressed || pointerClick) {
         state.activeDialogue.currentIndex += 1;
         if (state.activeDialogue.currentIndex >= state.activeDialogue.lines.length) {
           state.activeDialogue = null;
@@ -1440,7 +1530,16 @@
       }
     }
     refreshInteractables(state);
-    if (zPressed && state.nearbyInteractable) {
+    let pointerInteracted = false;
+    if (pointerClick && state.nearbyInteractable) {
+      const b = state.nearbyInteractable.bounds;
+      const clickMargin = 24;
+      const clickedNearObject = pointerClick.worldX >= b.x - clickMargin && pointerClick.worldX <= b.x + b.width + clickMargin && pointerClick.worldY >= b.y - clickMargin && pointerClick.worldY <= b.y + b.height + clickMargin;
+      if (clickedNearObject) {
+        pointerInteracted = true;
+      }
+    }
+    if ((zPressed || pointerInteracted) && state.nearbyInteractable) {
       const id = state.nearbyInteractable.id;
       if (id === "motorcycle") {
         state.motorcycle.status = "driving";
@@ -1492,6 +1591,28 @@
     const input = createEmptyInput();
     attachKeyboardListeners(window, input);
     const state = createGameState();
+    attachPointerListeners({
+      canvas,
+      input,
+      getCamera: () => {
+        const mapWidthPx = state.map.cols * state.map.tileSize;
+        const mapHeightPx = state.map.rows * state.map.tileSize;
+        return computeCamera(
+          state.player.x,
+          state.player.y,
+          state.player.width,
+          state.player.height,
+          canvas.width,
+          canvas.height,
+          mapWidthPx,
+          mapHeightPx
+        );
+      },
+      getPlayerCenter: () => ({
+        x: state.player.x + state.player.width / 2,
+        y: state.player.y + state.player.height / 2
+      })
+    });
     let lastTimestamp = null;
     function frame(now) {
       const dtSeconds = lastTimestamp === null ? 0 : Math.max(0, Math.min((now - lastTimestamp) / 1e3, 0.1));

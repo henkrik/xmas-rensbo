@@ -199,12 +199,18 @@ export function updateGameState(
   const safeDt = Math.max(0, dtSeconds);
   state.elapsedTime += safeDt;
   dtSeconds = safeDt;
-  const zPressed = consumeActionPress(input);
+  let zPressed = consumeActionPress(input);
 
-  // If a dialogue box is currently open, pressing Z advances or closes it
+  // Consume any pointer/touch click
+  const pointerClick = input.pointerClick;
+  if (pointerClick) {
+    input.pointerClick = null;
+  }
+
+  // If a dialogue box is currently open, pressing Z or clicking the screen advances or closes it
   if (state.activeDialogue) {
     state.player.isMoving = false;
-    if (zPressed) {
+    if (zPressed || pointerClick) {
       state.activeDialogue.currentIndex += 1;
       if (
         state.activeDialogue.currentIndex >= state.activeDialogue.lines.length
@@ -351,7 +357,24 @@ export function updateGameState(
   // Check if Santa is close enough to an interactable object to show the Z prompt
   refreshInteractables(state);
 
-  if (zPressed && state.nearbyInteractable) {
+  // If the player clicked with mouse/finger, check if they clicked near the interactable object
+  let pointerInteracted = false;
+  if (pointerClick && state.nearbyInteractable) {
+    const b = state.nearbyInteractable.bounds;
+    // Allow clicking anywhere near the object (within 24px of bounds)
+    const clickMargin = 24;
+    const clickedNearObject =
+      pointerClick.worldX >= b.x - clickMargin &&
+      pointerClick.worldX <= b.x + b.width + clickMargin &&
+      pointerClick.worldY >= b.y - clickMargin &&
+      pointerClick.worldY <= b.y + b.height + clickMargin;
+
+    if (clickedNearObject) {
+      pointerInteracted = true;
+    }
+  }
+
+  if ((zPressed || pointerInteracted) && state.nearbyInteractable) {
     const id = state.nearbyInteractable.id;
     if (id === 'motorcycle') {
       state.motorcycle.status = 'driving';
