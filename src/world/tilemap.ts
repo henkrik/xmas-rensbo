@@ -20,6 +20,7 @@ export enum TileType {
   PatioTable = 12,
   HouseWallPlain = 13,
   ElectricCar = 14,
+  Motorcycle = 15,
 }
 
 export interface TileMap {
@@ -56,7 +57,8 @@ export const DAMAGED_WIRE_HAZARD: Rect = {
  * - Blue garage in the bottom-left corner (cols 2..7, rows 21..25) with wallbox EV charger at (col 7, row 22)
  * - Electric Car parked on the driveway where the road turns right (cols 17..19, rows 21..22), connected by
  *   a charging cable across row 22 with a damaged sparking hazard at (col 14, row 22)
- * - White shed with bright red double doors on the right (cols 25..29, rows 16..19)
+ * - White shed with bright red double doors on the right (cols 25..29, rows 16..19), with a black motorcycle
+ *   parked outside on the right side of the car (cols 25..26, row 21)
  */
 export const STARTER_MAP: TileMap = {
   cols: MAP_COLS,
@@ -85,7 +87,7 @@ export const STARTER_MAP: TileMap = {
     [1, 0, 0, 0, 0, 0, 4, 4, 0, 0, 0, 0, 3, 2, 2, 2, 2, 2, 3, 0, 3, 0, 0, 0, 0, 10, 10, 10, 10, 10, 0, 1], // 18
     [1, 0, 0, 0, 0, 0, 0, 4, 4, 0, 0, 0, 3, 2, 2, 2, 2, 2, 3, 0, 3, 0, 0, 0, 0, 10, 10, 10, 10, 10, 0, 1], // 19
     [1, 0, 0, 0, 0, 0, 0, 0, 4, 4, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 1], // 20
-    [1, 0, 5, 5, 5, 5, 5, 5, 0, 4, 4, 0, 0, 2, 2, 2, 2, 14, 14, 14, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 1], // 21: Blue garage roof | Electric Car (17..19)
+    [1, 0, 5, 5, 5, 5, 5, 5, 0, 4, 4, 0, 0, 2, 2, 2, 2, 14, 14, 14, 2, 2, 2, 2, 2, 15, 15, 2, 0, 0, 0, 1], // 21: Blue garage roof | Electric Car (17..19) | Motorcycle (25..26)
     [1, 0, 5, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 2, 2, 2, 2, 14, 14, 14, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 1], // 22: Charging wire cols 8..16 -> Car (17..19)
     [1, 0, 11, 11, 11, 11, 11, 11, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 1], // 23
     [1, 0, 11, 11, 11, 11, 11, 11, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], // 24

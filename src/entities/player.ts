@@ -1,7 +1,19 @@
 import { InputState } from '../core/input';
-import { isRectCollidingWithMap, TileMap } from '../world/tilemap';
+import { isRectCollidingWithMap, TileMap, TileType } from '../world/tilemap';
 
 export type Direction = 'up' | 'down' | 'left' | 'right';
+
+export const FOOTPRINT_DURATION_SECONDS = 3.0;
+export const FOOTPRINT_STEP_INTERVAL_SECONDS = 0.14;
+
+export interface Footprint {
+  x: number;
+  y: number;
+  age: number;
+  maxAge: number;
+  foot: 'left' | 'right';
+  facing: Direction;
+}
 
 export interface Rect {
   x: number;
@@ -20,6 +32,8 @@ export interface Player {
   isMoving: boolean;
   walkTimer: number;
   blinkTimer: number;
+  footprintSpawnTimer: number;
+  nextFootprintFoot: 'left' | 'right';
 }
 
 export function createPlayer(x: number, y: number): Player {
@@ -33,6 +47,8 @@ export function createPlayer(x: number, y: number): Player {
     isMoving: false,
     walkTimer: 0,
     blinkTimer: 0,
+    footprintSpawnTimer: 0,
+    nextFootprintFoot: 'left',
   };
 }
 
@@ -43,6 +59,58 @@ export function rectsIntersect(a: Rect, b: Rect): boolean {
     a.y < b.y + b.height &&
     a.y + a.height > b.y
   );
+}
+
+export function isPlayerOnSnowTile(player: Player, map: TileMap): boolean {
+  const footCenterX = player.x + player.width / 2;
+  const footCenterY = player.y + player.height - 2;
+  const col = Math.floor(footCenterX / map.tileSize);
+  const row = Math.floor(footCenterY / map.tileSize);
+  if (col < 0 || col >= map.cols || row < 0 || row >= map.rows) {
+    return false;
+  }
+  return map.tiles[row][col] === TileType.Snow;
+}
+
+export function updateFootprints(
+  footprints: Footprint[],
+  player: Player,
+  map: TileMap,
+  dtSeconds: number
+): void {
+  for (let i = footprints.length - 1; i >= 0; i--) {
+    footprints[i].age += dtSeconds;
+    if (footprints[i].age >= footprints[i].maxAge) {
+      footprints.splice(i, 1);
+    }
+  }
+
+  if (player.isMoving && isPlayerOnSnowTile(player, map)) {
+    player.footprintSpawnTimer -= dtSeconds;
+    while (player.footprintSpawnTimer <= 0) {
+      const foot = player.nextFootprintFoot;
+      const baseX = player.x + player.width / 2;
+      const baseY = player.y + player.height - 1;
+
+      const isVertical = player.facing === 'up' || player.facing === 'down';
+      const fx = isVertical ? baseX + (foot === 'left' ? -3 : 1) : baseX - 1;
+      const fy = isVertical ? baseY - 1 : baseY + (foot === 'left' ? -2 : 1);
+
+      footprints.push({
+        x: Math.round(fx),
+        y: Math.round(fy),
+        age: 0,
+        maxAge: FOOTPRINT_DURATION_SECONDS,
+        foot,
+        facing: player.facing,
+      });
+
+      player.nextFootprintFoot = foot === 'left' ? 'right' : 'left';
+      player.footprintSpawnTimer += FOOTPRINT_STEP_INTERVAL_SECONDS;
+    }
+  } else {
+    player.footprintSpawnTimer = 0;
+  }
 }
 
 export function updatePlayer(

@@ -271,7 +271,7 @@ function generateRensboOverworldPng(mapMatrix) {
       const n = hash2d(x, y);
       const wave = smoothNoise(x, y);
 
-      if (tile === 2 || tile === 14) {
+      if (tile === 2 || tile === 14 || tile === 15) {
         // Plowed gravel road / terrace with snow-dusted edges and wheel tracks
         const isHouseTerrace = row <= 11 && col <= 11;
         let c = isHouseTerrace ? PAL.terracottaBase : PAL.gravelBase;
@@ -337,7 +337,7 @@ function generateRensboOverworldPng(mapMatrix) {
   for (let row = 1; row < 27; row++) {
     for (let col = 1; col < 31; col++) {
       const tile = mapMatrix[row][col];
-      if (tile !== 2 && tile !== 14) continue;
+      if (tile !== 2 && tile !== 14 && tile !== 15) continue;
       const bx = col * 16;
       const by = row * 16;
 
@@ -1184,6 +1184,50 @@ function generateRensboOverworldPng(mapMatrix) {
     // Charging plug & glowing green charging status indicator on the front-left fender
     canvas.fillRect(carX - 1, carY + 14, 4, 4, PAL.outline);
     canvas.fillRect(carX + 3, carY + 15, 2, 2, PAL.ledGreen);
+
+    // 11d. Sleek Black Motorcycle parked on the right side of the car,
+    // outside the white tool shed with the red double doors (cols 25..26, row 21)
+    const motoX = 25 * 16 + 2;
+    const motoY = 21 * 16 + 1;
+
+    // Ground drop shadow + angled kickstand on the gravel
+    canvas.fillEllipse(motoX + 14, motoY + 13, 13, 3.2, PAL.deepShadow);
+    canvas.drawLine(motoX + 13, motoY + 11, motoX + 11, motoY + 14, PAL.outline);
+
+    // Rear tire (left) & Front tire (right) with dark rubber & silver wheel rims
+    canvas.fillEllipse(motoX + 5, motoY + 10, 4.2, 4.2, PAL.outline);
+    canvas.fillEllipse(motoX + 5, motoY + 10, 2.2, 2.2, [168, 180, 198, 255]);
+    canvas.setPixel(motoX + 5, motoY + 10, PAL.outline);
+
+    canvas.fillEllipse(motoX + 23, motoY + 10, 4.2, 4.2, PAL.outline);
+    canvas.fillEllipse(motoX + 23, motoY + 10, 2.2, 2.2, [168, 180, 198, 255]);
+    canvas.setPixel(motoX + 23, motoY + 10, PAL.outline);
+
+    // Chrome dual exhaust pipe & engine block fins
+    canvas.fillRect(motoX + 9, motoY + 7, 8, 4, [62, 70, 84, 255]);
+    canvas.drawLine(motoX + 4, motoY + 11, motoX + 16, motoY + 10, [210, 222, 240, 255]);
+    canvas.drawLine(motoX + 4, motoY + 12, motoX + 15, motoY + 11, [132, 144, 164, 255]);
+
+    // Jet-black motorcycle frame, tail fender & sculpted fuel tank
+    canvas.fillRect(motoX + 4, motoY + 6, 15, 3, PAL.outline);
+    canvas.fillRect(motoX + 12, motoY + 4, 8, 4, [28, 32, 44, 255]);
+    canvas.strokeRect(motoX + 12, motoY + 4, 8, 4, PAL.outline);
+    // Glossy specular highlight on the black fuel tank
+    canvas.drawLine(motoX + 14, motoY + 5, motoX + 18, motoY + 5, [140, 156, 184, 255]);
+
+    // Dark leather rider seat
+    canvas.fillRect(motoX + 6, motoY + 5, 6, 3, [46, 36, 34, 255]);
+    canvas.drawLine(motoX + 7, motoY + 5, motoX + 11, motoY + 5, [78, 62, 58, 255]);
+
+    // Chrome front fork, handlebars, mirror & round headlight
+    canvas.drawLine(motoX + 19, motoY + 3, motoX + 23, motoY + 10, [202, 214, 232, 255]);
+    canvas.drawLine(motoX + 18, motoY + 3, motoX + 22, motoY + 10, PAL.outline);
+    canvas.fillRect(motoX + 17, motoY + 2, 4, 2, PAL.outline);
+    canvas.setPixel(motoX + 19, motoY + 1, [210, 222, 240, 255]); // side mirror
+    // Headlight (right) & red taillight (left)
+    canvas.fillRect(motoX + 21, motoY + 4, 3, 3, PAL.outline);
+    canvas.fillRect(motoX + 22, motoY + 5, 2, 2, PAL.sparkYellow);
+    canvas.fillRect(motoX + 3, motoY + 6, 2, 2, PAL.shedRedBright);
   }
 
   // ==========================================================================
@@ -1587,8 +1631,114 @@ function generateZKeySprite() {
 }
 
 // ============================================================================
+// 4B. GENERATE 16-BIT SNES DOG SPRITESHEET (48x32: 3 frames x 2 directions)
+// Frame 0 = Waiting/Sitting pose, Frames 1 & 2 = Chasing/Running poses
+// ============================================================================
+function generateDogSpritesheet() {
+  const sheet = new PixelCanvas(48, 32);
+  const C = {
+    K: [22, 20, 28, 255], // Dark outline
+    D: [148, 88, 42, 255], // Deep warm brown fur shade
+    M: [198, 132, 68, 255], // Golden-brown coat mid
+    L: [236, 178, 108, 255], // Golden highlight fur
+    W: [248, 244, 236, 255], // Cream chest & muzzle
+    R: [228, 44, 68, 255], // Red collar & happy tongue
+    Y: [255, 214, 74, 255], // Gold collar bell
+  };
+
+  // Frame 0: Dog sitting patiently in "waiting mode" (facing right)
+  const rightSit = [
+    '................',
+    '.......KK.KK....',
+    '......KDMKDMK...',
+    '.....KDLLLLMLK..',
+    '.....KMLKLWLKK..',
+    '.....KMLWWWWWK..',
+    '.....KRRRRYYK...',
+    '....KMMLLLLWK...',
+    '...K.KMLLWWWK...',
+    '..KMK.KMLLWWK...',
+    '..KDK.KMMLLLK...',
+    '...KK.KDDMMDK...',
+    '......KDDKDDK...',
+    '......KWWKWWK...',
+    '......KKKKKKK...',
+    '................',
+  ];
+
+  // Frame 1: Dog galloping in "chasing mode" - stride A (facing right, happy tongue out)
+  const rightRun1 = [
+    '................',
+    '........KK.KK...',
+    '.......KDMKDMK..',
+    '......KDLLLLMLK.',
+    '......KMLKLWLKK.',
+    '......KMLWWWWWK.',
+    '..KK..KRRRRYYRK.',
+    '.KMLKKMMMLLLWWK.',
+    'KDMLLLLLLLLWWK..',
+    '.KKKDDDDMMMLLK..',
+    '...KDDK....KDDK.',
+    '..KWWK......KWWK',
+    '..KKKK......KKKK',
+    '................',
+    '................',
+    '................',
+  ];
+
+  // Frame 2: Dog galloping in "chasing mode" - stride B (facing right, legs gathered)
+  const rightRun2 = [
+    '................',
+    '................',
+    '........KK.KK...',
+    '.......KDMKDMK..',
+    '......KDLLLLMLK.',
+    '......KMLKLWLKK.',
+    '...KK.KMLWWWWWK.',
+    '..KMLKKRRRRYYRK.',
+    '..KDMLLLLLLLWWK.',
+    '...KKDDDDMMLLK..',
+    '.....KDDKKDDK...',
+    '....KWWK..KWWK..',
+    '....KKKK..KKKK..',
+    '................',
+    '................',
+    '................',
+  ];
+
+  function flipH(grid) {
+    return grid.map((r) => r.split('').reverse().join(''));
+  }
+
+  function drawDogFrame(ox, oy, grid) {
+    sheet.fillEllipse(ox + 8, oy + 14, 5.5, 1.8, [12, 16, 26, 105]);
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const ch = grid[y][x];
+        if (ch !== '.' && C[ch]) {
+          sheet.setPixel(ox + x, oy + y, C[ch]);
+        }
+      }
+    }
+  }
+
+  // Row 0: Facing Right
+  drawDogFrame(0, 0, rightSit);
+  drawDogFrame(16, 0, rightRun1);
+  drawDogFrame(32, 0, rightRun2);
+
+  // Row 1: Facing Left
+  drawDogFrame(0, 16, flipH(rightSit));
+  drawDogFrame(16, 16, flipH(rightRun1));
+  drawDogFrame(32, 16, flipH(rightRun2));
+
+  return sheet.toPngBuffer();
+}
+
+// ============================================================================
 // 5. RENSBO 32x28 MAP MATRIX (Matches src/world/tilemap.ts)
 // Tile 14 = Electric Car parked on the driveway (cols 17..19, rows 21..22)
+// Tile 15 = Black Motorcycle parked outside the red-door shed (cols 25..26, row 21)
 // ============================================================================
 const RENSBO_MAP_MATRIX = [
   //0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
@@ -1613,7 +1763,7 @@ const RENSBO_MAP_MATRIX = [
   [1, 0, 0, 0, 0, 0, 4, 4, 0, 0, 0, 0, 3, 2, 2, 2, 2, 2, 3, 0, 3, 0, 0, 0, 0, 10, 10, 10, 10, 10, 0, 1], // 18
   [1, 0, 0, 0, 0, 0, 0, 4, 4, 0, 0, 0, 3, 2, 2, 2, 2, 2, 3, 0, 3, 0, 0, 0, 0, 10, 10, 10, 10, 10, 0, 1], // 19
   [1, 0, 0, 0, 0, 0, 0, 0, 4, 4, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 1], // 20
-  [1, 0, 5, 5, 5, 5, 5, 5, 0, 4, 4, 0, 0, 2, 2, 2, 2, 14, 14, 14, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 1], // 21: Blue garage roof | Electric Car (17..19)
+  [1, 0, 5, 5, 5, 5, 5, 5, 0, 4, 4, 0, 0, 2, 2, 2, 2, 14, 14, 14, 2, 2, 2, 2, 2, 15, 15, 2, 0, 0, 0, 1], // 21: Blue garage roof | Electric Car (17..19) | Motorcycle (25..26)
   [1, 0, 5, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 2, 2, 2, 2, 14, 14, 14, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 1], // 22: Charging cable runs cols 8..16 to Car (17..19)
   [1, 0, 11, 11, 11, 11, 11, 11, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 1], // 23
   [1, 0, 11, 11, 11, 11, 11, 11, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 4, 4, 4, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1], // 24
@@ -1628,6 +1778,7 @@ fs.mkdirSync(spritesDir, { recursive: true });
 fs.mkdirSync(tilesDir, { recursive: true });
 
 fs.writeFileSync(path.join(spritesDir, 'santa.png'), generateSantaSpritesheet());
+fs.writeFileSync(path.join(spritesDir, 'dog.png'), generateDogSpritesheet());
 fs.writeFileSync(path.join(spritesDir, 'thrower.png'), generateThrowerSpritesheet());
 fs.writeFileSync(path.join(spritesDir, 'snowball.png'), generateSnowballSprite());
 fs.writeFileSync(path.join(spritesDir, 'z-key.png'), generateZKeySprite());
@@ -1636,4 +1787,4 @@ fs.writeFileSync(
   generateRensboOverworldPng(RENSBO_MAP_MATRIX)
 );
 
-console.log('Generated snow-covered 16-bit SNES Rensbo map with electric car & charging cable!');
+console.log('Generated snow-covered 16-bit SNES Rensbo map with electric car, motorcycle & dog!');

@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { applyKeyEvent, createEmptyInput } from '../src/core/input';
-import { createPlayer, updatePlayer } from '../src/entities/player';
+import {
+  DOG_AGGRO_DISTANCE,
+  DOG_DEAGGRO_DISTANCE,
+  DOG_START_X,
+  DOG_START_Y,
+} from '../src/entities/dog';
+import {
+  createPlayer,
+  FOOTPRINT_DURATION_SECONDS,
+  updatePlayer,
+} from '../src/entities/player';
 import { HIT_BLINK_DURATION_SECONDS } from '../src/entities/snowball';
 import { createGameState, updateGameState } from '../src/world/gameState';
 import {
@@ -17,7 +27,7 @@ import {
 } from '../src/world/tilemap';
 
 describe('Player walking & 2x Rensbo map layout', () => {
-  it('uses a 32x28 map (2x width and height) with a large 13x7 main house', () => {
+  it('uses a 32x28 map (2x width and height) with a large 13x7 main house and parked black motorcycle', () => {
     expect(MAP_COLS).toBe(32);
     expect(MAP_ROWS).toBe(28);
     expect(STARTER_MAP.tiles.length).toBe(28);
@@ -29,6 +39,10 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(STARTER_MAP.tiles[HOUSE_DOOR_ROW][HOUSE_DOOR_COL]).toBe(
       TileType.HouseDoor
     );
+
+    // Verify the black motorcycle is parked on the right side of the electric car, outside the red-door shed
+    expect(STARTER_MAP.tiles[21][25]).toBe(TileType.Motorcycle);
+    expect(STARTER_MAP.tiles[21][26]).toBe(TileType.Motorcycle);
   });
 
   it('moves the player in all four directions using arrow keys', () => {
@@ -55,6 +69,32 @@ describe('Player walking & 2x Rensbo map layout', () => {
     // Stop moving when keys are released
     updatePlayer(player, input, 0.2, STARTER_MAP);
     expect(player.isMoving).toBe(false);
+  });
+
+  it('leaves footprints on snow tiles (but not road tiles) that fade after 3 seconds', () => {
+    const state = createGameState();
+    const input = createEmptyInput();
+
+    // Walk up on the gravel road (TileType.Road) -> no footprints should be left
+    input.up = true;
+    updateGameState(state, input, 0.2);
+    expect(state.footprints.length).toBe(0);
+
+    // Move Santa onto the snow lawn on the left (col 10, row 16 -> TileType.Snow) and walk
+    state.player.x = 10 * TILE_SIZE;
+    state.player.y = 16 * TILE_SIZE;
+    updateGameState(state, input, 0.2);
+    expect(state.footprints.length).toBeGreaterThan(0);
+    expect(state.footprints[0].maxAge).toBe(FOOTPRINT_DURATION_SECONDS);
+
+    // Stop walking and advance just under 3 seconds -> footprint is still visible (fading)
+    input.up = false;
+    updateGameState(state, input, 2.5);
+    expect(state.footprints.length).toBeGreaterThan(0);
+
+    // Advance past 3.0 seconds total -> footprints completely fade out and are removed
+    updateGameState(state, input, 0.6);
+    expect(state.footprints.length).toBe(0);
   });
 
   it('allows walking straight up the driveway to the main house when not hit by a snowball', () => {
@@ -114,6 +154,53 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(state.player.x).toBe(PLAYER_START_X);
     expect(state.player.y).toBe(PLAYER_START_Y);
     expect(state.player.blinkTimer).toBe(HIT_BLINK_DURATION_SECONDS);
+  });
+
+  it('has a dog on the east snow field that waits, chases with red hearts when close, can be dodged or blocked, and resets Santa if caught', () => {
+    const state = createGameState();
+    const input = createEmptyInput();
+
+    // Dog starts in waiting mode on the east snow field between the guest cottages and red-door shed
+    expect(state.dog.x).toBe(DOG_START_X);
+    expect(state.dog.y).toBe(DOG_START_Y);
+    expect(state.dog.mode).toBe('waiting');
+    expect(state.dog.hearts.length).toBe(0);
+
+    // Move Santa within aggro distance on the east snow field
+    state.player.x = DOG_START_X - (DOG_AGGRO_DISTANCE - 16);
+    state.player.y = DOG_START_Y;
+    updateGameState(state, input, 0.1);
+
+    expect(state.dog.mode).toBe('chasing');
+    expect(state.dog.hearts.length).toBeGreaterThan(0);
+    // Gradual acceleration: after 0.1s the dog is moving toward Santa but hasn't hit maxSpeed yet
+    expect(state.dog.vx).toBeLessThan(0);
+    expect(Math.abs(state.dog.vx)).toBeLessThan(state.dog.maxSpeed);
+
+    // Move Santa far away (beyond de-aggro distance) -> dog returns to waiting mode and decelerates
+    state.player.x = DOG_START_X - (DOG_DEAGGRO_DISTANCE + 32);
+    updateGameState(state, input, 0.1);
+    expect(state.dog.mode).toBe('waiting');
+
+    // Now place Santa close to the dog and stand still -> dog accelerates and inevitably catches Santa
+    state.dog.x = DOG_START_X;
+    state.dog.y = DOG_START_Y;
+    state.dog.vx = 0;
+    state.dog.vy = 0;
+    state.player.x = DOG_START_X - 48;
+    state.player.y = DOG_START_Y;
+
+    for (let i = 0; i < 40; i++) {
+      updateGameState(state, input, 0.05);
+      if (state.player.blinkTimer > 0) {
+        break;
+      }
+    }
+
+    expect(state.player.x).toBe(PLAYER_START_X);
+    expect(state.player.y).toBe(PLAYER_START_Y);
+    expect(state.player.blinkTimer).toBe(HIT_BLINK_DURATION_SECONDS);
+    expect(state.dog.mode).toBe('waiting');
   });
 
   it('shows "Z: Talk to" near a snowball thrower and displays "Watch out!" when Z is pressed', () => {

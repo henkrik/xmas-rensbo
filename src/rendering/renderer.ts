@@ -1,5 +1,6 @@
 import { GameAssets } from '../assets';
-import { Direction } from '../entities/player';
+import { Dog } from '../entities/dog';
+import { Direction, Footprint } from '../entities/player';
 import { GameState } from '../world/gameState';
 import { DAMAGED_WIRE_HAZARD, TILE_SIZE } from '../world/tilemap';
 
@@ -162,6 +163,118 @@ function drawDialogueBox(
 }
 
 /**
+ * Renders Santa's boot prints pressed into snow tiles, fading smoothly over 3 seconds.
+ */
+function drawFootprints(
+  ctx: CanvasRenderingContext2D,
+  footprints: readonly Footprint[]
+): void {
+  if (footprints.length === 0) return;
+  ctx.save();
+
+  for (const fp of footprints) {
+    const alpha = Math.max(0, 1 - fp.age / fp.maxAge);
+    if (alpha <= 0) continue;
+
+    const isVertical = fp.facing === 'up' || fp.facing === 'down';
+    const w = isVertical ? 2 : 3;
+    const h = isVertical ? 3 : 2;
+    const x = Math.round(fp.x);
+    const y = Math.round(fp.y);
+
+    // Subtle displaced snow highlight along bottom/right edge
+    ctx.fillStyle = `rgba(255, 255, 255, ${(0.55 * alpha).toFixed(3)})`;
+    ctx.fillRect(x, y + 1, w, h);
+
+    // Recessed blue-grey snow boot print shadow
+    ctx.fillStyle = `rgba(122, 148, 184, ${(0.82 * alpha).toFixed(3)})`;
+    ctx.fillRect(x, y, w, h);
+
+    // Deeper sole indentation center
+    ctx.fillStyle = `rgba(92, 118, 154, ${(0.72 * alpha).toFixed(3)})`;
+    ctx.fillRect(x, y, 1, 1);
+  }
+
+  ctx.restore();
+}
+
+/**
+ * Renders a crisp 7x6 pixel-art red heart at (cx, cy).
+ */
+function drawPixelHeart(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  alpha: number
+): void {
+  const x = Math.round(cx - 3);
+  const y = Math.round(cy - 3);
+  const pattern = [
+    '.KK.KK.',
+    'KRRKRRK',
+    'KRHRRRK',
+    '.KRRRK.',
+    '..KRK..',
+    '...K...',
+  ];
+
+  ctx.save();
+  for (let row = 0; row < pattern.length; row++) {
+    for (let col = 0; col < pattern[row].length; col++) {
+      const ch = pattern[row][col];
+      if (ch === '.') continue;
+      if (ch === 'K') {
+        ctx.fillStyle = `rgba(28, 18, 32, ${(0.9 * alpha).toFixed(3)})`;
+      } else if (ch === 'H') {
+        ctx.fillStyle = `rgba(255, 184, 200, ${(0.95 * alpha).toFixed(3)})`;
+      } else {
+        ctx.fillStyle = `rgba(238, 36, 74, ${(0.95 * alpha).toFixed(3)})`;
+      }
+      ctx.fillRect(x + col, y + row, 1, 1);
+    }
+  }
+  ctx.restore();
+}
+
+/**
+ * Renders the dog on the east snow field along with floating red hearts when chasing Santa.
+ */
+function drawDogAndHearts(
+  ctx: CanvasRenderingContext2D,
+  dog: Dog,
+  dogSprite: HTMLImageElement
+): void {
+  const drawX = Math.round(dog.x - (TILE_SIZE - dog.width) / 2);
+  const drawY = Math.round(dog.y - (TILE_SIZE - dog.height));
+
+  const speed = Math.hypot(dog.vx, dog.vy);
+  let frameCol = 0;
+  if (dog.mode === 'chasing' || speed > 4) {
+    frameCol = Math.floor(dog.animTimer * 10) % 2 === 0 ? 1 : 2;
+  }
+  const dirRow = dog.facing === 'left' ? 1 : 0;
+
+  ctx.drawImage(
+    dogSprite,
+    frameCol * TILE_SIZE,
+    dirRow * TILE_SIZE,
+    TILE_SIZE,
+    TILE_SIZE,
+    drawX,
+    drawY,
+    TILE_SIZE,
+    TILE_SIZE
+  );
+
+  for (const heart of dog.hearts) {
+    const alpha = Math.max(0, 1 - heart.age / heart.maxAge);
+    if (alpha > 0) {
+      drawPixelHeart(ctx, heart.x, heart.y, alpha);
+    }
+  }
+}
+
+/**
  * Renders animated electric sparks crackling out of the damaged EV charging cable on the driveway.
  */
 function drawDamagedWireSparks(
@@ -264,6 +377,8 @@ export function renderGame(
   const {
     map,
     player,
+    footprints,
+    dog,
     throwers,
     snowballs,
     nearbyInteractable,
@@ -337,10 +452,13 @@ export function renderGame(
     }
   }
 
-  // 2. Draw animated electric sparks on the damaged EV charging cable
+  // 2. Draw Santa's fading footprints in the snow
+  drawFootprints(ctx, footprints);
+
+  // 3. Draw animated electric sparks on the damaged EV charging cable
   drawDamagedWireSparks(ctx, elapsedTime);
 
-  // 3. Draw snowball thrower NPCs on the driveway (with throwing animation frame)
+  // 4. Draw snowball thrower NPCs on the driveway (with throwing animation frame)
   for (const thrower of throwers) {
     const drawX = Math.round(thrower.x - (TILE_SIZE - thrower.width) / 2);
     const drawY = Math.round(thrower.y - (TILE_SIZE - thrower.height));
@@ -364,14 +482,17 @@ export function renderGame(
     );
   }
 
-  // 4. Draw flying snowballs
+  // 5. Draw the dog on the east snow field & its floating love hearts when chasing
+  drawDogAndHearts(ctx, dog, assets.dogSprite);
+
+  // 6. Draw flying snowballs
   for (const sb of snowballs) {
     const drawX = Math.round(sb.x - (TILE_SIZE - sb.width) / 2);
     const drawY = Math.round(sb.y - (TILE_SIZE - sb.height) / 2);
     ctx.drawImage(assets.snowballSprite, drawX, drawY, TILE_SIZE, TILE_SIZE);
   }
 
-  // 5. Draw Santa (4-directional SNES spritesheet + 3-frame walk cycle + hit blinking)
+  // 7. Draw Santa (4-directional SNES spritesheet + 3-frame walk cycle + hit blinking)
   const isBlinkHidden =
     player.blinkTimer > 0 && Math.floor(player.blinkTimer * 12) % 2 === 1;
 
@@ -401,10 +522,10 @@ export function renderGame(
 
   ctx.restore();
 
-  // 6. Gentle falling snow overlay across the screen
+  // 8. Gentle falling snow overlay across the screen
   drawSnowfall(ctx, elapsedTime, camera);
 
-  // 7. Screen-space UI overlay: Dialogue box OR bottom Z-key interaction prompt
+  // 9. Screen-space UI overlay: Dialogue box OR bottom Z-key interaction prompt
   if (activeDialogue) {
     const line = activeDialogue.lines[activeDialogue.currentIndex] ?? '';
     drawDialogueBox(ctx, line, assets.zKeySprite);
