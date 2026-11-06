@@ -229,11 +229,11 @@ describe('Player walking & 2x Rensbo map layout', () => {
     const state = createGameState();
     const input = createEmptyInput();
 
-    // 1. Before acquiring the ladder, the snow-free spot on the west side of the house shows "Z: Inspect"
+    // 1. Before acquiring the ladder, the snow-free spot on the west side of the house shows "Inspect"
     state.player.x = HOUSE_WEST_LADDER_SPOT.x + 2;
     state.player.y = HOUSE_WEST_LADDER_SPOT.y + 4;
     updateGameState(state, input, 0.01);
-    expect(state.nearbyInteractable?.promptText).toBe('Z: Inspect');
+    expect(state.nearbyInteractable?.promptText).toBe('Inspect');
 
     applyKeyEvent(input, 'KeyZ', true);
     updateGameState(state, input, 0.01);
@@ -248,7 +248,7 @@ describe('Player walking & 2x Rensbo map layout', () => {
     applyKeyEvent(input, 'KeyZ', false);
     expect(state.activeDialogue).toBeNull();
 
-    // 2. Walk over the ladder on the ground next to the dog (non-colliding) and pick it up with "Z: Pick up"
+    // 2. Walk over the ladder on the ground next to the dog (non-colliding) and pick it up with "Pick up"
     state.dog.x = 29 * TILE_SIZE; // keep dog slightly to the right while testing pickup
     state.player.x = GROUND_LADDER_BOUNDS.x;
     state.player.y = GROUND_LADDER_BOUNDS.y;
@@ -257,7 +257,7 @@ describe('Player walking & 2x Rensbo map layout', () => {
     input.right = false;
     // Verify Santa moved freely over the ground ladder without collision
     expect(state.player.x).toBeGreaterThan(GROUND_LADDER_BOUNDS.x);
-    expect(state.nearbyInteractable?.promptText).toBe('Z: Pick up');
+    expect(state.nearbyInteractable?.promptText).toBe('Pick up');
 
     applyKeyEvent(input, 'KeyZ', true);
     updateGameState(state, input, 0.01);
@@ -265,18 +265,18 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(state.hasLadder).toBe(true);
     expect(state.nearbyInteractable).toBeNull();
 
-    // 3. Return to the west side of the main house -> "Z: Place ladder"
+    // 3. Return to the west side of the main house -> "Place ladder"
     state.player.x = HOUSE_WEST_LADDER_SPOT.x + 2;
     state.player.y = HOUSE_WEST_LADDER_SPOT.y + 4;
     updateGameState(state, input, 0.01);
-    expect(state.nearbyInteractable?.promptText).toBe('Z: Place ladder');
+    expect(state.nearbyInteractable?.promptText).toBe('Place ladder');
 
     applyKeyEvent(input, 'KeyZ', true);
     updateGameState(state, input, 0.01);
     applyKeyEvent(input, 'KeyZ', false);
     expect(state.hasLadder).toBe(false);
     expect(state.ladderPlaced).toBe(true);
-    expect(state.nearbyInteractable?.promptText).toBe('Z: Climb ladder');
+    expect(state.nearbyInteractable?.promptText).toBe('Climb ladder');
 
     // 4. Press Z to climb the ladder -> Santa slides up onto the roof
     applyKeyEvent(input, 'KeyZ', true);
@@ -295,7 +295,7 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(state.climbing).toBeNull();
     expect(state.isOnRoof).toBe(true);
     expect(state.player.y).toBe(ROOF_WALK_Y);
-    expect(state.nearbyInteractable?.promptText).toBe('Z: Climb down ladder');
+    expect(state.nearbyInteractable?.promptText).toBe('Climb down ladder');
 
     // 5. On the roof, Santa cannot walk north or south
     input.up = true;
@@ -308,14 +308,14 @@ describe('Player walking & 2x Rensbo map layout', () => {
     input.down = false;
     expect(state.player.y).toBe(ROOF_WALK_Y);
 
-    // 6. Walk east along the roof to the chimney -> "Z: Climb down chimney"
+    // 6. Walk east along the roof to the chimney -> "Climb down chimney"
     input.right = true;
     for (let i = 0; i < 60; i++) {
       updateGameState(state, input, 0.05);
     }
     input.right = false;
     expect(state.player.x).toBe(ROOF_MAX_X);
-    expect(state.nearbyInteractable?.promptText).toBe('Z: Climb down chimney');
+    expect(state.nearbyInteractable?.promptText).toBe('Climb down chimney');
 
     // Pressing Z at the chimney is a placeholder and does nothing for now
     applyKeyEvent(input, 'KeyZ', true);
@@ -331,7 +331,7 @@ describe('Player walking & 2x Rensbo map layout', () => {
     }
     input.left = false;
     expect(state.player.x).toBe(ROOF_MIN_X);
-    expect(state.nearbyInteractable?.promptText).toBe('Z: Climb down ladder');
+    expect(state.nearbyInteractable?.promptText).toBe('Climb down ladder');
 
     applyKeyEvent(input, 'KeyZ', true);
     updateGameState(state, input, 0.01);
@@ -356,7 +356,7 @@ describe('Player walking & 2x Rensbo map layout', () => {
     state.player.y = MOTORCYCLE_START_Y - state.player.height - 2;
 
     updateGameState(state, input, 0.01);
-    expect(state.nearbyInteractable?.promptText).toBe('Z: drive');
+    expect(state.nearbyInteractable?.promptText).toBe('Drive');
 
     // Press Z to drive the motorcycle
     applyKeyEvent(input, 'KeyZ', true);
@@ -388,7 +388,7 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(state.nearbyInteractable).toBeNull();
   });
 
-  it('shows "Z: Talk to" near a snowball thrower and displays "Watch out!" when Z is pressed', () => {
+  it('shows "Talk to" near a snowball thrower and displays "Watch out!" when Z is pressed', () => {
     const state = createGameState();
     const input = createEmptyInput();
 
@@ -399,7 +399,7 @@ describe('Player walking & 2x Rensbo map layout', () => {
 
     updateGameState(state, input, 0.01);
     expect(state.nearbyInteractable).not.toBeNull();
-    expect(state.nearbyInteractable?.promptText).toBe('Z: Talk to');
+    expect(state.nearbyInteractable?.promptText).toBe('Talk to');
 
     // Press Z to talk
     applyKeyEvent(input, 'KeyZ', true);
@@ -419,7 +419,7 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(state.activeDialogue).toBeNull();
   });
 
-  it('shows "Z: Open door" at the main house door and advances through the two dialogue lines with Z', () => {
+  it('shows "Open door" at the main house door and advances through the two dialogue lines with Z', () => {
     const state = createGameState();
     const input = createEmptyInput();
 
@@ -429,7 +429,7 @@ describe('Player walking & 2x Rensbo map layout', () => {
 
     updateGameState(state, input, 0.01);
     expect(state.nearbyInteractable).not.toBeNull();
-    expect(state.nearbyInteractable?.promptText).toBe('Z: Open door');
+    expect(state.nearbyInteractable?.promptText).toBe('Open door');
 
     // Press Z to try opening the locked door
     applyKeyEvent(input, 'KeyZ', true);
@@ -499,16 +499,34 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(state.activeDialogue).toBeNull();
   });
 
-  it('triggers J key toggle callback via applyKeyEvent', () => {
+  it('halves dog max speed in joystick mode', () => {
+    const state = createGameState();
     const input = createEmptyInput();
-    let toggled = false;
 
-    applyKeyEvent(input, 'KeyJ', true, {
-      onToggleJoystick: () => {
-        toggled = true;
-      },
-    });
+    // Aggro dog on east snow field
+    state.dog.x = DOG_START_X;
+    state.dog.y = DOG_START_Y;
+    state.player.x = DOG_START_X - (DOG_AGGRO_DISTANCE - 16);
+    state.player.y = DOG_START_Y;
 
-    expect(toggled).toBe(true);
+    // Normal keyboard mode
+    state.joystickActive = false;
+    updateGameState(state, input, 0.5);
+    expect(state.dog.vx).toBeLessThan(-30);
+    expect(Math.abs(state.dog.vx)).toBeGreaterThan(37); // > halved max speed
+
+    // Reset and test in Joystick mode
+    state.dog.x = DOG_START_X;
+    state.dog.y = DOG_START_Y;
+    state.dog.vx = 0;
+    state.dog.vy = 0;
+    state.player.x = DOG_START_X - (DOG_AGGRO_DISTANCE - 16);
+    state.player.y = DOG_START_Y;
+    state.joystickActive = true;
+
+    for (let i = 0; i < 20; i++) {
+      updateGameState(state, input, 0.05);
+      expect(Math.abs(state.dog.vx)).toBeLessThanOrEqual(37.01);
+    }
   });
 });

@@ -11,7 +11,8 @@ import { createGameState, updateGameState } from './world/gameState';
 function getActionLabel(promptText: string): string {
   // Strip "Z: " prefix if present and return concise action
   const clean = promptText.replace(/^Z:\s*/i, '').trim();
-  return clean || 'Action';
+  if (!clean) return 'Action';
+  return clean.charAt(0).toUpperCase() + clean.slice(1);
 }
 
 async function startGame(): Promise<void> {
@@ -105,12 +106,15 @@ async function startGame(): Promise<void> {
         : Math.max(0, Math.min((now - lastTimestamp) / 1000, 0.1));
     lastTimestamp = now;
 
+    // Track joystick active state in game state so renderer & entities (like dog speed) adapt
+    const isJoystickShown = joystick?.isVisible() ?? false;
+    state.joystickActive = isJoystickShown;
+
     updateGameState(state, input, dtSeconds);
     renderGame(ctx!, state, assets);
 
     // Sync mobile action button visibility and text with nearby interactable
     if (mobileActionBtn) {
-      const isJoystickShown = joystick?.isVisible() ?? false;
       if (isJoystickShown && state.nearbyInteractable) {
         mobileActionBtn.textContent = getActionLabel(state.nearbyInteractable.promptText);
         mobileActionBtn.style.display = 'block';

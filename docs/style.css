@@ -90,9 +90,9 @@ body {
   width: 30%;
   height: 30%;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 215, 0, 0.85) 45%, rgba(200, 140, 20, 0.9) 100%);
-  border: 2px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.6);
+  background: radial-gradient(circle at 35% 35%, #424958 0%, #252b37 60%, #161b24 100%);
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7), inset 0 2px 4px rgba(255, 255, 255, 0.2);
   position: absolute;
   pointer-events: none;
   transition: transform 0.05s ease-out;

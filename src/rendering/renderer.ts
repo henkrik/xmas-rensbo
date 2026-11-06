@@ -802,7 +802,7 @@ export function renderGame(
   if (activeDialogue) {
     const line = activeDialogue.lines[activeDialogue.currentIndex] ?? '';
     drawDialogueBox(ctx, line, assets.zKeySprite);
-  } else if (nearbyInteractable) {
+  } else if (nearbyInteractable && !state.joystickActive) {
     drawInteractionPrompt(ctx, nearbyInteractable.promptText, assets.zKeySprite);
   }
 }

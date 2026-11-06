@@ -59,13 +59,13 @@ export function buildInteractables(
       {
         id: 'roof-ladder',
         bounds: { ...ROOF_LADDER_BOUNDS },
-        promptText: 'Z: Climb down ladder',
+        promptText: 'Climb down ladder',
         dialogueLines: [],
       },
       {
         id: 'roof-chimney',
         bounds: { ...ROOF_CHIMNEY_BOUNDS },
-        promptText: 'Z: Climb down chimney',
+        promptText: 'Climb down chimney',
         dialogueLines: [],
       },
     ];
@@ -74,7 +74,7 @@ export function buildInteractables(
   const list: Interactable[] = throwers.map((t) => ({
     id: t.id,
     bounds: { x: t.x, y: t.y, width: t.width, height: t.height },
-    promptText: 'Z: Talk to',
+    promptText: 'Talk to',
     dialogueLines: ['Watch out!'],
   }));
 
@@ -86,7 +86,7 @@ export function buildInteractables(
       width: TILE_SIZE,
       height: TILE_SIZE,
     },
-    promptText: 'Z: Open door',
+    promptText: 'Open door',
     dialogueLines: [
       "It's locked.",
       'There has to be another way into the house...',
@@ -102,7 +102,7 @@ export function buildInteractables(
         width: TILE_SIZE * 2,
         height: TILE_SIZE,
       },
-      promptText: 'Z: drive',
+      promptText: 'Drive',
       dialogueLines: [],
     });
   }
@@ -111,13 +111,13 @@ export function buildInteractables(
     list.push({
       id: 'ground-ladder',
       bounds: { ...GROUND_LADDER_BOUNDS },
-      promptText: 'Z: Pick up',
+      promptText: 'Pick up',
       dialogueLines: [],
     });
     list.push({
       id: 'house-west-inspect',
       bounds: { ...HOUSE_WEST_LADDER_SPOT },
-      promptText: 'Z: Inspect',
+      promptText: 'Inspect',
       dialogueLines: [
         "Hmm.. looks like there is a chimney up there, but I can't reach it",
       ],
@@ -126,14 +126,14 @@ export function buildInteractables(
     list.push({
       id: 'house-west-place-ladder',
       bounds: { ...HOUSE_WEST_LADDER_SPOT },
-      promptText: 'Z: Place ladder',
+      promptText: 'Place ladder',
       dialogueLines: [],
     });
   } else if (ladderPlaced) {
     list.push({
       id: 'house-west-climb-ladder',
       bounds: { ...HOUSE_WEST_LADDER_SPOT },
-      promptText: 'Z: Climb ladder',
+      promptText: 'Climb ladder',
       dialogueLines: [],
     });
   }

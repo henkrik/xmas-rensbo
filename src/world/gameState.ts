@@ -76,6 +76,7 @@ export interface GameState {
   isOnRoof: boolean;
   climbing: ClimbingState | null;
   electrocutionTimer: number;
+  joystickActive: boolean;
   interactables: Interactable[];
   nearbyInteractable: Interactable | null;
   activeDialogue: DialogueState | null;
@@ -124,6 +125,7 @@ export function createGameState(map: TileMap = STARTER_MAP): GameState {
     isOnRoof: false,
     climbing: null,
     electrocutionTimer: 0,
+    joystickActive: false,
     interactables,
     nearbyInteractable: null,
     activeDialogue: null,
@@ -329,12 +331,15 @@ export function updateGameState(
     }
 
     // Update the dog on the east snow field
+    // In joystick mode, dog's max speed is halved (0.5x) to make mobile navigation balanced
+    const dogSpeedMultiplier = state.joystickActive ? 0.5 : 1.0;
     const caughtByDog = updateDog(
       state.dog,
       state.player,
       dtSeconds,
       state.map,
-      solidObstacles
+      solidObstacles,
+      dogSpeedMultiplier
     );
     if (caughtByDog) {
       resetAfterSnowballHit(state);

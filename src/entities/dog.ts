@@ -74,7 +74,8 @@ export function updateDog(
   player: Player,
   dtSeconds: number,
   map: TileMap,
-  solidObstacles: readonly Rect[] = []
+  solidObstacles: readonly Rect[] = [],
+  speedMultiplier: number = 1.0
 ): boolean {
   const dogCenterX = dog.x + dog.width / 2;
   const dogCenterY = dog.y + dog.height / 2;
@@ -92,11 +93,13 @@ export function updateDog(
     dog.mode = 'waiting';
   }
 
+  const effectiveMaxSpeed = dog.maxSpeed * speedMultiplier;
+
   if (dog.mode === 'chasing') {
     const ux = dist > 0.001 ? dx / dist : 0;
     const uy = dist > 0.001 ? dy / dist : 0;
-    const targetVx = ux * dog.maxSpeed;
-    const targetVy = uy * dog.maxSpeed;
+    const targetVx = ux * effectiveMaxSpeed;
+    const targetVy = uy * effectiveMaxSpeed;
 
     const dvx = targetVx - dog.vx;
     const dvy = targetVy - dog.vy;

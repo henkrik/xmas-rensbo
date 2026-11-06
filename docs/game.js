@@ -963,7 +963,7 @@
     if (activeDialogue) {
       const line = activeDialogue.lines[activeDialogue.currentIndex] ?? "";
       drawDialogueBox(ctx, line, assets.zKeySprite);
-    } else if (nearbyInteractable) {
+    } else if (nearbyInteractable && !state.joystickActive) {
       drawInteractionPrompt(ctx, nearbyInteractable.promptText, assets.zKeySprite);
     }
   }
@@ -1103,7 +1103,7 @@
       hearts: []
     };
   }
-  function updateDog(dog, player, dtSeconds, map, solidObstacles = []) {
+  function updateDog(dog, player, dtSeconds, map, solidObstacles = [], speedMultiplier = 1) {
     const dogCenterX = dog.x + dog.width / 2;
     const dogCenterY = dog.y + dog.height / 2;
     const playerCenterX = player.x + player.width / 2;
@@ -1117,11 +1117,12 @@
     } else if (dog.mode === "chasing" && dist >= DOG_DEAGGRO_DISTANCE) {
       dog.mode = "waiting";
     }
+    const effectiveMaxSpeed = dog.maxSpeed * speedMultiplier;
     if (dog.mode === "chasing") {
       const ux = dist > 1e-3 ? dx / dist : 0;
       const uy = dist > 1e-3 ? dy / dist : 0;
-      const targetVx = ux * dog.maxSpeed;
-      const targetVy = uy * dog.maxSpeed;
+      const targetVx = ux * effectiveMaxSpeed;
+      const targetVy = uy * effectiveMaxSpeed;
       const dvx = targetVx - dog.vx;
       const dvy = targetVy - dog.vy;
       const dvLen = Math.hypot(dvx, dvy);
@@ -1292,13 +1293,13 @@
         {
           id: "roof-ladder",
           bounds: { ...ROOF_LADDER_BOUNDS },
-          promptText: "Z: Climb down ladder",
+          promptText: "Climb down ladder",
           dialogueLines: []
         },
         {
           id: "roof-chimney",
           bounds: { ...ROOF_CHIMNEY_BOUNDS },
-          promptText: "Z: Climb down chimney",
+          promptText: "Climb down chimney",
           dialogueLines: []
         }
       ];
@@ -1306,7 +1307,7 @@
     const list = throwers.map((t) => ({
       id: t.id,
       bounds: { x: t.x, y: t.y, width: t.width, height: t.height },
-      promptText: "Z: Talk to",
+      promptText: "Talk to",
       dialogueLines: ["Watch out!"]
     }));
     list.push({
@@ -1317,7 +1318,7 @@
         width: TILE_SIZE,
         height: TILE_SIZE
       },
-      promptText: "Z: Open door",
+      promptText: "Open door",
       dialogueLines: [
         "It's locked.",
         "There has to be another way into the house..."
@@ -1332,7 +1333,7 @@
           width: TILE_SIZE * 2,
           height: TILE_SIZE
         },
-        promptText: "Z: drive",
+        promptText: "Drive",
         dialogueLines: []
       });
     }
@@ -1340,13 +1341,13 @@
       list.push({
         id: "ground-ladder",
         bounds: { ...GROUND_LADDER_BOUNDS },
-        promptText: "Z: Pick up",
+        promptText: "Pick up",
         dialogueLines: []
       });
       list.push({
         id: "house-west-inspect",
         bounds: { ...HOUSE_WEST_LADDER_SPOT },
-        promptText: "Z: Inspect",
+        promptText: "Inspect",
         dialogueLines: [
           "Hmm.. looks like there is a chimney up there, but I can't reach it"
         ]
@@ -1355,14 +1356,14 @@
       list.push({
         id: "house-west-place-ladder",
         bounds: { ...HOUSE_WEST_LADDER_SPOT },
-        promptText: "Z: Place ladder",
+        promptText: "Place ladder",
         dialogueLines: []
       });
     } else if (ladderPlaced) {
       list.push({
         id: "house-west-climb-ladder",
         bounds: { ...HOUSE_WEST_LADDER_SPOT },
-        promptText: "Z: Climb ladder",
+        promptText: "Climb ladder",
         dialogueLines: []
       });
     }
@@ -1426,6 +1427,7 @@
       isOnRoof: false,
       climbing: null,
       electrocutionTimer: 0,
+      joystickActive: false,
       interactables,
       nearbyInteractable: null,
       activeDialogue: null,
@@ -1576,12 +1578,14 @@
         state.activeDialogue = null;
         return;
       }
+      const dogSpeedMultiplier = state.joystickActive ? 0.5 : 1;
       const caughtByDog = updateDog(
         state.dog,
         state.player,
         dtSeconds,
         state.map,
-        solidObstacles
+        solidObstacles,
+        dogSpeedMultiplier
       );
       if (caughtByDog) {
         resetAfterSnowballHit(state);
@@ -1649,7 +1653,8 @@
   // src/main.ts
   function getActionLabel(promptText) {
     const clean = promptText.replace(/^Z:\s*/i, "").trim();
-    return clean || "Action";
+    if (!clean) return "Action";
+    return clean.charAt(0).toUpperCase() + clean.slice(1);
   }
   async function startGame() {
     const canvas = document.getElementById("game-canvas");
@@ -1721,10 +1726,11 @@
     function frame(now) {
       const dtSeconds = lastTimestamp === null ? 0 : Math.max(0, Math.min((now - lastTimestamp) / 1e3, 0.1));
       lastTimestamp = now;
+      const isJoystickShown = joystick?.isVisible() ?? false;
+      state.joystickActive = isJoystickShown;
       updateGameState(state, input, dtSeconds);
       renderGame(ctx, state, assets);
       if (mobileActionBtn) {
-        const isJoystickShown = joystick?.isVisible() ?? false;
         if (isJoystickShown && state.nearbyInteractable) {
           mobileActionBtn.textContent = getActionLabel(state.nearbyInteractable.promptText);
           mobileActionBtn.style.display = "block";
