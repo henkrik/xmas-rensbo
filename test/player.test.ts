@@ -12,6 +12,7 @@ import {
   updatePlayer,
 } from '../src/entities/player';
 import { HIT_BLINK_DURATION_SECONDS } from '../src/entities/snowball';
+import { wrapTextLines } from '../src/rendering/renderer';
 import { createGameState, resetAfterSnowballHit, updateGameState } from '../src/world/gameState';
 import {
   CLIMB_DURATION_SECONDS,
@@ -538,7 +539,7 @@ describe('Player walking & 2x Rensbo map layout', () => {
       'Use the arrow keys to move around and Z to interact. Press Z to close this window and start playing.'
     );
     expect(desktopState.activeDialogue?.lines[1]).toBe(
-      'Good luck! Christmas depends on you...'
+      'Good luck!\nChristmas depends on you...'
     );
     expect(desktopState.activeDialogue?.currentIndex).toBe(0);
 
@@ -560,7 +561,7 @@ describe('Player walking & 2x Rensbo map layout', () => {
       'Use the virtual joystick to move around. To interact with things, move close enough to it and an interaction button will appear. Click anywhere to close this window and start playing.'
     );
     expect(mobileState.activeDialogue?.lines[1]).toBe(
-      'Good luck! Christmas depends on you...'
+      'Good luck!\nChristmas depends on you...'
     );
 
     // Click anywhere to advance to line 2
@@ -576,5 +577,19 @@ describe('Player walking & 2x Rensbo map layout', () => {
     // When damage reset occurs, activeDialogue must remain null (not reset to intro dialogue)
     resetAfterSnowballHit(mobileState);
     expect(mobileState.activeDialogue).toBeNull();
+  });
+
+  it('breaks dialogue lines on explicit newline characters', () => {
+    const mockCtx = {
+      measureText: (str: string) => ({ width: str.length * 6 }),
+    } as unknown as CanvasRenderingContext2D;
+
+    const wrapped = wrapTextLines(
+      mockCtx,
+      'Good luck!\nChristmas depends on you...',
+      220
+    );
+
+    expect(wrapped).toEqual(['Good luck!', 'Christmas depends on you...']);
   });
 });

@@ -444,20 +444,29 @@
       height: viewportHeight
     };
   }
+  var DIALOGUE_FONT = 'bold 10px "Courier New", Courier, monospace';
   function wrapTextLines(ctx, text, maxWidth) {
-    const words = text.split(" ");
+    const paragraphs = text.split("\n");
     const lines = [];
-    let current = "";
-    for (const word of words) {
-      const candidate = current ? `${current} ${word}` : word;
-      if (ctx.measureText(candidate).width <= maxWidth) {
-        current = candidate;
-      } else {
-        if (current) lines.push(current);
-        current = word;
+    for (const paragraph of paragraphs) {
+      const trimmed = paragraph.trim();
+      if (!trimmed) {
+        lines.push("");
+        continue;
       }
+      const words = trimmed.split(/\s+/);
+      let current = "";
+      for (const word of words) {
+        const candidate = current ? `${current} ${word}` : word;
+        if (ctx.measureText(candidate).width <= maxWidth) {
+          current = candidate;
+        } else {
+          if (current) lines.push(current);
+          current = word;
+        }
+      }
+      if (current) lines.push(current);
     }
-    if (current) lines.push(current);
     return lines;
   }
   function drawSnesFrame(ctx, x, y, w, h) {
@@ -478,7 +487,7 @@
   }
   function drawInteractionPrompt(ctx, promptText, zKeySprite) {
     ctx.save();
-    ctx.font = 'bold 10px "Courier New", Courier, monospace';
+    ctx.font = DIALOGUE_FONT;
     ctx.textBaseline = "middle";
     const textWidth = Math.ceil(ctx.measureText(promptText).width);
     const iconSize = 16;
@@ -504,7 +513,7 @@
     ctx.save();
     const margin = 8;
     const boxWidth = ctx.canvas.width - margin * 2;
-    ctx.font = 'bold 10px "Courier New", Courier, monospace';
+    ctx.font = DIALOGUE_FONT;
     ctx.textBaseline = "top";
     const lines = wrapTextLines(ctx, text, boxWidth - 24);
     const lineHeight = 12;
@@ -1411,7 +1420,7 @@
   function createIntroDialogue(isMobile) {
     const firstLine = isMobile ? "Use the virtual joystick to move around. To interact with things, move close enough to it and an interaction button will appear. Click anywhere to close this window and start playing." : "Use the arrow keys to move around and Z to interact. Press Z to close this window and start playing.";
     return {
-      lines: [firstLine, "Good luck! Christmas depends on you..."],
+      lines: [firstLine, "Good luck!\nChristmas depends on you..."],
       currentIndex: 0
     };
   }

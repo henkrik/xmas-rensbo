@@ -39,25 +39,38 @@ export function computeCamera(
   };
 }
 
-function wrapTextLines(
+export const DIALOGUE_FONT = 'bold 10px "Courier New", Courier, monospace';
+
+export function wrapTextLines(
   ctx: CanvasRenderingContext2D,
   text: string,
   maxWidth: number
 ): string[] {
-  const words = text.split(' ');
+  // Support explicit line breaks (\n) and word-wrap within each paragraph
+  const paragraphs = text.split('\n');
   const lines: string[] = [];
-  let current = '';
 
-  for (const word of words) {
-    const candidate = current ? `${current} ${word}` : word;
-    if (ctx.measureText(candidate).width <= maxWidth) {
-      current = candidate;
-    } else {
-      if (current) lines.push(current);
-      current = word;
+  for (const paragraph of paragraphs) {
+    const trimmed = paragraph.trim();
+    if (!trimmed) {
+      lines.push('');
+      continue;
     }
+    const words = trimmed.split(/\s+/);
+    let current = '';
+
+    for (const word of words) {
+      const candidate = current ? `${current} ${word}` : word;
+      if (ctx.measureText(candidate).width <= maxWidth) {
+        current = candidate;
+      } else {
+        if (current) lines.push(current);
+        current = word;
+      }
+    }
+    if (current) lines.push(current);
   }
-  if (current) lines.push(current);
+
   return lines;
 }
 
@@ -99,7 +112,7 @@ function drawInteractionPrompt(
   zKeySprite: HTMLImageElement
 ): void {
   ctx.save();
-  ctx.font = 'bold 10px "Courier New", Courier, monospace';
+  ctx.font = DIALOGUE_FONT;
   ctx.textBaseline = 'middle';
 
   const textWidth = Math.ceil(ctx.measureText(promptText).width);
@@ -139,7 +152,7 @@ function drawDialogueBox(
   const boxWidth = ctx.canvas.width - margin * 2;
 
   // Wrapped dialogue text with crisp 1px drop shadow
-  ctx.font = 'bold 10px "Courier New", Courier, monospace';
+  ctx.font = DIALOGUE_FONT;
   ctx.textBaseline = 'top';
   const lines = wrapTextLines(ctx, text, boxWidth - 24);
   const lineHeight = 12;

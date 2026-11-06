@@ -110,7 +110,7 @@ export function createIntroDialogue(isMobile: boolean): DialogueState {
     : 'Use the arrow keys to move around and Z to interact. Press Z to close this window and start playing.';
 
   return {
-    lines: [firstLine, 'Good luck! Christmas depends on you...'],
+    lines: [firstLine, 'Good luck!\nChristmas depends on you...'],
     currentIndex: 0,
   };
 }
