@@ -94,7 +94,11 @@
     z: "action",
     Z: "action"
   };
-  function applyKeyEvent(state, codeOrKey, isPressed) {
+  function applyKeyEvent(state, codeOrKey, isPressed, options) {
+    if (isPressed && (codeOrKey === "KeyJ" || codeOrKey === "j" || codeOrKey === "J")) {
+      options?.onToggleJoystick?.();
+      return true;
+    }
     const btn = KEY_TO_BUTTON[codeOrKey];
     if (!btn) {
       return false;
@@ -116,14 +120,14 @@
     }
     return false;
   }
-  function attachKeyboardListeners(target, state) {
+  function attachKeyboardListeners(target, state, options) {
     const onKeyDown = (e) => {
-      if (applyKeyEvent(state, e.code || e.key, true)) {
+      if (applyKeyEvent(state, e.code || e.key, true, options)) {
         e.preventDefault();
       }
     };
     const onKeyUp = (e) => {
-      if (applyKeyEvent(state, e.code || e.key, false)) {
+      if (applyKeyEvent(state, e.code || e.key, false, options)) {
         e.preventDefault();
       }
     };
@@ -135,7 +139,7 @@
     };
   }
   function attachPointerListeners(options) {
-    const { canvas, input, getCamera, getPlayerCenter } = options;
+    const { canvas, input, getCamera, isJoystickActive } = options;
     let activePointerId = null;
     let pointerDownTime = 0;
     let startClientX = 0;
@@ -154,48 +158,17 @@
         canvasY
       };
     };
-    const updateDirectionalMovement = (clientX, clientY) => {
-      const world = toWorldCoords(clientX, clientY);
-      const player = getPlayerCenter();
-      const dx = world.worldX - player.x;
-      const dy = world.worldY - player.y;
-      const dist = Math.hypot(dx, dy);
-      if (dist < 6) {
-        input.left = false;
-        input.right = false;
-        input.up = false;
-        input.down = false;
-        return;
-      }
-      const absDx = Math.abs(dx);
-      const absDy = Math.abs(dy);
-      input.left = dx < 0 && absDx > absDy * 0.4;
-      input.right = dx > 0 && absDx > absDy * 0.4;
-      input.up = dy < 0 && absDy > absDx * 0.4;
-      input.down = dy > 0 && absDy > absDx * 0.4;
-    };
-    const clearMovement = () => {
-      input.left = false;
-      input.right = false;
-      input.up = false;
-      input.down = false;
-    };
     const onPointerDown = (e) => {
+      if (isJoystickActive?.()) return;
       e.preventDefault();
       activePointerId = e.pointerId;
       pointerDownTime = performance.now();
       startClientX = e.clientX;
       startClientY = e.clientY;
-      updateDirectionalMovement(e.clientX, e.clientY);
-    };
-    const onPointerMove = (e) => {
-      if (activePointerId !== e.pointerId) return;
-      updateDirectionalMovement(e.clientX, e.clientY);
     };
     const onPointerUp = (e) => {
       if (activePointerId !== e.pointerId) return;
       activePointerId = null;
-      clearMovement();
       const duration = performance.now() - pointerDownTime;
       const moveDist = Math.hypot(e.clientX - startClientX, e.clientY - startClientY);
       if (duration < 400 && moveDist < 16) {
@@ -206,18 +179,113 @@
     const onPointerCancel = (e) => {
       if (activePointerId !== e.pointerId) return;
       activePointerId = null;
-      clearMovement();
     };
     canvas.addEventListener("pointerdown", onPointerDown);
-    window.addEventListener("pointermove", onPointerMove);
     window.addEventListener("pointerup", onPointerUp);
     window.addEventListener("pointercancel", onPointerCancel);
     canvas.style.touchAction = "none";
     return () => {
       canvas.removeEventListener("pointerdown", onPointerDown);
-      window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("pointercancel", onPointerCancel);
+    };
+  }
+  function createVirtualJoystick(options) {
+    const { container, stick, input } = options;
+    let activePointerId = null;
+    let isDragging = false;
+    const resetStick = () => {
+      stick.style.transform = "translate(0px, 0px)";
+      input.left = false;
+      input.right = false;
+      input.up = false;
+      input.down = false;
+    };
+    const handlePointer = (clientX, clientY) => {
+      const rect = container.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const dx = clientX - centerX;
+      const dy = clientY - centerY;
+      const dist = Math.hypot(dx, dy);
+      const maxRadius = rect.width / 2 * 0.72;
+      let clampedX = dx;
+      let clampedY = dy;
+      if (dist > maxRadius) {
+        clampedX = dx / dist * maxRadius;
+        clampedY = dy / dist * maxRadius;
+      }
+      stick.style.transform = `translate(${clampedX.toFixed(1)}px, ${clampedY.toFixed(1)}px)`;
+      const deadzone = maxRadius * 0.15;
+      if (dist < deadzone) {
+        input.left = false;
+        input.right = false;
+        input.up = false;
+        input.down = false;
+        return;
+      }
+      const absX = Math.abs(clampedX);
+      const absY = Math.abs(clampedY);
+      input.left = clampedX < 0 && absX > absY * 0.38;
+      input.right = clampedX > 0 && absX > absY * 0.38;
+      input.up = clampedY < 0 && absY > absX * 0.38;
+      input.down = clampedY > 0 && absY > absX * 0.38;
+    };
+    const onPointerDown = (e) => {
+      activePointerId = e.pointerId;
+      isDragging = true;
+      e.preventDefault();
+      handlePointer(e.clientX, e.clientY);
+    };
+    const onPointerMove = (e) => {
+      if (!isDragging || e.pointerId !== activePointerId) return;
+      e.preventDefault();
+      handlePointer(e.clientX, e.clientY);
+    };
+    const onPointerUp = (e) => {
+      if (e.pointerId !== activePointerId) return;
+      activePointerId = null;
+      isDragging = false;
+      resetStick();
+    };
+    const onPointerCancel = (e) => {
+      if (e.pointerId !== activePointerId) return;
+      activePointerId = null;
+      isDragging = false;
+      resetStick();
+    };
+    container.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerCancel);
+    return {
+      show: () => {
+        container.style.display = "flex";
+      },
+      hide: () => {
+        container.style.display = "none";
+        activePointerId = null;
+        isDragging = false;
+        resetStick();
+      },
+      toggle: () => {
+        if (container.style.display === "none") {
+          container.style.display = "flex";
+        } else {
+          container.style.display = "none";
+          activePointerId = null;
+          isDragging = false;
+          resetStick();
+        }
+      },
+      isVisible: () => container.style.display !== "none",
+      isPointerActive: () => isDragging,
+      destroy: () => {
+        container.removeEventListener("pointerdown", onPointerDown);
+        window.removeEventListener("pointermove", onPointerMove);
+        window.removeEventListener("pointerup", onPointerUp);
+        window.removeEventListener("pointercancel", onPointerCancel);
+      }
     };
   }
 
@@ -1579,6 +1647,10 @@
   }
 
   // src/main.ts
+  function getActionLabel(promptText) {
+    const clean = promptText.replace(/^Z:\s*/i, "").trim();
+    return clean || "Action";
+  }
   async function startGame() {
     const canvas = document.getElementById("game-canvas");
     if (!canvas) {
@@ -1588,10 +1660,44 @@
     if (!ctx) {
       throw new Error("Could not get 2D rendering context");
     }
+    const joystickContainer = document.getElementById("virtual-joystick-container");
+    const joystickStick = document.getElementById("virtual-joystick-stick");
+    const mobileActionBtn = document.getElementById("mobile-action-btn");
     const assets = await loadAllAssets();
     const input = createEmptyInput();
-    attachKeyboardListeners(window, input);
+    let joystick = null;
+    if (joystickContainer && joystickStick) {
+      joystick = createVirtualJoystick({
+        container: joystickContainer,
+        stick: joystickStick,
+        input
+      });
+      const isMobileDevice = typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0 || window.matchMedia("(pointer: coarse)").matches);
+      if (isMobileDevice) {
+        joystick.show();
+      } else {
+        joystick.hide();
+      }
+    }
+    attachKeyboardListeners(window, input, {
+      onToggleJoystick: () => {
+        joystick?.toggle();
+      }
+    });
     const state = createGameState();
+    if (mobileActionBtn) {
+      mobileActionBtn.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        input.actionJustPressed = true;
+        input.action = true;
+      });
+      mobileActionBtn.addEventListener("pointerup", () => {
+        input.action = false;
+      });
+      mobileActionBtn.addEventListener("pointercancel", () => {
+        input.action = false;
+      });
+    }
     attachPointerListeners({
       canvas,
       input,
@@ -1609,10 +1715,7 @@
           mapHeightPx
         );
       },
-      getPlayerCenter: () => ({
-        x: state.player.x + state.player.width / 2,
-        y: state.player.y + state.player.height / 2
-      })
+      isJoystickActive: () => joystick?.isPointerActive() ?? false
     });
     let lastTimestamp = null;
     function frame(now) {
@@ -1620,6 +1723,15 @@
       lastTimestamp = now;
       updateGameState(state, input, dtSeconds);
       renderGame(ctx, state, assets);
+      if (mobileActionBtn) {
+        const isJoystickShown = joystick?.isVisible() ?? false;
+        if (isJoystickShown && state.nearbyInteractable) {
+          mobileActionBtn.textContent = getActionLabel(state.nearbyInteractable.promptText);
+          mobileActionBtn.style.display = "block";
+        } else {
+          mobileActionBtn.style.display = "none";
+        }
+      }
       requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);

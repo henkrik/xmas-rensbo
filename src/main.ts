@@ -3,9 +3,16 @@ import {
   attachKeyboardListeners,
   attachPointerListeners,
   createEmptyInput,
+  createVirtualJoystick,
 } from './core/input';
 import { computeCamera, renderGame } from './rendering/renderer';
 import { createGameState, updateGameState } from './world/gameState';
+
+function getActionLabel(promptText: string): string {
+  // Strip "Z: " prefix if present and return concise action
+  const clean = promptText.replace(/^Z:\s*/i, '').trim();
+  return clean || 'Action';
+}
 
 async function startGame(): Promise<void> {
   const canvas = document.getElementById('game-canvas') as HTMLCanvasElement | null;
@@ -18,11 +25,56 @@ async function startGame(): Promise<void> {
     throw new Error('Could not get 2D rendering context');
   }
 
+  const joystickContainer = document.getElementById('virtual-joystick-container');
+  const joystickStick = document.getElementById('virtual-joystick-stick');
+  const mobileActionBtn = document.getElementById('mobile-action-btn') as HTMLButtonElement | null;
+
   const assets = await loadAllAssets();
   const input = createEmptyInput();
-  attachKeyboardListeners(window, input);
+
+  let joystick: ReturnType<typeof createVirtualJoystick> | null = null;
+  if (joystickContainer && joystickStick) {
+    joystick = createVirtualJoystick({
+      container: joystickContainer,
+      stick: joystickStick,
+      input,
+    });
+
+    // Detect mobile / touch device by default
+    const isMobileDevice =
+      typeof window !== 'undefined' &&
+      ('ontouchstart' in window ||
+        navigator.maxTouchPoints > 0 ||
+        window.matchMedia('(pointer: coarse)').matches);
+
+    if (isMobileDevice) {
+      joystick.show();
+    } else {
+      joystick.hide();
+    }
+  }
+
+  attachKeyboardListeners(window, input, {
+    onToggleJoystick: () => {
+      joystick?.toggle();
+    },
+  });
 
   const state = createGameState();
+
+  if (mobileActionBtn) {
+    mobileActionBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      input.actionJustPressed = true;
+      input.action = true;
+    });
+    mobileActionBtn.addEventListener('pointerup', () => {
+      input.action = false;
+    });
+    mobileActionBtn.addEventListener('pointercancel', () => {
+      input.action = false;
+    });
+  }
 
   attachPointerListeners({
     canvas,
@@ -41,10 +93,7 @@ async function startGame(): Promise<void> {
         mapHeightPx
       );
     },
-    getPlayerCenter: () => ({
-      x: state.player.x + state.player.width / 2,
-      y: state.player.y + state.player.height / 2,
-    }),
+    isJoystickActive: () => joystick?.isPointerActive() ?? false,
   });
 
   let lastTimestamp: number | null = null;
@@ -58,6 +107,17 @@ async function startGame(): Promise<void> {
 
     updateGameState(state, input, dtSeconds);
     renderGame(ctx!, state, assets);
+
+    // Sync mobile action button visibility and text with nearby interactable
+    if (mobileActionBtn) {
+      const isJoystickShown = joystick?.isVisible() ?? false;
+      if (isJoystickShown && state.nearbyInteractable) {
+        mobileActionBtn.textContent = getActionLabel(state.nearbyInteractable.promptText);
+        mobileActionBtn.style.display = 'block';
+      } else {
+        mobileActionBtn.style.display = 'none';
+      }
+    }
 
     requestAnimationFrame(frame);
   }

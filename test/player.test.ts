@@ -498,4 +498,17 @@ describe('Player walking & 2x Rensbo map layout', () => {
     updateGameState(state, input, 0.01);
     expect(state.activeDialogue).toBeNull();
   });
+
+  it('triggers J key toggle callback via applyKeyEvent', () => {
+    const input = createEmptyInput();
+    let toggled = false;
+
+    applyKeyEvent(input, 'KeyJ', true, {
+      onToggleJoystick: () => {
+        toggled = true;
+      },
+    });
+
+    expect(toggled).toBe(true);
+  });
 });

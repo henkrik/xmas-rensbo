@@ -33,11 +33,21 @@ const KEY_TO_BUTTON: Record<
   Z: 'action',
 };
 
+export interface KeyboardListenersOptions {
+  onToggleJoystick?: () => void;
+}
+
 export function applyKeyEvent(
   state: InputState,
   codeOrKey: string,
-  isPressed: boolean
+  isPressed: boolean,
+  options?: KeyboardListenersOptions
 ): boolean {
+  if (isPressed && (codeOrKey === 'KeyJ' || codeOrKey === 'j' || codeOrKey === 'J')) {
+    options?.onToggleJoystick?.();
+    return true;
+  }
+
   const btn = KEY_TO_BUTTON[codeOrKey];
   if (!btn) {
     return false;
@@ -63,16 +73,17 @@ export function consumeActionPress(state: InputState): boolean {
 
 export function attachKeyboardListeners(
   target: Window,
-  state: InputState
+  state: InputState,
+  options?: KeyboardListenersOptions
 ): () => void {
   const onKeyDown = (e: KeyboardEvent) => {
-    if (applyKeyEvent(state, e.code || e.key, true)) {
+    if (applyKeyEvent(state, e.code || e.key, true, options)) {
       e.preventDefault();
     }
   };
 
   const onKeyUp = (e: KeyboardEvent) => {
-    if (applyKeyEvent(state, e.code || e.key, false)) {
+    if (applyKeyEvent(state, e.code || e.key, false, options)) {
       e.preventDefault();
     }
   };
@@ -90,17 +101,16 @@ export interface PointerControlsOptions {
   canvas: HTMLCanvasElement;
   input: InputState;
   getCamera: () => { x: number; y: number };
-  getPlayerCenter: () => { x: number; y: number };
+  isJoystickActive?: () => boolean;
 }
 
 /**
- * Attaches pointer/touch listeners to enable moving by holding/pressing
- * in a direction relative to Santa, and interacting by tapping/clicking near objects or dialogue.
+ * Attaches pointer/touch listeners on canvas to enable tapping/clicking near objects or dialogue.
  */
 export function attachPointerListeners(
   options: PointerControlsOptions
 ): () => void {
-  const { canvas, input, getCamera, getPlayerCenter } = options;
+  const { canvas, input, getCamera, isJoystickActive } = options;
 
   let activePointerId: number | null = null;
   let pointerDownTime = 0;
@@ -122,67 +132,27 @@ export function attachPointerListeners(
     };
   };
 
-  const updateDirectionalMovement = (clientX: number, clientY: number) => {
-    const world = toWorldCoords(clientX, clientY);
-    const player = getPlayerCenter();
-    const dx = world.worldX - player.x;
-    const dy = world.worldY - player.y;
-    const dist = Math.hypot(dx, dy);
-
-    // Deadzone of 6px around Santa's center to prevent jittering when finger is directly on Santa
-    if (dist < 6) {
-      input.left = false;
-      input.right = false;
-      input.up = false;
-      input.down = false;
-      return;
-    }
-
-    // 8-way directional deadband
-    const absDx = Math.abs(dx);
-    const absDy = Math.abs(dy);
-
-    input.left = dx < 0 && (absDx > absDy * 0.4);
-    input.right = dx > 0 && (absDx > absDy * 0.4);
-    input.up = dy < 0 && (absDy > absDx * 0.4);
-    input.down = dy > 0 && (absDy > absDx * 0.4);
-  };
-
-  const clearMovement = () => {
-    input.left = false;
-    input.right = false;
-    input.up = false;
-    input.down = false;
-  };
-
   const onPointerDown = (e: PointerEvent) => {
-    // Prevent browser selection / drag triggers when rapidly clicking or dragging
+    // If virtual joystick is being used or handle is active, don't conflict
+    if (isJoystickActive?.()) return;
+
+    // Prevent browser selection / drag triggers when rapidly clicking
     e.preventDefault();
 
     activePointerId = e.pointerId;
     pointerDownTime = performance.now();
     startClientX = e.clientX;
     startClientY = e.clientY;
-
-    // Start moving immediately towards finger/mouse
-    updateDirectionalMovement(e.clientX, e.clientY);
-  };
-
-  const onPointerMove = (e: PointerEvent) => {
-    if (activePointerId !== e.pointerId) return;
-
-    updateDirectionalMovement(e.clientX, e.clientY);
   };
 
   const onPointerUp = (e: PointerEvent) => {
     if (activePointerId !== e.pointerId) return;
     activePointerId = null;
-    clearMovement();
 
     const duration = performance.now() - pointerDownTime;
     const moveDist = Math.hypot(e.clientX - startClientX, e.clientY - startClientY);
 
-    // If it's a tap/click (not a long-press walk drag):
+    // If it's a tap/click:
     // Duration under 400ms and didn't drag far across the screen
     if (duration < 400 && moveDist < 16) {
       const { worldX, worldY } = toWorldCoords(e.clientX, e.clientY);
@@ -193,11 +163,9 @@ export function attachPointerListeners(
   const onPointerCancel = (e: PointerEvent) => {
     if (activePointerId !== e.pointerId) return;
     activePointerId = null;
-    clearMovement();
   };
 
   canvas.addEventListener('pointerdown', onPointerDown);
-  window.addEventListener('pointermove', onPointerMove);
   window.addEventListener('pointerup', onPointerUp);
   window.addEventListener('pointercancel', onPointerCancel);
 
@@ -206,8 +174,143 @@ export function attachPointerListeners(
 
   return () => {
     canvas.removeEventListener('pointerdown', onPointerDown);
-    window.removeEventListener('pointermove', onPointerMove);
     window.removeEventListener('pointerup', onPointerUp);
     window.removeEventListener('pointercancel', onPointerCancel);
+  };
+}
+
+export interface VirtualJoystickOptions {
+  container: HTMLElement;
+  stick: HTMLElement;
+  input: InputState;
+}
+
+export interface VirtualJoystickController {
+  show: () => void;
+  hide: () => void;
+  toggle: () => void;
+  isVisible: () => boolean;
+  isPointerActive: () => boolean;
+  destroy: () => void;
+}
+
+export function createVirtualJoystick(
+  options: VirtualJoystickOptions
+): VirtualJoystickController {
+  const { container, stick, input } = options;
+
+  let activePointerId: number | null = null;
+  let isDragging = false;
+
+  const resetStick = () => {
+    stick.style.transform = 'translate(0px, 0px)';
+    input.left = false;
+    input.right = false;
+    input.up = false;
+    input.down = false;
+  };
+
+  const handlePointer = (clientX: number, clientY: number) => {
+    const rect = container.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    const dx = clientX - centerX;
+    const dy = clientY - centerY;
+    const dist = Math.hypot(dx, dy);
+
+    // Max movement radius for the stick inside the base circle
+    // Container radius minus half of stick radius
+    const maxRadius = (rect.width / 2) * 0.72;
+
+    let clampedX = dx;
+    let clampedY = dy;
+    if (dist > maxRadius) {
+      clampedX = (dx / dist) * maxRadius;
+      clampedY = (dy / dist) * maxRadius;
+    }
+
+    stick.style.transform = `translate(${clampedX.toFixed(1)}px, ${clampedY.toFixed(1)}px)`;
+
+    // Deadzone of 15% to prevent small thumb rests from triggering motion
+    const deadzone = maxRadius * 0.15;
+    if (dist < deadzone) {
+      input.left = false;
+      input.right = false;
+      input.up = false;
+      input.down = false;
+      return;
+    }
+
+    // 8-directional movement deadband
+    const absX = Math.abs(clampedX);
+    const absY = Math.abs(clampedY);
+
+    input.left = clampedX < 0 && absX > absY * 0.38;
+    input.right = clampedX > 0 && absX > absY * 0.38;
+    input.up = clampedY < 0 && absY > absX * 0.38;
+    input.down = clampedY > 0 && absY > absX * 0.38;
+  };
+
+  const onPointerDown = (e: PointerEvent) => {
+    activePointerId = e.pointerId;
+    isDragging = true;
+    e.preventDefault();
+    handlePointer(e.clientX, e.clientY);
+  };
+
+  const onPointerMove = (e: PointerEvent) => {
+    if (!isDragging || e.pointerId !== activePointerId) return;
+    e.preventDefault();
+    handlePointer(e.clientX, e.clientY);
+  };
+
+  const onPointerUp = (e: PointerEvent) => {
+    if (e.pointerId !== activePointerId) return;
+    activePointerId = null;
+    isDragging = false;
+    resetStick();
+  };
+
+  const onPointerCancel = (e: PointerEvent) => {
+    if (e.pointerId !== activePointerId) return;
+    activePointerId = null;
+    isDragging = false;
+    resetStick();
+  };
+
+  container.addEventListener('pointerdown', onPointerDown);
+  window.addEventListener('pointermove', onPointerMove);
+  window.addEventListener('pointerup', onPointerUp);
+  window.addEventListener('pointercancel', onPointerCancel);
+
+  return {
+    show: () => {
+      container.style.display = 'flex';
+    },
+    hide: () => {
+      container.style.display = 'none';
+      activePointerId = null;
+      isDragging = false;
+      resetStick();
+    },
+    toggle: () => {
+      if (container.style.display === 'none') {
+        container.style.display = 'flex';
+      } else {
+        container.style.display = 'none';
+        activePointerId = null;
+        isDragging = false;
+        resetStick();
+      }
+    },
+    isVisible: () => container.style.display !== 'none',
+    isPointerActive: () => isDragging,
+    destroy: () => {
+      container.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerCancel);
+    },
   };
 }

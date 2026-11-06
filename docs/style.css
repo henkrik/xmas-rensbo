@@ -53,3 +53,78 @@ body {
   image-rendering: crisp-edges;
 }
 
+/* Virtual Joystick Overlay */
+#virtual-joystick-container {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50vw;
+  height: 50vw;
+  max-width: 320px;
+  max-height: 320px;
+  min-width: 180px;
+  min-height: 180px;
+  pointer-events: auto;
+  touch-action: none;
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#virtual-joystick-base {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, rgba(16, 24, 48, 0.35) 70%, rgba(8, 12, 24, 0.55) 100%);
+  border: 2px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), inset 0 0 12px rgba(255, 255, 255, 0.1);
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#virtual-joystick-stick {
+  width: 30%;
+  height: 30%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 215, 0, 0.85) 45%, rgba(200, 140, 20, 0.9) 100%);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.6);
+  position: absolute;
+  pointer-events: none;
+  transition: transform 0.05s ease-out;
+  transform: translate(0px, 0px);
+}
+
+/* Mobile Action Button (Bottom Left) */
+#mobile-action-btn {
+  position: fixed;
+  bottom: 24px;
+  left: 20px;
+  z-index: 101;
+  padding: 12px 20px;
+  min-width: 90px;
+  border-radius: 28px;
+  background: rgba(16, 26, 48, 0.92);
+  color: #ffd166;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  text-align: center;
+  border: 2px solid #e8f0ff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6), inset 0 1px 2px rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  touch-action: manipulation;
+  display: none;
+}
+
+#mobile-action-btn:active {
+  transform: scale(0.94);
+  background: rgba(28, 42, 74, 0.96);
+  color: #ffffff;
+}
+
