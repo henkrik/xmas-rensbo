@@ -741,5 +741,21 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(landscape.actionBtnLeft).toBe(20);
     expect(landscape.actionBtnTop).toBe(Math.round(390 / 2));
     expect(landscape.actionBtnBottom).toBeNull();
+    // 3. Stale browser dimensions during rotation animation (axes swapped relative to orientation)
+    // Mobile rotates to landscape, but browser still reports 390x844:
+    const staleLandscape = computeViewportLayout(390, 844, true);
+    expect(staleLandscape.isLandscape).toBe(true);
+    expect(staleLandscape.containerWidth).toBe(844);
+    expect(staleLandscape.containerHeight).toBe(390);
+    expect(staleLandscape.joystickLeft).toBe(844 - 195);
+    expect(staleLandscape.joystickTop).toBe(Math.round((390 - 195) / 2));
+
+    // Mobile rotates to portrait, but browser still reports 844x390:
+    const stalePortrait = computeViewportLayout(844, 390, false);
+    expect(stalePortrait.isLandscape).toBe(false);
+    expect(stalePortrait.containerWidth).toBe(390);
+    expect(stalePortrait.containerHeight).toBe(844);
+    expect(stalePortrait.joystickLeft).toBe(Math.round((390 - 195) / 2));
+    expect(stalePortrait.joystickTop).toBe(844 - 195);
   });
 });

@@ -194,6 +194,53 @@
       window.removeEventListener("pointercancel", onPointerCancel);
     };
   }
+  function computeViewportLayout(vw, vh, isLandscapeOverride) {
+    const dim1 = Math.max(1, Math.round(vw));
+    const dim2 = Math.max(1, Math.round(vh));
+    const isLandscape = typeof isLandscapeOverride === "boolean" ? isLandscapeOverride : dim1 > dim2;
+    const longSide = Math.max(dim1, dim2);
+    const shortSide = Math.min(dim1, dim2);
+    const safeVw = isLandscape ? longSide : shortSide;
+    const safeVh = isLandscape ? shortSide : longSide;
+    const pad = 24;
+    const availW = Math.max(64, safeVw - pad);
+    const availH = Math.max(64, safeVh - pad);
+    const aspect = 256 / 224;
+    const canvasWidth = Math.floor(Math.min(availW, availH * aspect));
+    const canvasHeight = Math.floor(Math.min(availH, availW / aspect));
+    const maxAllowedJoy = Math.max(80, shortSide - 16);
+    const joystickSize = Math.round(
+      Math.min(maxAllowedJoy, Math.max(120, Math.min(320, shortSide * 0.5)))
+    );
+    if (isLandscape) {
+      return {
+        isLandscape: true,
+        containerWidth: safeVw,
+        containerHeight: safeVh,
+        canvasWidth,
+        canvasHeight,
+        joystickSize,
+        joystickLeft: safeVw - joystickSize,
+        joystickTop: Math.round((safeVh - joystickSize) / 2),
+        actionBtnLeft: 20,
+        actionBtnTop: Math.round(safeVh / 2),
+        actionBtnBottom: null
+      };
+    }
+    return {
+      isLandscape: false,
+      containerWidth: safeVw,
+      containerHeight: safeVh,
+      canvasWidth,
+      canvasHeight,
+      joystickSize,
+      joystickLeft: Math.round((safeVw - joystickSize) / 2),
+      joystickTop: safeVh - joystickSize,
+      actionBtnLeft: 20,
+      actionBtnTop: null,
+      actionBtnBottom: 24
+    };
+  }
   function createVirtualJoystick(options) {
     const { container, stick, input } = options;
     let activePointerId = null;
@@ -1865,12 +1912,31 @@
   }
 
   // src/main.ts
+  function detectIsLandscape() {
+    if (typeof window === "undefined") return false;
+    if (typeof screen !== "undefined" && screen.orientation?.type) {
+      if (screen.orientation.type.startsWith("landscape")) return true;
+      if (screen.orientation.type.startsWith("portrait")) return false;
+    }
+    if (typeof window.orientation === "number") {
+      if (Math.abs(window.orientation) === 90) return true;
+      if (window.orientation === 0 || window.orientation === 180) return false;
+    }
+    if (typeof window.matchMedia === "function") {
+      const m = window.matchMedia("(orientation: landscape)");
+      if (m && typeof m.matches === "boolean") {
+        return m.matches;
+      }
+    }
+    return window.innerWidth > window.innerHeight;
+  }
   function getActionLabel(promptText) {
     const clean = promptText.replace(/^Z:\s*/i, "").trim();
     if (!clean) return "Action";
     return clean.charAt(0).toUpperCase() + clean.slice(1);
   }
   async function startGame() {
+    const gameContainer = document.getElementById("game-container");
     const canvas = document.getElementById("game-canvas");
     if (!canvas) {
       throw new Error("Could not find #game-canvas element");
@@ -1898,43 +1964,78 @@
         joystick.hide();
       }
     }
+    let lastLayoutKey = "";
     let lastIsLandscape = null;
-    const handleOrientationOrResize = () => {
+    const applyViewportLayout = (force = false) => {
       if (typeof window === "undefined") return;
       if (window.scrollX !== 0 || window.scrollY !== 0) {
         window.scrollTo(0, 0);
       }
-      const isLandscape = window.innerWidth > window.innerHeight;
-      if (lastIsLandscape !== null && lastIsLandscape !== isLandscape) {
+      const isLandscape = detectIsLandscape();
+      const vv = window.visualViewport;
+      const rawW = Math.round(vv ? vv.width : window.innerWidth);
+      const rawH = Math.round(vv ? vv.height : window.innerHeight);
+      const layout = computeViewportLayout(rawW, rawH, isLandscape);
+      const layoutKey = `${layout.isLandscape}-${layout.containerWidth}-${layout.containerHeight}-${layout.canvasWidth}-${layout.canvasHeight}`;
+      if (!force && layoutKey === lastLayoutKey) {
+        return;
+      }
+      lastLayoutKey = layoutKey;
+      if (lastIsLandscape !== null && lastIsLandscape !== layout.isLandscape) {
         joystick?.reset();
       }
-      lastIsLandscape = isLandscape;
+      lastIsLandscape = layout.isLandscape;
+      if (gameContainer) {
+        gameContainer.style.left = "0px";
+        gameContainer.style.top = "0px";
+        gameContainer.style.width = `${layout.containerWidth}px`;
+        gameContainer.style.height = `${layout.containerHeight}px`;
+      }
+      canvas.style.width = `${layout.canvasWidth}px`;
+      canvas.style.height = `${layout.canvasHeight}px`;
+      if (joystickContainer) {
+        joystickContainer.style.width = `${layout.joystickSize}px`;
+        joystickContainer.style.height = `${layout.joystickSize}px`;
+        joystickContainer.style.left = `${layout.joystickLeft}px`;
+        joystickContainer.style.top = `${layout.joystickTop}px`;
+        joystickContainer.style.right = "auto";
+        joystickContainer.style.bottom = "auto";
+        joystickContainer.style.transform = "none";
+      }
+      if (mobileActionBtn) {
+        mobileActionBtn.style.left = `${layout.actionBtnLeft}px`;
+        mobileActionBtn.style.right = "auto";
+        if (layout.actionBtnTop !== null) {
+          mobileActionBtn.style.top = `${layout.actionBtnTop}px`;
+          mobileActionBtn.style.bottom = "auto";
+          mobileActionBtn.style.transform = "translateY(-50%)";
+        } else {
+          mobileActionBtn.style.top = "auto";
+          mobileActionBtn.style.bottom = `${layout.actionBtnBottom ?? 24}px`;
+          mobileActionBtn.style.transform = "none";
+        }
+      }
     };
     const onOrientationOrResize = () => {
-      handleOrientationOrResize();
-      setTimeout(handleOrientationOrResize, 100);
-      setTimeout(handleOrientationOrResize, 300);
+      applyViewportLayout(true);
+      setTimeout(() => applyViewportLayout(true), 50);
+      setTimeout(() => applyViewportLayout(true), 150);
+      setTimeout(() => applyViewportLayout(true), 300);
+      setTimeout(() => applyViewportLayout(true), 500);
     };
-    handleOrientationOrResize();
+    applyViewportLayout(true);
     window.addEventListener("resize", onOrientationOrResize);
     window.addEventListener("orientationchange", onOrientationOrResize);
-    window.addEventListener("scroll", () => {
-      if (window.scrollX !== 0 || window.scrollY !== 0) {
-        window.scrollTo(0, 0);
-      }
-    }, { passive: true });
+    window.addEventListener("scroll", () => applyViewportLayout(false), { passive: true });
     window.visualViewport?.addEventListener("resize", onOrientationOrResize);
-    window.visualViewport?.addEventListener("scroll", () => {
-      if (window.scrollX !== 0 || window.scrollY !== 0) {
-        window.scrollTo(0, 0);
-      }
-    });
+    window.visualViewport?.addEventListener("scroll", () => applyViewportLayout(false));
     if (typeof screen !== "undefined" && screen.orientation?.addEventListener) {
       screen.orientation.addEventListener("change", onOrientationOrResize);
     }
     attachKeyboardListeners(window, input, {
       onToggleJoystick: () => {
         joystick?.toggle();
+        applyViewportLayout(true);
       }
     });
     const state = createGameState({
@@ -1977,9 +2078,7 @@
     });
     let lastTimestamp = null;
     function frame(now) {
-      if (window.scrollX !== 0 || window.scrollY !== 0) {
-        window.scrollTo(0, 0);
-      }
+      applyViewportLayout(false);
       const dtSeconds = lastTimestamp === null ? 0 : Math.max(0, Math.min((now - lastTimestamp) / 1e3, 0.1));
       lastTimestamp = now;
       const isJoystickShown = joystick?.isVisible() ?? false;

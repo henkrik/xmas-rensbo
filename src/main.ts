@@ -2,11 +2,39 @@ import { loadAllAssets } from './assets';
 import {
   attachKeyboardListeners,
   attachPointerListeners,
+  computeViewportLayout,
   createEmptyInput,
   createVirtualJoystick,
 } from './core/input';
 import { computeCamera, renderGame } from './rendering/renderer';
 import { createGameState, updateGameState } from './world/gameState';
+
+export function detectIsLandscape(): boolean {
+  if (typeof window === 'undefined') return false;
+
+  // 1. screen.orientation API (modern standard)
+  if (typeof screen !== 'undefined' && screen.orientation?.type) {
+    if (screen.orientation.type.startsWith('landscape')) return true;
+    if (screen.orientation.type.startsWith('portrait')) return false;
+  }
+
+  // 2. window.orientation (iOS Safari legacy standard: 90 or -90 is landscape)
+  if (typeof window.orientation === 'number') {
+    if (Math.abs(window.orientation) === 90) return true;
+    if (window.orientation === 0 || window.orientation === 180) return false;
+  }
+
+  // 3. CSS media query matching (evaluated by CSS engine in real-time)
+  if (typeof window.matchMedia === 'function') {
+    const m = window.matchMedia('(orientation: landscape)');
+    if (m && typeof m.matches === 'boolean') {
+      return m.matches;
+    }
+  }
+
+  // 4. Fallback to window dimensions
+  return window.innerWidth > window.innerHeight;
+}
 
 function getActionLabel(promptText: string): string {
   // Strip "Z: " prefix if present and return concise action
@@ -16,6 +44,7 @@ function getActionLabel(promptText: string): string {
 }
 
 async function startGame(): Promise<void> {
+  const gameContainer = document.getElementById('game-container');
   const canvas = document.getElementById('game-canvas') as HTMLCanvasElement | null;
   if (!canvas) {
     throw new Error('Could not find #game-canvas element');
@@ -55,43 +84,87 @@ async function startGame(): Promise<void> {
     }
   }
 
+  let lastLayoutKey = '';
   let lastIsLandscape: boolean | null = null;
 
-  const handleOrientationOrResize = (): void => {
+  const applyViewportLayout = (force = false): void => {
     if (typeof window === 'undefined') return;
 
     if (window.scrollX !== 0 || window.scrollY !== 0) {
       window.scrollTo(0, 0);
     }
 
-    const isLandscape = window.innerWidth > window.innerHeight;
-    if (lastIsLandscape !== null && lastIsLandscape !== isLandscape) {
+    const isLandscape = detectIsLandscape();
+
+    const vv = window.visualViewport;
+    const rawW = Math.round(vv ? vv.width : window.innerWidth);
+    const rawH = Math.round(vv ? vv.height : window.innerHeight);
+
+    // Compute layout using detectIsLandscape to ensure horizontal and vertical axes
+    // are correctly mapped regardless of delayed browser viewport updates
+    const layout = computeViewportLayout(rawW, rawH, isLandscape);
+
+    const layoutKey = `${layout.isLandscape}-${layout.containerWidth}-${layout.containerHeight}-${layout.canvasWidth}-${layout.canvasHeight}`;
+    if (!force && layoutKey === lastLayoutKey) {
+      return;
+    }
+    lastLayoutKey = layoutKey;
+
+    if (lastIsLandscape !== null && lastIsLandscape !== layout.isLandscape) {
       joystick?.reset();
     }
-    lastIsLandscape = isLandscape;
+    lastIsLandscape = layout.isLandscape;
+
+    if (gameContainer) {
+      gameContainer.style.left = '0px';
+      gameContainer.style.top = '0px';
+      gameContainer.style.width = `${layout.containerWidth}px`;
+      gameContainer.style.height = `${layout.containerHeight}px`;
+    }
+
+    canvas.style.width = `${layout.canvasWidth}px`;
+    canvas.style.height = `${layout.canvasHeight}px`;
+
+    if (joystickContainer) {
+      joystickContainer.style.width = `${layout.joystickSize}px`;
+      joystickContainer.style.height = `${layout.joystickSize}px`;
+      joystickContainer.style.left = `${layout.joystickLeft}px`;
+      joystickContainer.style.top = `${layout.joystickTop}px`;
+      joystickContainer.style.right = 'auto';
+      joystickContainer.style.bottom = 'auto';
+      joystickContainer.style.transform = 'none';
+    }
+
+    if (mobileActionBtn) {
+      mobileActionBtn.style.left = `${layout.actionBtnLeft}px`;
+      mobileActionBtn.style.right = 'auto';
+      if (layout.actionBtnTop !== null) {
+        mobileActionBtn.style.top = `${layout.actionBtnTop}px`;
+        mobileActionBtn.style.bottom = 'auto';
+        mobileActionBtn.style.transform = 'translateY(-50%)';
+      } else {
+        mobileActionBtn.style.top = 'auto';
+        mobileActionBtn.style.bottom = `${layout.actionBtnBottom ?? 24}px`;
+        mobileActionBtn.style.transform = 'none';
+      }
+    }
   };
 
   const onOrientationOrResize = (): void => {
-    handleOrientationOrResize();
-    // Re-check after mobile browser rotation animation completes
-    setTimeout(handleOrientationOrResize, 100);
-    setTimeout(handleOrientationOrResize, 300);
+    applyViewportLayout(true);
+    // Re-apply across mobile browser rotation animation phases
+    setTimeout(() => applyViewportLayout(true), 50);
+    setTimeout(() => applyViewportLayout(true), 150);
+    setTimeout(() => applyViewportLayout(true), 300);
+    setTimeout(() => applyViewportLayout(true), 500);
   };
 
-  handleOrientationOrResize();
+  applyViewportLayout(true);
   window.addEventListener('resize', onOrientationOrResize);
   window.addEventListener('orientationchange', onOrientationOrResize);
-  window.addEventListener('scroll', () => {
-    if (window.scrollX !== 0 || window.scrollY !== 0) {
-      window.scrollTo(0, 0);
-    }
-  }, { passive: true });
+  window.addEventListener('scroll', () => applyViewportLayout(false), { passive: true });
   window.visualViewport?.addEventListener('resize', onOrientationOrResize);
-  window.visualViewport?.addEventListener('scroll', () => {
-    if (window.scrollX !== 0 || window.scrollY !== 0) {
-      window.scrollTo(0, 0);
-    }
-  });
+  window.visualViewport?.addEventListener('scroll', () => applyViewportLayout(false));
   if (typeof screen !== 'undefined' && screen.orientation?.addEventListener) {
     screen.orientation.addEventListener('change', onOrientationOrResize);
   }
@@ -99,6 +172,7 @@ async function startGame(): Promise<void> {
   attachKeyboardListeners(window, input, {
     onToggleJoystick: () => {
       joystick?.toggle();
+      applyViewportLayout(true);
     },
   });
 
@@ -146,9 +220,7 @@ async function startGame(): Promise<void> {
   let lastTimestamp: number | null = null;
 
   function frame(now: number): void {
-    if (window.scrollX !== 0 || window.scrollY !== 0) {
-      window.scrollTo(0, 0);
-    }
+    applyViewportLayout(false);
 
     const dtSeconds =
       lastTimestamp === null

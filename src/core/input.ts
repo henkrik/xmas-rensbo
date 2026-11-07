@@ -222,11 +222,30 @@ export interface ViewportLayout {
 /**
  * Computes exact pixel layout for the game container, canvas, virtual joystick, and action button
  * for any viewport dimensions (desktop, mobile portrait, and mobile landscape).
+ *
+ * If isLandscapeOverride is specified (e.g. from device orientation APIs), it ensures
+ * the horizontal axis (width) maps to the long side in landscape, and the short side in portrait,
+ * preventing any axis confusion during mobile orientation transitions.
  */
-export function computeViewportLayout(vw: number, vh: number): ViewportLayout {
-  const safeVw = Math.max(1, Math.round(vw));
-  const safeVh = Math.max(1, Math.round(vh));
-  const isLandscape = safeVw > safeVh;
+export function computeViewportLayout(
+  vw: number,
+  vh: number,
+  isLandscapeOverride?: boolean
+): ViewportLayout {
+  const dim1 = Math.max(1, Math.round(vw));
+  const dim2 = Math.max(1, Math.round(vh));
+  const isLandscape =
+    typeof isLandscapeOverride === 'boolean'
+      ? isLandscapeOverride
+      : dim1 > dim2;
+
+  const longSide = Math.max(dim1, dim2);
+  const shortSide = Math.min(dim1, dim2);
+
+  // In landscape mode, the horizontal axis is the long side and vertical axis is the short side.
+  // In portrait mode, the horizontal axis is the short side and vertical axis is the long side.
+  const safeVw = isLandscape ? longSide : shortSide;
+  const safeVh = isLandscape ? shortSide : longSide;
 
   const pad = 24;
   const availW = Math.max(64, safeVw - pad);
@@ -236,7 +255,6 @@ export function computeViewportLayout(vw: number, vh: number): ViewportLayout {
   const canvasWidth = Math.floor(Math.min(availW, availH * aspect));
   const canvasHeight = Math.floor(Math.min(availH, availW / aspect));
 
-  const shortSide = Math.min(safeVw, safeVh);
   const maxAllowedJoy = Math.max(80, shortSide - 16);
   const joystickSize = Math.round(
     Math.min(maxAllowedJoy, Math.max(120, Math.min(320, shortSide * 0.5)))
