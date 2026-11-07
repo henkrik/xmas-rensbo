@@ -6,7 +6,7 @@ import {
   createEmptyInput,
   createVirtualJoystick,
 } from './core/input';
-import { attachViewportDebugOverlay } from './core/viewportDebug';
+import { attachDebugConsole } from './core/debugConsole';
 import { computeCamera, renderGame } from './rendering/renderer';
 import { createGameState, updateGameState } from './world/gameState';
 
@@ -198,7 +198,7 @@ async function startGame(): Promise<void> {
   }
 
   if (new URLSearchParams(window.location.search).has('debug')) {
-    attachViewportDebugOverlay(document.getElementById('viewport-frame'), gameContainer);
+    attachDebugConsole(document.getElementById('viewport-frame'));
   }
 
   attachKeyboardListeners(window, input, {

@@ -21,6 +21,13 @@ export enum TileType {
   HouseWallPlain = 13,
   ElectricCar = 14,
   Motorcycle = 15,
+  WoodFloor = 16,
+  StoneTileFloor = 17,
+  BathroomTileFloor = 18,
+  StairsFloor = 19,
+  VoidBlack = 20,
+  InteriorWall = 21,
+  FurnitureSolid = 22,
 }
 
 export interface TileMap {
@@ -148,6 +155,10 @@ export const WALKABLE_TILES: ReadonlySet<TileType> = new Set([
   TileType.Snow,
   TileType.Road,
   TileType.Motorcycle,
+  TileType.WoodFloor,
+  TileType.StoneTileFloor,
+  TileType.BathroomTileFloor,
+  TileType.StairsFloor,
 ]);
 
 export function isSolidTile(map: TileMap, col: number, row: number): boolean {

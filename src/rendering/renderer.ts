@@ -1,7 +1,8 @@
 import { GameAssets } from '../assets';
 import { Dog } from '../entities/dog';
-import { Direction, Footprint } from '../entities/player';
+import { Direction, Footprint, Rect } from '../entities/player';
 import { GameState, MotorcycleState } from '../world/gameState';
+import { CollidableDoor } from '../world/levels/types';
 import {
   DAMAGED_WIRE_HAZARD,
   GROUND_LADDER_BOUNDS,
@@ -616,6 +617,114 @@ function drawElectrocutedSanta(
   ctx.restore();
 }
 
+function drawClosedDoorAndHiddenMask(
+  ctx: CanvasRenderingContext2D,
+  door: CollidableDoor
+): void {
+  // 1. Mask the hidden room in pure black (#000000) until the door is opened
+  ctx.fillStyle = '#000000';
+  for (const region of door.hiddenRegions) {
+    ctx.fillRect(region.x, region.y, region.width, region.height);
+  }
+
+  // 2. Draw the closed wooden door sprite at the doorway
+  const { x, y, width, height } = door.bounds;
+  ctx.fillStyle = '#26160c';
+  ctx.fillRect(x, y, width, height);
+  ctx.fillStyle = '#784826';
+  ctx.fillRect(x + 1, y + 1, width - 2, height - 2);
+  ctx.fillStyle = '#5c361b';
+  ctx.fillRect(x + 3, y + 3, width - 6, height - 6);
+  // Brass doorknob
+  ctx.fillStyle = '#f2c84b';
+  ctx.fillRect(x + width - 5, y + Math.floor(height / 2), 2, 2);
+}
+
+function drawWindowGazingNpc(
+  ctx: CanvasRenderingContext2D,
+  npcBounds: Rect
+): void {
+  const x = Math.round(npcBounds.x - 2);
+  const y = Math.round(npcBounds.y - 4);
+
+  // Soft floor shadow
+  ctx.fillStyle = 'rgba(12, 10, 16, 0.4)';
+  ctx.fillRect(x + 3, y + 13, 10, 3);
+
+  // Character standing facing south (looking out the big south window)
+  // Dark outline & hair
+  ctx.fillStyle = '#181420';
+  ctx.fillRect(x + 4, y + 1, 8, 6);
+  ctx.fillStyle = '#583822'; // Warm brown hair
+  ctx.fillRect(x + 5, y + 2, 6, 4);
+
+  // Cozy winter sweater (forest green with cream collar)
+  ctx.fillStyle = '#181420';
+  ctx.fillRect(x + 3, y + 7, 10, 5);
+  ctx.fillStyle = '#e8e2d5';
+  ctx.fillRect(x + 5, y + 7, 6, 1);
+  ctx.fillStyle = '#2e7d52';
+  ctx.fillRect(x + 4, y + 8, 8, 3);
+
+  // Trousers & boots
+  ctx.fillStyle = '#2c3e5a';
+  ctx.fillRect(x + 4, y + 11, 3, 3);
+  ctx.fillRect(x + 9, y + 11, 3, 3);
+  ctx.fillStyle = '#181420';
+  ctx.fillRect(x + 4, y + 14, 3, 1);
+  ctx.fillRect(x + 9, y + 14, 3, 1);
+}
+
+function drawFireplaceAnimation(
+  ctx: CanvasRenderingContext2D,
+  elapsedTime: number
+): void {
+  const fx = 11 * TILE_SIZE;
+  const fy = 9 * TILE_SIZE;
+  const phase = Math.floor(elapsedTime * 10) % 3;
+
+  // Warm flickering firelight on the hearth & floor
+  const alpha = 0.12 + phase * 0.03;
+  ctx.fillStyle = `rgba(255, 168, 52, ${alpha})`;
+  ctx.fillRect(fx - 24, fy + 8, 40, 44);
+
+  // Animated flame tongues inside the firebox
+  ctx.fillStyle = '#ff6b24';
+  ctx.fillRect(fx + 10, fy + 24 + (phase % 2), 14, 12);
+  ctx.fillStyle = '#ffd644';
+  ctx.fillRect(fx + 12 + (phase === 1 ? 1 : 0), fy + 26, 9, 8);
+  ctx.fillStyle = '#fff6b8';
+  ctx.fillRect(fx + 14, fy + 29 - (phase === 2 ? 1 : 0), 5, 4);
+}
+
+function drawBlinkingExclamation(
+  ctx: CanvasRenderingContext2D,
+  playerDrawX: number,
+  playerDrawY: number,
+  elapsed: number
+): void {
+  // Blink at ~8 Hz while the other Santa runs past the kitchen windows
+  if (Math.floor(elapsed * 8) % 2 !== 0) {
+    return;
+  }
+
+  const bx = playerDrawX + 3;
+  const by = playerDrawY - 12;
+
+  // Speech/alert badge background with dark pixel outline
+  ctx.fillStyle = '#141824';
+  ctx.fillRect(bx, by, 10, 11);
+  ctx.fillStyle = '#fff8d6';
+  ctx.fillRect(bx + 1, by + 1, 8, 9);
+
+  // Bold red/gold '!!' exclamation marks
+  ctx.fillStyle = '#d62828';
+  ctx.fillRect(bx + 3, by + 2, 1, 5);
+  ctx.fillRect(bx + 3, by + 8, 1, 1);
+  ctx.fillRect(bx + 6, by + 2, 1, 5);
+  ctx.fillRect(bx + 6, by + 8, 1, 1);
+}
+
 export function renderGame(
   ctx: CanvasRenderingContext2D,
   state: GameState,
@@ -636,6 +745,12 @@ export function renderGame(
   ctx.imageSmoothingEnabled = false;
   ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
+  // Fill background with pure black for indoor levels
+  if (state.currentLevelId !== 'level-outside') {
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  }
+
   const mapWidthPx = map.cols * map.tileSize;
   const mapHeightPx = map.rows * map.tileSize;
   const camera = computeCamera(
@@ -652,14 +767,110 @@ export function renderGame(
   ctx.save();
   ctx.translate(-camera.x, -camera.y);
 
-  // 1. Draw visible map region
-  const isFullOverworldAtlas =
-    assets.winterTiles.width === mapWidthPx &&
-    assets.winterTiles.height === mapHeightPx;
+  const playerDrawX = Math.round(player.x - (TILE_SIZE - player.width) / 2);
+  const playerDrawY = Math.round(player.y - (TILE_SIZE - player.height));
 
-  if (isFullOverworldAtlas) {
+  if (state.currentLevelId === 'level-outside') {
+    // 1. Draw visible outdoor map region
+    const isFullOverworldAtlas =
+      assets.winterTiles.width === mapWidthPx &&
+      assets.winterTiles.height === mapHeightPx;
+
+    if (isFullOverworldAtlas) {
+      ctx.drawImage(
+        assets.winterTiles,
+        camera.x,
+        camera.y,
+        camera.width,
+        camera.height,
+        camera.x,
+        camera.y,
+        camera.width,
+        camera.height
+      );
+    } else {
+      const startCol = Math.max(0, Math.floor(camera.x / TILE_SIZE));
+      const endCol = Math.min(
+        map.cols - 1,
+        Math.ceil((camera.x + camera.width) / TILE_SIZE)
+      );
+      const startRow = Math.max(0, Math.floor(camera.y / TILE_SIZE));
+      const endRow = Math.min(
+        map.rows - 1,
+        Math.ceil((camera.y + camera.height) / TILE_SIZE)
+      );
+
+      for (let row = startRow; row <= endRow; row++) {
+        for (let col = startCol; col <= endCol; col++) {
+          const tileType = map.tiles[row][col];
+          ctx.drawImage(
+            assets.winterTiles,
+            tileType * TILE_SIZE,
+            0,
+            TILE_SIZE,
+            TILE_SIZE,
+            col * TILE_SIZE,
+            row * TILE_SIZE,
+            TILE_SIZE,
+            TILE_SIZE
+          );
+        }
+      }
+    }
+
+    // 2. Draw Santa's fading footprints in the snow
+    drawFootprints(ctx, footprints);
+
+    // 3. Draw the ladder (either lying next to the dog on the ground, or leaning up the west side of the house)
+    if (!state.hasLadder && !state.ladderPlaced) {
+      drawGroundLadder(ctx);
+    } else if (state.ladderPlaced) {
+      drawPlacedHouseLadder(ctx);
+    }
+
+    // 4. Draw the black motorcycle (parked, driving east, or crashed into the trees)
+    drawMotorcycle(ctx, state.motorcycle, elapsedTime);
+
+    // 5. Draw animated electric sparks on the damaged EV charging cable
+    drawDamagedWireSparks(ctx, elapsedTime);
+
+    // 6. Draw snowball thrower NPCs on the driveway (with throwing animation frame)
+    for (const thrower of throwers) {
+      const drawX = Math.round(thrower.x - (TILE_SIZE - thrower.width) / 2);
+      const drawY = Math.round(thrower.y - (TILE_SIZE - thrower.height));
+
+      const isThrowingPose =
+        thrower.throwTimer < 0.25 ||
+        thrower.throwTimer > thrower.throwInterval - 0.35;
+      const frameCol = isThrowingPose ? 1 : 0;
+      const dirRow = thrower.facing === 'left' ? 1 : 0;
+
+      ctx.drawImage(
+        assets.throwerSprite,
+        frameCol * TILE_SIZE,
+        dirRow * TILE_SIZE,
+        TILE_SIZE,
+        TILE_SIZE,
+        drawX,
+        drawY,
+        TILE_SIZE,
+        TILE_SIZE
+      );
+    }
+
+    // 7. Draw the dog on the east snow field & its floating love hearts when chasing
+    drawDogAndHearts(ctx, dog, assets.dogSprite);
+
+    // 8. Draw flying snowballs
+    for (const sb of snowballs) {
+      const drawX = Math.round(sb.x - (TILE_SIZE - sb.width) / 2);
+      const drawY = Math.round(sb.y - (TILE_SIZE - sb.height) / 2);
+      ctx.drawImage(assets.snowballSprite, drawX, drawY, TILE_SIZE, TILE_SIZE);
+    }
+  } else if (state.currentLevelId === 'level-basement') {
+    const basement = state.levels['level-basement'];
     ctx.drawImage(
-      assets.winterTiles,
+      assets.basementTiles,
       camera.x,
       camera.y,
       camera.width,
@@ -669,92 +880,59 @@ export function renderGame(
       camera.width,
       camera.height
     );
-  } else {
-    const startCol = Math.max(0, Math.floor(camera.x / TILE_SIZE));
-    const endCol = Math.min(
-      map.cols - 1,
-      Math.ceil((camera.x + camera.width) / TILE_SIZE)
-    );
-    const startRow = Math.max(0, Math.floor(camera.y / TILE_SIZE));
-    const endRow = Math.min(
-      map.rows - 1,
-      Math.ceil((camera.y + camera.height) / TILE_SIZE)
+
+    // Animated warm fire inside the library fireplace
+    drawFireplaceAnimation(ctx, elapsedTime);
+
+    // Character standing by the extra big south windows in the basement living room
+    drawWindowGazingNpc(ctx, basement.windowNpc);
+
+    // Closed doors & black fog-of-war over unopened rooms (e.g. bathroom)
+    for (const door of basement.doors) {
+      drawClosedDoorAndHiddenMask(ctx, door);
+    }
+  } else if (state.currentLevelId === 'level-upstairs') {
+    const upstairs = state.levels['level-upstairs'];
+    ctx.drawImage(
+      assets.upstairsTiles,
+      camera.x,
+      camera.y,
+      camera.width,
+      camera.height,
+      camera.x,
+      camera.y,
+      camera.width,
+      camera.height
     );
 
-    for (let row = startRow; row <= endRow; row++) {
-      for (let col = startCol; col <= endCol; col++) {
-        const tileType = map.tiles[row][col];
-        ctx.drawImage(
-          assets.winterTiles,
-          tileType * TILE_SIZE,
-          0,
-          TILE_SIZE,
-          TILE_SIZE,
-          col * TILE_SIZE,
-          row * TILE_SIZE,
-          TILE_SIZE,
-          TILE_SIZE
-        );
-      }
+    // If the one-time Kitchen Rosanna cutscene is active, draw the other Santa running east-to-west outside the north windows
+    if (upstairs.rosannaCutscene?.active) {
+      const cs = upstairs.rosannaCutscene;
+      const stepPhase = Math.floor(cs.walkTimer * 10) % 4;
+      const frameCol = stepPhase === 1 ? 1 : stepPhase === 3 ? 2 : 0;
+      const leftDirRow = DIRECTION_TO_ROW.left;
+      ctx.drawImage(
+        assets.santaSprite,
+        frameCol * TILE_SIZE,
+        leftDirRow * TILE_SIZE,
+        TILE_SIZE,
+        TILE_SIZE,
+        Math.round(cs.santaX),
+        Math.round(cs.santaY),
+        TILE_SIZE,
+        TILE_SIZE
+      );
+    }
+
+    // Closed doors & black fog-of-war over unopened rooms (shower, bedroom, office, table room)
+    for (const door of upstairs.doors) {
+      drawClosedDoorAndHiddenMask(ctx, door);
     }
   }
 
-  // 2. Draw Santa's fading footprints in the snow
-  drawFootprints(ctx, footprints);
-
-  // 3. Draw the ladder (either lying next to the dog on the ground, or leaning up the west side of the house)
-  if (!state.hasLadder && !state.ladderPlaced) {
-    drawGroundLadder(ctx);
-  } else if (state.ladderPlaced) {
-    drawPlacedHouseLadder(ctx);
-  }
-
-  // 4. Draw the black motorcycle (parked, driving east, or crashed into the trees)
-  drawMotorcycle(ctx, state.motorcycle, elapsedTime);
-
-  // 5. Draw animated electric sparks on the damaged EV charging cable
-  drawDamagedWireSparks(ctx, elapsedTime);
-
-  // 4. Draw snowball thrower NPCs on the driveway (with throwing animation frame)
-  for (const thrower of throwers) {
-    const drawX = Math.round(thrower.x - (TILE_SIZE - thrower.width) / 2);
-    const drawY = Math.round(thrower.y - (TILE_SIZE - thrower.height));
-
-    const isThrowingPose =
-      thrower.throwTimer < 0.25 ||
-      thrower.throwTimer > thrower.throwInterval - 0.35;
-    const frameCol = isThrowingPose ? 1 : 0;
-    const dirRow = thrower.facing === 'left' ? 1 : 0;
-
-    ctx.drawImage(
-      assets.throwerSprite,
-      frameCol * TILE_SIZE,
-      dirRow * TILE_SIZE,
-      TILE_SIZE,
-      TILE_SIZE,
-      drawX,
-      drawY,
-      TILE_SIZE,
-      TILE_SIZE
-    );
-  }
-
-  // 5. Draw the dog on the east snow field & its floating love hearts when chasing
-  drawDogAndHearts(ctx, dog, assets.dogSprite);
-
-  // 6. Draw flying snowballs
-  for (const sb of snowballs) {
-    const drawX = Math.round(sb.x - (TILE_SIZE - sb.width) / 2);
-    const drawY = Math.round(sb.y - (TILE_SIZE - sb.height) / 2);
-    ctx.drawImage(assets.snowballSprite, drawX, drawY, TILE_SIZE, TILE_SIZE);
-  }
-
-  // 7. Draw Santa (3-second cartoony electrocution OR 4-directional SNES spritesheet + 3-frame walk cycle + hit blinking)
-  const drawX = Math.round(player.x - (TILE_SIZE - player.width) / 2);
-  const drawY = Math.round(player.y - (TILE_SIZE - player.height));
-
-  if (state.electrocutionTimer > 0) {
-    drawElectrocutedSanta(ctx, drawX, drawY, state.electrocutionTimer);
+  // Draw Santa (electrocuted OR 4-directional SNES spritesheet + 3-frame walk cycle + hit blinking)
+  if (state.currentLevelId === 'level-outside' && state.electrocutionTimer > 0) {
+    drawElectrocutedSanta(ctx, playerDrawX, playerDrawY, state.electrocutionTimer);
   } else {
     const isBlinkHidden =
       player.blinkTimer > 0 && Math.floor(player.blinkTimer * 12) % 2 === 1;
@@ -773,20 +951,35 @@ export function renderGame(
         dirRow * TILE_SIZE,
         TILE_SIZE,
         TILE_SIZE,
-        drawX,
-        drawY,
+        playerDrawX,
+        playerDrawY,
         TILE_SIZE,
         TILE_SIZE
       );
     }
   }
 
+  // Draw blinking '!' above the player's head during the Kitchen Rosanna cutscene
+  if (
+    state.currentLevelId === 'level-upstairs' &&
+    state.levels['level-upstairs'].rosannaCutscene?.active
+  ) {
+    drawBlinkingExclamation(
+      ctx,
+      playerDrawX,
+      playerDrawY,
+      state.levels['level-upstairs'].rosannaCutscene.elapsed
+    );
+  }
+
   ctx.restore();
 
-  // 8. Gentle falling snow overlay across the screen
-  drawSnowfall(ctx, elapsedTime, camera);
+  // Gentle falling snow overlay across the screen (outdoor level only)
+  if (state.currentLevelId === 'level-outside') {
+    drawSnowfall(ctx, elapsedTime, camera);
+  }
 
-  // 9. Screen-space UI overlay: Dialogue box OR bottom Z-key interaction prompt
+  // Screen-space UI overlay: Dialogue box OR bottom Z-key interaction prompt
   if (activeDialogue) {
     const line = activeDialogue.lines[activeDialogue.currentIndex] ?? '';
     drawDialogueBox(ctx, line, assets.zKeySprite, !state.joystickActive);

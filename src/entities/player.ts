@@ -34,6 +34,7 @@ export interface Player {
   blinkTimer: number;
   footprintSpawnTimer: number;
   nextFootprintFoot: 'left' | 'right';
+  states: Map<string, unknown>;
 }
 
 export function createPlayer(x: number, y: number): Player {
@@ -49,6 +50,7 @@ export function createPlayer(x: number, y: number): Player {
     blinkTimer: 0,
     footprintSpawnTimer: 0,
     nextFootprintFoot: 'left',
+    states: new Map<string, unknown>(),
   };
 }
 

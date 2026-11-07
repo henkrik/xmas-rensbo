@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { debugConsole, debugLog } from '../src/core/debugConsole';
 import {
   applyKeyEvent,
   computeViewportLayout,
@@ -19,7 +20,31 @@ import {
 import { HIT_BLINK_DURATION_SECONDS } from '../src/entities/snowball';
 import { drawPixelText, measurePixelText } from '../src/rendering/pixelFont';
 import { wrapTextLines } from '../src/rendering/renderer';
-import { createGameState, resetAfterSnowballHit, updateGameState } from '../src/world/gameState';
+import {
+  createGameState,
+  loadLevel,
+  resetAfterSnowballHit,
+  updateGameState,
+} from '../src/world/gameState';
+import {
+  BASEMENT_BATHROOM_DOOR_BOUNDS,
+  BASEMENT_FIREPLACE_SPAWN,
+  BASEMENT_FRONT_DOOR_BOUNDS,
+  BASEMENT_HALL_NORTH_DOOR_BOUNDS,
+  BASEMENT_STAIRS_SPAWN,
+  BASEMENT_STAIRS_TRIGGER_BOUNDS,
+  USED_STAIRS_STATE_KEY,
+} from '../src/world/levels/levelBasement';
+import {
+  KITCHEN_ROSANNA_STATE_KEY,
+  KITCHEN_TRIGGER_BOUNDS,
+  UPSTAIRS_BEDROOM_DOOR_BOUNDS,
+  UPSTAIRS_OFFICE_DOOR_BOUNDS,
+  UPSTAIRS_SHOWER_DOOR_BOUNDS,
+  UPSTAIRS_STAIRS_SPAWN,
+  UPSTAIRS_STAIRS_TRIGGER_BOUNDS,
+  UPSTAIRS_TABLE_ROOM_DOOR_BOUNDS,
+} from '../src/world/levels/levelUpstairs';
 import {
   CLIMB_DURATION_SECONDS,
   DAMAGED_WIRE_HAZARD,
@@ -324,14 +349,7 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(state.player.x).toBe(ROOF_MAX_X);
     expect(state.nearbyInteractable?.promptText).toBe('Climb down chimney');
 
-    // Pressing Z at the chimney is a placeholder and does nothing for now
-    applyKeyEvent(input, 'KeyZ', true);
-    updateGameState(state, input, 0.01);
-    applyKeyEvent(input, 'KeyZ', false);
-    expect(state.isOnRoof).toBe(true);
-    expect(state.activeDialogue).toBeNull();
-
-    // 7. Walk west back to the ladder and climb down
+    // 7. Walk west back to the ladder and climb down first
     input.left = true;
     for (let i = 0; i < 60; i++) {
       updateGameState(state, input, 0.05);
@@ -349,6 +367,27 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(state.climbing).toBeNull();
     expect(state.isOnRoof).toBe(false);
     expect(state.player.y).toBe(LADDER_BOTTOM_Y);
+
+    // 8. Climb back up to the roof, walk to the chimney, and press Z to enter level-basement!
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    updateGameState(state, input, CLIMB_DURATION_SECONDS + 0.05);
+    expect(state.isOnRoof).toBe(true);
+
+    input.right = true;
+    for (let i = 0; i < 60; i++) {
+      updateGameState(state, input, 0.05);
+    }
+    input.right = false;
+    expect(state.nearbyInteractable?.promptText).toBe('Climb down chimney');
+
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.currentLevelId).toBe('level-basement');
+    expect(state.player.x).toBe(BASEMENT_FIREPLACE_SPAWN.x);
+    expect(state.player.y).toBe(BASEMENT_FIREPLACE_SPAWN.y);
   });
 
   it('lets Santa "Z: drive" the motorcycle east into the trees where it crashes and Santa spawns next to it blinking without resetting the map', () => {
@@ -757,5 +796,212 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(stalePortrait.containerHeight).toBe(844);
     expect(stalePortrait.joystickLeft).toBe(Math.round((390 - 195) / 2));
     expect(stalePortrait.joystickTop).toBe(844 - 195);
+  });
+
+  it('supports level-basement mechanics: fireplace spawn, locked doors, openable bathroom door, stairs transition, and persistent player.states', () => {
+    const state = createGameState({ initialLevelId: 'level-basement' });
+    const input = createEmptyInput();
+
+    // 1. Player starts with a Map in `player.states` and spawns next to the fireplace in the library
+    expect(state.player.states).toBeInstanceOf(Map);
+    expect(state.currentLevelId).toBe('level-basement');
+    expect(state.player.x).toBe(BASEMENT_FIREPLACE_SPAWN.x);
+    expect(state.player.y).toBe(BASEMENT_FIREPLACE_SPAWN.y);
+
+    // 2. Both locked doors in the basement hallway show "It's locked."
+    state.player.x = BASEMENT_HALL_NORTH_DOOR_BOUNDS.x + 2;
+    state.player.y = BASEMENT_HALL_NORTH_DOOR_BOUNDS.y + TILE_SIZE + 2;
+    updateGameState(state, input, 0.01);
+    expect(state.nearbyInteractable?.id).toBe('basement-hall-north-door');
+
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.activeDialogue?.lines[0]).toBe("It's locked.");
+
+    // Close dialogue
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.activeDialogue).toBeNull();
+
+    // Check front door on south wall of hallway
+    state.player.x = BASEMENT_FRONT_DOOR_BOUNDS.x + 2;
+    state.player.y = BASEMENT_FRONT_DOOR_BOUNDS.y - state.player.height - 2;
+    updateGameState(state, input, 0.01);
+    expect(state.nearbyInteractable?.id).toBe('basement-front-door');
+
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.activeDialogue?.lines[0]).toBe("It's locked.");
+
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+
+    // 3. Bathroom door is initially closed and collidable (blocks walking into bathroom)
+    state.player.x = BASEMENT_BATHROOM_DOOR_BOUNDS.x + 2;
+    state.player.y = BASEMENT_BATHROOM_DOOR_BOUNDS.y + TILE_SIZE + 1;
+    input.up = true;
+    updateGameState(state, input, 0.2);
+    input.up = false;
+    // Blocked by closed bathroom door at row 9 (y = 9 * 16 = 144 -> player stops at y = 160)
+    expect(state.player.y).toBeGreaterThanOrEqual(
+      BASEMENT_BATHROOM_DOOR_BOUNDS.y + BASEMENT_BATHROOM_DOOR_BOUNDS.height - 0.01
+    );
+    expect(state.nearbyInteractable?.id).toBe('basement-bathroom-door');
+    expect(state.nearbyInteractable?.promptText).toBe('Open door');
+
+    // Open the bathroom door -> deletes the door and allows walking freely into the bathroom
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.levels['level-basement'].doors.length).toBe(0);
+
+    input.up = true;
+    updateGameState(state, input, 0.35);
+    input.up = false;
+    expect(state.player.y).toBeLessThan(BASEMENT_BATHROOM_DOOR_BOUNDS.y);
+
+    // 4. Walk halfway up the stairs -> collide with invisible box & interact with "Walk upstairs"
+    state.player.x = BASEMENT_STAIRS_TRIGGER_BOUNDS.x - state.player.width - 1;
+    state.player.y = BASEMENT_STAIRS_TRIGGER_BOUNDS.y + 8;
+    input.right = true;
+    updateGameState(state, input, 0.2);
+    input.right = false;
+    expect(state.player.x).toBeLessThanOrEqual(
+      BASEMENT_STAIRS_TRIGGER_BOUNDS.x - state.player.width + 0.01
+    );
+    expect(state.nearbyInteractable?.id).toBe('basement-stairs-up');
+    expect(state.nearbyInteractable?.promptText).toBe('Walk upstairs');
+
+    // Press Z to walk upstairs -> records `usedStairs` in `player.states` and loads `level-upstairs`
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.currentLevelId).toBe('level-upstairs');
+    expect(state.player.states.get(USED_STAIRS_STATE_KEY)).toBe(true);
+    expect(state.player.x).toBe(UPSTAIRS_STAIRS_SPAWN.x);
+    expect(state.player.y).toBe(UPSTAIRS_STAIRS_SPAWN.y);
+
+    // 5. Walk back downstairs from `level-upstairs` -> spawns Santa on the stairs in `level-basement` (not by the fireplace!)
+    state.player.x = UPSTAIRS_STAIRS_TRIGGER_BOUNDS.x + 8;
+    state.player.y = UPSTAIRS_STAIRS_TRIGGER_BOUNDS.y - state.player.height - 1;
+    updateGameState(state, input, 0.01);
+    expect(state.nearbyInteractable?.id).toBe('upstairs-stairs-down');
+    expect(state.nearbyInteractable?.promptText).toBe('Walk downstairs');
+
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.currentLevelId).toBe('level-basement');
+    expect(state.player.x).toBe(BASEMENT_STAIRS_SPAWN.x);
+    expect(state.player.y).toBe(BASEMENT_STAIRS_SPAWN.y);
+  });
+
+  it('supports level-upstairs closed doors, open hallway to extra room, and the one-time Kitchen Rosanna Santa cutscene', () => {
+    const state = createGameState({ initialLevelId: 'level-upstairs' });
+    const input = createEmptyInput();
+    const upstairs = state.levels['level-upstairs'];
+
+    // 1. Shower, Bedroom, Office, and Table Room doors start closed and are deleted when opened
+    expect(upstairs.doors.map((d) => d.id)).toEqual([
+      'upstairs-shower-door',
+      'upstairs-bedroom-door',
+      'upstairs-office-door',
+      'upstairs-table-room-door',
+    ]);
+
+    for (const [doorId, bounds, offsetY] of [
+      ['upstairs-shower-door', UPSTAIRS_SHOWER_DOOR_BOUNDS, TILE_SIZE + 2],
+      ['upstairs-bedroom-door', UPSTAIRS_BEDROOM_DOOR_BOUNDS, TILE_SIZE + 2],
+      ['upstairs-office-door', UPSTAIRS_OFFICE_DOOR_BOUNDS, -14],
+      ['upstairs-table-room-door', UPSTAIRS_TABLE_ROOM_DOOR_BOUNDS, -14],
+    ] as const) {
+      state.player.x = bounds.x + 2;
+      state.player.y = bounds.y + offsetY;
+      updateGameState(state, input, 0.01);
+      expect(state.nearbyInteractable?.id).toBe(doorId);
+      expect(state.nearbyInteractable?.promptText).toBe('Open door');
+
+      applyKeyEvent(input, 'KeyZ', true);
+      updateGameState(state, input, 0.01);
+      applyKeyEvent(input, 'KeyZ', false);
+    }
+
+    expect(upstairs.doors.length).toBe(0);
+
+    // 2. Hallway connects directly to the Extra Room on the east without any wall or door blocking it
+    state.player.x = 23 * TILE_SIZE;
+    state.player.y = 12 * TILE_SIZE;
+    input.right = true;
+    for (let i = 0; i < 20; i++) {
+      updateGameState(state, input, 0.05);
+    }
+    input.right = false;
+    expect(state.player.x).toBeGreaterThan(26 * TILE_SIZE);
+
+    // 3. Walking into The Kitchen triggers the one-time Rosanna Santa event
+    expect(state.player.states.get(KITCHEN_ROSANNA_STATE_KEY)).toBeUndefined();
+    state.player.x = KITCHEN_TRIGGER_BOUNDS.x + 16;
+    state.player.y = KITCHEN_TRIGGER_BOUNDS.y + 24;
+    updateGameState(state, input, 0.05);
+
+    expect(state.player.states.get(KITCHEN_ROSANNA_STATE_KEY)).toBe(true);
+    expect(upstairs.rosannaCutscene?.active).toBe(true);
+    const initialOtherSantaX = upstairs.rosannaCutscene!.santaX;
+
+    // While the other Santa runs east-to-west outside the north windows, the player cannot move
+    const lockedPlayerX = state.player.x;
+    const lockedPlayerY = state.player.y;
+    input.left = true;
+    input.down = true;
+    updateGameState(state, input, 0.3);
+    input.left = false;
+    input.down = false;
+    expect(state.player.x).toBe(lockedPlayerX);
+    expect(state.player.y).toBe(lockedPlayerY);
+    expect(upstairs.rosannaCutscene!.santaX).toBeLessThan(initialOtherSantaX);
+
+    // Advance until the other Santa finishes running west and is out of sight
+    for (let i = 0; i < 40; i++) {
+      updateGameState(state, input, 0.05);
+      if (!upstairs.rosannaCutscene) {
+        break;
+      }
+    }
+
+    expect(upstairs.rosannaCutscene).toBeNull();
+    expect(state.activeDialogue).not.toBeNull();
+    expect(state.activeDialogue?.lines[0]).toBe('... Rosanna???');
+
+    // Close the "... Rosanna???" dialogue -> player regains control and can move again!
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.activeDialogue).toBeNull();
+
+    input.down = true;
+    updateGameState(state, input, 0.2);
+    input.down = false;
+    expect(state.player.y).toBeGreaterThan(lockedPlayerY);
+    // Does not re-trigger on subsequent movement in the kitchen
+    expect(upstairs.rosannaCutscene).toBeNull();
+  });
+
+  it('logs level transitions and custom messages via debugLog and DebugConsole', () => {
+    debugConsole.clear();
+    const state = createGameState();
+    expect(debugConsole.getLines()).toContain('Loaded level: level-outside');
+
+    loadLevel(state, 'level-basement');
+    expect(debugConsole.getLines()).toContain('Loaded level: level-basement');
+
+    loadLevel(state, 'level-upstairs');
+    expect(debugConsole.getLines()).toContain('Loaded level: level-upstairs');
+
+    debugLog('Custom debug test');
+    expect(debugConsole.getLines()).toContain('Custom debug test');
   });
 });

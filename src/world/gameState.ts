@@ -1,3 +1,4 @@
+import { debugLog } from '../core/debugConsole';
 import { consumeActionPress, InputState } from '../core/input';
 import { createDog, Dog, updateDog } from '../entities/dog';
 import {
@@ -17,11 +18,20 @@ import {
   updateSnowballFight,
 } from '../entities/snowball';
 import {
-  buildInteractables,
   DialogueState,
   findNearbyInteractable,
   Interactable,
 } from './interaction';
+import { LevelBasement } from './levels/levelBasement';
+import {
+  ClimbingState,
+  createMotorcycle,
+  LevelOutside,
+  MotorcycleState,
+  MotorcycleStatus,
+} from './levels/levelOutside';
+import { LevelUpstairs } from './levels/levelUpstairs';
+import { GameLevel, LevelId, LevelTransitionContext } from './levels/types';
 import {
   CLIMB_DURATION_SECONDS,
   DAMAGED_WIRE_HAZARD,
@@ -30,7 +40,6 @@ import {
   LADDER_CLIMB_X,
   MOTORCYCLE_CRASH_X,
   MOTORCYCLE_SPEED,
-  MOTORCYCLE_START_X,
   MOTORCYCLE_START_Y,
   PLAYER_START_X,
   PLAYER_START_Y,
@@ -38,32 +47,21 @@ import {
   ROOF_MIN_X,
   ROOF_WALK_Y,
   STARTER_MAP,
-  TILE_SIZE,
   TileMap,
 } from './tilemap';
 
-export interface ClimbingState {
-  direction: 'up' | 'down';
-  progress: number;
-}
+export { createMotorcycle };
+export type { ClimbingState, MotorcycleState, MotorcycleStatus };
 
-export type MotorcycleStatus = 'parked' | 'driving' | 'crashed';
-
-export interface MotorcycleState extends Rect {
-  status: MotorcycleStatus;
-}
-
-export function createMotorcycle(): MotorcycleState {
-  return {
-    x: MOTORCYCLE_START_X,
-    y: MOTORCYCLE_START_Y,
-    width: TILE_SIZE * 2,
-    height: TILE_SIZE,
-    status: 'parked',
-  };
+export interface LevelRegistry {
+  'level-outside': LevelOutside;
+  'level-basement': LevelBasement;
+  'level-upstairs': LevelUpstairs;
 }
 
 export interface GameState {
+  currentLevelId: LevelId;
+  levels: LevelRegistry;
   map: TileMap;
   player: Player;
   footprints: Footprint[];
@@ -83,25 +81,88 @@ export interface GameState {
   elapsedTime: number;
 }
 
-function refreshInteractables(state: GameState): void {
-  state.interactables = buildInteractables(state.throwers, {
-    hasLadder: state.hasLadder,
-    ladderPlaced: state.ladderPlaced,
-    isOnRoof: state.isOnRoof,
-    motorcycleStatus: state.motorcycle.status,
-  });
+function syncOutsideToLevel(state: GameState): void {
+  const outside = state.levels['level-outside'];
+  outside.dog = state.dog;
+  outside.motorcycle = state.motorcycle;
+  outside.throwers = state.throwers;
+  outside.snowballs = state.snowballs;
+  outside.hasLadder = state.hasLadder;
+  outside.ladderPlaced = state.ladderPlaced;
+  outside.isOnRoof = state.isOnRoof;
+  outside.climbing = state.climbing;
+  outside.electrocutionTimer = state.electrocutionTimer;
+}
+
+function syncLevelToOutside(state: GameState): void {
+  const outside = state.levels['level-outside'];
+  state.dog = outside.dog;
+  state.motorcycle = outside.motorcycle;
+  state.throwers = outside.throwers;
+  state.snowballs = outside.snowballs;
+  state.hasLadder = outside.hasLadder;
+  state.ladderPlaced = outside.ladderPlaced;
+  state.isOnRoof = outside.isOnRoof;
+  state.climbing = outside.climbing;
+  state.electrocutionTimer = outside.electrocutionTimer;
+}
+
+export function getActiveLevel(state: GameState): GameLevel {
+  return state.levels[state.currentLevelId];
+}
+
+export function refreshInteractables(state: GameState): void {
+  if (state.currentLevelId === 'level-outside') {
+    syncOutsideToLevel(state);
+  }
+  const activeLevel = getActiveLevel(state);
+  state.interactables = activeLevel.getInteractables();
+
+  const isBusyOutside =
+    state.currentLevelId === 'level-outside' &&
+    (state.climbing !== null ||
+      state.motorcycle.status === 'driving' ||
+      state.electrocutionTimer > 0);
+
+  const isBusyUpstairs =
+    state.currentLevelId === 'level-upstairs' &&
+    state.levels['level-upstairs'].rosannaCutscene?.active === true;
+
   state.nearbyInteractable =
-    state.climbing ||
-    state.motorcycle.status === 'driving' ||
-    state.electrocutionTimer > 0
+    isBusyOutside || isBusyUpstairs
       ? null
       : findNearbyInteractable(state.player, state.interactables);
+}
+
+/**
+ * Transitions the game to `levelId`, preserving the persistent `state.player`
+ * (and `state.player.states` Map), spawning the player at the level's entry point,
+ * and logging `"Loaded level: <levelId>"` to the debug console.
+ */
+export function loadLevel(state: GameState, levelId: LevelId): void {
+  if (state.currentLevelId === 'level-outside') {
+    state.isOnRoof = false;
+    state.climbing = null;
+    syncOutsideToLevel(state);
+  }
+
+  state.currentLevelId = levelId;
+  const nextLevel = state.levels[levelId];
+  state.map = nextLevel.map;
+  state.footprints = [];
+  state.nearbyInteractable = null;
+  state.activeDialogue = null;
+
+  nextLevel.enter(state.player);
+  refreshInteractables(state);
+  debugLog(`Loaded level: ${levelId}`);
 }
 
 export interface CreateGameStateOptions {
   map?: TileMap;
   isMobile?: boolean;
   showIntroDialogue?: boolean;
+  initialLevelId?: LevelId;
 }
 
 export function createIntroDialogue(isMobile: boolean): DialogueState {
@@ -121,6 +182,7 @@ export function createGameState(
   let map: TileMap = STARTER_MAP;
   let isMobile = false;
   let showIntroDialogue = false;
+  let initialLevelId: LevelId = 'level-outside';
 
   if (mapOrOptions && 'cols' in mapOrOptions && 'rows' in mapOrOptions) {
     map = mapOrOptions as TileMap;
@@ -128,45 +190,56 @@ export function createGameState(
     const opts = mapOrOptions as CreateGameStateOptions;
     if (opts.map) map = opts.map;
     if (opts.isMobile !== undefined) isMobile = opts.isMobile;
-    if (opts.showIntroDialogue !== undefined) showIntroDialogue = opts.showIntroDialogue;
+    if (opts.showIntroDialogue !== undefined) {
+      showIntroDialogue = opts.showIntroDialogue;
+    }
+    if (opts.initialLevelId) {
+      initialLevelId = opts.initialLevelId;
+    }
   }
 
   const player = createPlayer(PLAYER_START_X, PLAYER_START_Y);
-  const footprints: Footprint[] = [];
-  const dog = createDog();
-  const motorcycle = createMotorcycle();
-  const throwers = createDrivewayThrowers();
-  const snowballs: Snowball[] = [];
-  const interactables = buildInteractables(throwers, {
-    hasLadder: false,
-    ladderPlaced: false,
-    isOnRoof: false,
-    motorcycleStatus: motorcycle.status,
-  });
+  const levelOutside = new LevelOutside(map);
+  const levelBasement = new LevelBasement();
+  const levelUpstairs = new LevelUpstairs();
 
-  return {
-    map,
+  const levels: LevelRegistry = {
+    'level-outside': levelOutside,
+    'level-basement': levelBasement,
+    'level-upstairs': levelUpstairs,
+  };
+
+  const activeLevel = levels[initialLevelId];
+  activeLevel.enter(player);
+
+  const state: GameState = {
+    currentLevelId: initialLevelId,
+    levels,
+    map: activeLevel.map,
     player,
-    footprints,
-    dog,
-    motorcycle,
-    throwers,
-    snowballs,
-    hasLadder: false,
-    ladderPlaced: false,
-    isOnRoof: false,
-    climbing: null,
-    electrocutionTimer: 0,
+    footprints: [],
+    dog: levelOutside.dog,
+    motorcycle: levelOutside.motorcycle,
+    throwers: levelOutside.throwers,
+    snowballs: levelOutside.snowballs,
+    hasLadder: levelOutside.hasLadder,
+    ladderPlaced: levelOutside.ladderPlaced,
+    isOnRoof: levelOutside.isOnRoof,
+    climbing: levelOutside.climbing,
+    electrocutionTimer: levelOutside.electrocutionTimer,
     joystickActive: false,
-    interactables,
+    interactables: activeLevel.getInteractables(),
     nearbyInteractable: null,
     activeDialogue: showIntroDialogue ? createIntroDialogue(isMobile) : null,
     elapsedTime: 0,
   };
+
+  debugLog(`Loaded level: ${initialLevelId}`);
+  return state;
 }
 
 /**
- * Resets the map state when Santa takes damage (from a snowball, the sparking EV wire, or the loving dog):
+ * Resets the outdoor map state when Santa takes damage (from a snowball, the sparking EV wire, or the loving dog):
  * - Teleports Santa back to the bottom of the driveway facing up
  * - Starts Santa's blinking timer
  * - Resets the dog, motorcycle, ladder state, snowball throwers, footprints, and flying snowballs
@@ -192,6 +265,7 @@ export function resetAfterSnowballHit(state: GameState): void {
   state.climbing = null;
   state.electrocutionTimer = 0;
   state.activeDialogue = null;
+  syncOutsideToLevel(state);
   refreshInteractables(state);
 }
 
@@ -229,37 +303,12 @@ function updateRoofMovement(
   player.x = Math.max(ROOF_MIN_X, Math.min(ROOF_MAX_X, nextX));
 }
 
-export function updateGameState(
+function updateOutsideLevel(
   state: GameState,
   input: InputState,
   dtSeconds: number
-): void {
-  const safeDt = Math.max(0, dtSeconds);
-  state.elapsedTime += safeDt;
-  dtSeconds = safeDt;
-  let zPressed = consumeActionPress(input);
-
-  // Consume any pointer/touch click
-  const pointerClick = input.pointerClick;
-  if (pointerClick) {
-    input.pointerClick = null;
-  }
-
-  // If a dialogue box is currently open, pressing Z or clicking the screen advances or closes it
-  if (state.activeDialogue) {
-    state.player.isMoving = false;
-    if (zPressed || pointerClick) {
-      state.activeDialogue.currentIndex += 1;
-      if (
-        state.activeDialogue.currentIndex >= state.activeDialogue.lines.length
-      ) {
-        state.activeDialogue = null;
-      }
-    }
-    return;
-  }
-
-  // If Santa is currently being electrocuted on the sparking wire (3-second cartoony skeleton animation)
+): boolean {
+  // If Santa is currently being electrocuted on the sparking wire
   if (state.electrocutionTimer > 0) {
     state.player.isMoving = false;
     state.player.walkTimer = 0;
@@ -270,7 +319,7 @@ export function updateGameState(
     if (state.electrocutionTimer <= 0) {
       resetAfterSnowballHit(state);
     }
-    return;
+    return true;
   }
 
   // If Santa is riding the motorcycle straight east into the trees
@@ -297,7 +346,7 @@ export function updateGameState(
     }
 
     refreshInteractables(state);
-    return;
+    return true;
   }
 
   // If Santa is currently sliding up or down the ladder
@@ -335,62 +384,141 @@ export function updateGameState(
     }
 
     refreshInteractables(state);
-    return;
+    return true;
   }
 
   if (state.isOnRoof) {
     updateRoofMovement(state.player, input, dtSeconds);
-    // Continue aging any existing footprints on the snow below
     for (let i = state.footprints.length - 1; i >= 0; i--) {
       state.footprints[i].age += dtSeconds;
       if (state.footprints[i].age >= state.footprints[i].maxAge) {
         state.footprints.splice(i, 1);
       }
     }
-  } else {
-    const solidObstacles: Rect[] = [...state.throwers, state.motorcycle];
+    return false;
+  }
 
-    // Move player on the ground
-    updatePlayer(state.player, input, dtSeconds, state.map, solidObstacles);
+  const solidObstacles: Rect[] = [...state.throwers, state.motorcycle];
 
-    // Update snow footprints (spawns on snow tiles only and fades out over 3 seconds)
-    updateFootprints(state.footprints, state.player, state.map, dtSeconds);
+  // Move player on the ground
+  updatePlayer(state.player, input, dtSeconds, state.map, solidObstacles);
 
-    // Check if Santa stepped on the visibly damaged, sparking EV charging cable
-    if (rectsIntersect(state.player, DAMAGED_WIRE_HAZARD)) {
-      state.electrocutionTimer = ELECTROCUTION_DURATION_SECONDS;
-      state.player.isMoving = false;
-      state.player.walkTimer = 0;
-      state.nearbyInteractable = null;
-      state.activeDialogue = null;
+  // Update snow footprints (spawns on snow tiles only and fades out over 3 seconds)
+  updateFootprints(state.footprints, state.player, state.map, dtSeconds);
+
+  // Check if Santa stepped on the visibly damaged, sparking EV charging cable
+  if (rectsIntersect(state.player, DAMAGED_WIRE_HAZARD)) {
+    state.electrocutionTimer = ELECTROCUTION_DURATION_SECONDS;
+    state.player.isMoving = false;
+    state.player.walkTimer = 0;
+    state.nearbyInteractable = null;
+    state.activeDialogue = null;
+    return true;
+  }
+
+  // Update the dog on the east snow field
+  const dogSpeedMultiplier = state.joystickActive ? 0.5 : 1.0;
+  const caughtByDog = updateDog(
+    state.dog,
+    state.player,
+    dtSeconds,
+    state.map,
+    solidObstacles,
+    dogSpeedMultiplier
+  );
+  if (caughtByDog) {
+    resetAfterSnowballHit(state);
+    return true;
+  }
+
+  // Update snowball fight on the driveway
+  const hitBySnowball = updateSnowballFight(
+    state.throwers,
+    state.snowballs,
+    state.player,
+    dtSeconds
+  );
+  if (hitBySnowball) {
+    resetAfterSnowballHit(state);
+    return true;
+  }
+
+  return false;
+}
+
+export function updateGameState(
+  state: GameState,
+  input: InputState,
+  dtSeconds: number
+): void {
+  const safeDt = Math.max(0, dtSeconds);
+  state.elapsedTime += safeDt;
+  dtSeconds = safeDt;
+  const zPressed = consumeActionPress(input);
+
+  // Consume any pointer/touch click
+  const pointerClick = input.pointerClick;
+  if (pointerClick) {
+    input.pointerClick = null;
+  }
+
+  // If a dialogue box is currently open, pressing Z or clicking the screen advances or closes it
+  if (state.activeDialogue) {
+    state.player.isMoving = false;
+    if (zPressed || pointerClick) {
+      state.activeDialogue.currentIndex += 1;
+      if (
+        state.activeDialogue.currentIndex >= state.activeDialogue.lines.length
+      ) {
+        state.activeDialogue = null;
+      }
+    }
+    return;
+  }
+
+  const transitionCtx: LevelTransitionContext = {
+    loadLevel: (nextId: LevelId) => loadLevel(state, nextId),
+    openDialogue: (lines: string[]) => {
+      state.activeDialogue = { lines, currentIndex: 0 };
+    },
+  };
+
+  if (state.currentLevelId === 'level-outside') {
+    const handledEarly = updateOutsideLevel(state, input, dtSeconds);
+    if (handledEarly) {
       return;
     }
-
-    // Update the dog on the east snow field
-    // In joystick mode, dog's max speed is halved (0.5x) to make mobile navigation balanced
-    const dogSpeedMultiplier = state.joystickActive ? 0.5 : 1.0;
-    const caughtByDog = updateDog(
-      state.dog,
+  } else if (state.currentLevelId === 'level-basement') {
+    const basement = state.levels['level-basement'];
+    updatePlayer(
       state.player,
+      input,
       dtSeconds,
-      state.map,
-      solidObstacles,
-      dogSpeedMultiplier
+      basement.map,
+      basement.getSolidObstacles()
     );
-    if (caughtByDog) {
-      resetAfterSnowballHit(state);
+  } else if (state.currentLevelId === 'level-upstairs') {
+    const upstairs = state.levels['level-upstairs'];
+    // Check if the Kitchen Rosanna cutscene is active or just triggered
+    const movementLocked = upstairs.updateCutscene(
+      dtSeconds,
+      state.player,
+      transitionCtx
+    );
+    if (movementLocked) {
+      refreshInteractables(state);
       return;
     }
-
-    // Update snowball fight on the driveway
-    const hitBySnowball = updateSnowballFight(
-      state.throwers,
-      state.snowballs,
+    updatePlayer(
       state.player,
-      dtSeconds
+      input,
+      dtSeconds,
+      upstairs.map,
+      upstairs.getSolidObstacles()
     );
-    if (hitBySnowball) {
-      resetAfterSnowballHit(state);
+    // Re-check right after moving in case this step crossed into the kitchen
+    if (upstairs.updateCutscene(0, state.player, transitionCtx)) {
+      refreshInteractables(state);
       return;
     }
   }
@@ -402,7 +530,6 @@ export function updateGameState(
   let pointerInteracted = false;
   if (pointerClick && state.nearbyInteractable) {
     const b = state.nearbyInteractable.bounds;
-    // Allow clicking anywhere near the object (within 24px of bounds)
     const clickMargin = 24;
     const clickedNearObject =
       pointerClick.worldX >= b.x - clickMargin &&
@@ -416,38 +543,30 @@ export function updateGameState(
   }
 
   if ((zPressed || pointerInteracted) && state.nearbyInteractable) {
-    const id = state.nearbyInteractable.id;
-    if (id === 'motorcycle') {
-      state.motorcycle.status = 'driving';
-      state.player.x = state.motorcycle.x + 8;
-      state.player.y = state.motorcycle.y - 2;
-      state.player.facing = 'right';
-      state.player.isMoving = true;
-      state.nearbyInteractable = null;
-    } else if (id === 'ground-ladder') {
-      state.hasLadder = true;
+    const target = state.nearbyInteractable;
+    if (state.currentLevelId === 'level-outside') {
+      syncOutsideToLevel(state);
+    }
+
+    const activeLevel = getActiveLevel(state);
+    const prevLevelId = state.currentLevelId;
+    const handledByLevel = activeLevel.handleInteraction(
+      target.id,
+      state.player,
+      transitionCtx
+    );
+
+    if (handledByLevel) {
+      if (
+        prevLevelId === 'level-outside' &&
+        state.currentLevelId === 'level-outside'
+      ) {
+        syncLevelToOutside(state);
+      }
       refreshInteractables(state);
-    } else if (id === 'house-west-place-ladder') {
-      state.hasLadder = false;
-      state.ladderPlaced = true;
-      refreshInteractables(state);
-    } else if (id === 'house-west-climb-ladder') {
-      state.climbing = { direction: 'up', progress: 0 };
-      state.player.x = LADDER_CLIMB_X;
-      state.player.y = LADDER_BOTTOM_Y;
-      state.player.facing = 'up';
-      state.nearbyInteractable = null;
-    } else if (id === 'roof-ladder') {
-      state.climbing = { direction: 'down', progress: 0 };
-      state.player.x = LADDER_CLIMB_X;
-      state.player.y = ROOF_WALK_Y;
-      state.player.facing = 'down';
-      state.nearbyInteractable = null;
-    } else if (id === 'roof-chimney') {
-      // Placeholder: "Z: Climb down chimney" does nothing for now
-    } else if (state.nearbyInteractable.dialogueLines.length > 0) {
+    } else if (target.dialogueLines.length > 0) {
       state.activeDialogue = {
-        lines: state.nearbyInteractable.dialogueLines,
+        lines: target.dialogueLines,
         currentIndex: 0,
       };
     }
