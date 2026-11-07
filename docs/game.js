@@ -194,50 +194,6 @@
       window.removeEventListener("pointercancel", onPointerCancel);
     };
   }
-  function computeViewportLayout(vw, vh) {
-    const safeVw = Math.max(1, Math.round(vw));
-    const safeVh = Math.max(1, Math.round(vh));
-    const isLandscape = safeVw > safeVh;
-    const pad = 24;
-    const availW = Math.max(64, safeVw - pad);
-    const availH = Math.max(64, safeVh - pad);
-    const aspect = 256 / 224;
-    const canvasWidth = Math.floor(Math.min(availW, availH * aspect));
-    const canvasHeight = Math.floor(Math.min(availH, availW / aspect));
-    const shortSide = Math.min(safeVw, safeVh);
-    const maxAllowedJoy = Math.max(80, shortSide - 16);
-    const joystickSize = Math.round(
-      Math.min(maxAllowedJoy, Math.max(120, Math.min(320, shortSide * 0.5)))
-    );
-    if (isLandscape) {
-      return {
-        isLandscape: true,
-        containerWidth: safeVw,
-        containerHeight: safeVh,
-        canvasWidth,
-        canvasHeight,
-        joystickSize,
-        joystickLeft: safeVw - joystickSize,
-        joystickTop: Math.round((safeVh - joystickSize) / 2),
-        actionBtnLeft: 20,
-        actionBtnTop: Math.round(safeVh / 2),
-        actionBtnBottom: null
-      };
-    }
-    return {
-      isLandscape: false,
-      containerWidth: safeVw,
-      containerHeight: safeVh,
-      canvasWidth,
-      canvasHeight,
-      joystickSize,
-      joystickLeft: Math.round((safeVw - joystickSize) / 2),
-      joystickTop: safeVh - joystickSize,
-      actionBtnLeft: 20,
-      actionBtnTop: null,
-      actionBtnBottom: 24
-    };
-  }
   function createVirtualJoystick(options) {
     const { container, stick, input } = options;
     let activePointerId = null;
@@ -1915,7 +1871,6 @@
     return clean.charAt(0).toUpperCase() + clean.slice(1);
   }
   async function startGame() {
-    const gameContainer = document.getElementById("game-container");
     const canvas = document.getElementById("game-canvas");
     if (!canvas) {
       throw new Error("Could not find #game-canvas element");
@@ -1943,83 +1898,43 @@
         joystick.hide();
       }
     }
-    let lastVw = 0;
-    let lastVh = 0;
-    let lastOffsetLeft = 0;
-    let lastOffsetTop = 0;
     let lastIsLandscape = null;
-    const applyViewportLayout = (force = false) => {
+    const handleOrientationOrResize = () => {
       if (typeof window === "undefined") return;
       if (window.scrollX !== 0 || window.scrollY !== 0) {
         window.scrollTo(0, 0);
       }
-      const vv = window.visualViewport;
-      const vw = Math.round(vv ? vv.width : window.innerWidth);
-      const vh = Math.round(vv ? vv.height : window.innerHeight);
-      const offsetLeft = Math.round(vv ? vv.offsetLeft : 0);
-      const offsetTop = Math.round(vv ? vv.offsetTop : 0);
-      if (!force && vw === lastVw && vh === lastVh && offsetLeft === lastOffsetLeft && offsetTop === lastOffsetTop) {
-        return;
-      }
-      lastVw = vw;
-      lastVh = vh;
-      lastOffsetLeft = offsetLeft;
-      lastOffsetTop = offsetTop;
-      const layout = computeViewportLayout(vw, vh);
-      if (lastIsLandscape !== null && lastIsLandscape !== layout.isLandscape) {
+      const isLandscape = window.innerWidth > window.innerHeight;
+      if (lastIsLandscape !== null && lastIsLandscape !== isLandscape) {
         joystick?.reset();
       }
-      lastIsLandscape = layout.isLandscape;
-      if (gameContainer) {
-        gameContainer.style.left = `${offsetLeft}px`;
-        gameContainer.style.top = `${offsetTop}px`;
-        gameContainer.style.width = `${layout.containerWidth}px`;
-        gameContainer.style.height = `${layout.containerHeight}px`;
-      }
-      canvas.style.width = `${layout.canvasWidth}px`;
-      canvas.style.height = `${layout.canvasHeight}px`;
-      if (joystickContainer) {
-        joystickContainer.style.width = `${layout.joystickSize}px`;
-        joystickContainer.style.height = `${layout.joystickSize}px`;
-        joystickContainer.style.left = `${layout.joystickLeft}px`;
-        joystickContainer.style.top = `${layout.joystickTop}px`;
-        joystickContainer.style.right = "auto";
-        joystickContainer.style.bottom = "auto";
-        joystickContainer.style.transform = "none";
-      }
-      if (mobileActionBtn) {
-        mobileActionBtn.style.left = `${layout.actionBtnLeft}px`;
-        mobileActionBtn.style.right = "auto";
-        if (layout.actionBtnTop !== null) {
-          mobileActionBtn.style.top = `${layout.actionBtnTop}px`;
-          mobileActionBtn.style.bottom = "auto";
-          mobileActionBtn.style.transform = "translateY(-50%)";
-        } else {
-          mobileActionBtn.style.top = "auto";
-          mobileActionBtn.style.bottom = `${layout.actionBtnBottom ?? 24}px`;
-          mobileActionBtn.style.transform = "none";
-        }
-      }
+      lastIsLandscape = isLandscape;
     };
     const onOrientationOrResize = () => {
-      applyViewportLayout(true);
-      setTimeout(() => applyViewportLayout(true), 60);
-      setTimeout(() => applyViewportLayout(true), 180);
-      setTimeout(() => applyViewportLayout(true), 350);
+      handleOrientationOrResize();
+      setTimeout(handleOrientationOrResize, 100);
+      setTimeout(handleOrientationOrResize, 300);
     };
-    applyViewportLayout(true);
+    handleOrientationOrResize();
     window.addEventListener("resize", onOrientationOrResize);
     window.addEventListener("orientationchange", onOrientationOrResize);
-    window.addEventListener("scroll", () => applyViewportLayout(false), { passive: true });
+    window.addEventListener("scroll", () => {
+      if (window.scrollX !== 0 || window.scrollY !== 0) {
+        window.scrollTo(0, 0);
+      }
+    }, { passive: true });
     window.visualViewport?.addEventListener("resize", onOrientationOrResize);
-    window.visualViewport?.addEventListener("scroll", () => applyViewportLayout(false));
+    window.visualViewport?.addEventListener("scroll", () => {
+      if (window.scrollX !== 0 || window.scrollY !== 0) {
+        window.scrollTo(0, 0);
+      }
+    });
     if (typeof screen !== "undefined" && screen.orientation?.addEventListener) {
       screen.orientation.addEventListener("change", onOrientationOrResize);
     }
     attachKeyboardListeners(window, input, {
       onToggleJoystick: () => {
         joystick?.toggle();
-        applyViewportLayout(true);
       }
     });
     const state = createGameState({
@@ -2062,7 +1977,9 @@
     });
     let lastTimestamp = null;
     function frame(now) {
-      applyViewportLayout(false);
+      if (window.scrollX !== 0 || window.scrollY !== 0) {
+        window.scrollTo(0, 0);
+      }
       const dtSeconds = lastTimestamp === null ? 0 : Math.max(0, Math.min((now - lastTimestamp) / 1e3, 0.1));
       lastTimestamp = now;
       const isJoystickShown = joystick?.isVisible() ?? false;
