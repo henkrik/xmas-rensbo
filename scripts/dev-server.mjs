@@ -1,6 +1,7 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { execSync } from 'node:child_process';
 
 const rootDir = process.cwd();
@@ -47,7 +48,30 @@ const server = http.createServer((req, res) => {
   res.end(fs.readFileSync(filePath));
 });
 
-server.listen(port, () => {
-  console.log(`\n  Xmas Rensbo running at: http://localhost:${port}/\n`);
-});
+function getLanAddresses() {
+  const interfaces = os.networkInterfaces();
+  const addresses = [];
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name] || []) {
+      const isIpv4 = iface.family === 'IPv4' || iface.family === 4;
+      if (isIpv4 && !iface.internal) {
+        addresses.push(iface.address);
+      }
+    }
+  }
+  return [...new Set(addresses)];
+}
 
+server.listen(port, '0.0.0.0', () => {
+  const lanAddresses = getLanAddresses();
+  console.log('\n  Xmas Rensbo dev server running at:');
+  console.log(`  > Local:   http://localhost:${port}/`);
+  if (lanAddresses.length > 0) {
+    for (const addr of lanAddresses) {
+      console.log(`  > Network: http://${addr}:${port}/`);
+    }
+  } else {
+    console.log('  > Network: No external IPv4 LAN address detected');
+  }
+  console.log();
+});
