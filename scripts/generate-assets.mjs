@@ -1909,9 +1909,9 @@ function drawInteriorWallTile(canvas, col, row) {
 }
 
 function drawNeutralCouchVertical(canvas, cStart, rStart, cEnd, rEnd) {
-  const x = cStart * 16 + 2;
+  const x = cStart * 16 + 1;
   const y = rStart * 16 + 2;
-  const w = (cEnd - cStart + 1) * 16 - 4;
+  const w = (cEnd - cStart + 1) * 16 - 2;
   const h = (rEnd - rStart + 1) * 16 - 4;
 
   // Drop shadow
@@ -1919,44 +1919,71 @@ function drawNeutralCouchVertical(canvas, cStart, rStart, cEnd, rEnd) {
   // Outer dark outline
   canvas.fillRect(x, y, w, h, [34, 28, 26, 255]);
   // Warm neutral beige/taupe backrest (on left/west side)
-  canvas.fillRect(x + 2, y + 2, 8, h - 4, [156, 142, 126, 255]);
-  canvas.fillRect(x + 3, y + 3, 6, h - 6, [178, 164, 148, 255]);
+  const backW = Math.max(4, Math.floor(w * 0.32));
+  canvas.fillRect(x + 1, y + 2, backW, h - 4, [156, 142, 126, 255]);
+  canvas.fillRect(x + 2, y + 3, backW - 2, h - 6, [178, 164, 148, 255]);
   // Seat cushions (3 vertical cushions)
   const cushionCount = 3;
-  const ch = Math.floor((h - 16) / cushionCount);
+  const ch = Math.floor((h - 10) / cushionCount);
   for (let i = 0; i < cushionCount; i++) {
-    const cy = y + 8 + i * ch;
-    canvas.fillRect(x + 10, cy, w - 12, ch - 1, [198, 186, 170, 255]);
-    canvas.fillRect(x + 11, cy + 1, w - 14, ch - 3, [214, 202, 186, 255]);
-    canvas.drawLine(x + 10, cy + ch - 1, x + w - 3, cy + ch - 1, [138, 124, 110, 255]);
+    const cy = y + 5 + i * ch;
+    canvas.fillRect(x + backW + 1, cy, w - backW - 2, ch - 1, [198, 186, 170, 255]);
+    canvas.fillRect(x + backW + 2, cy + 1, w - backW - 4, ch - 3, [214, 202, 186, 255]);
+    canvas.drawLine(x + backW + 1, cy + ch - 1, x + w - 2, cy + ch - 1, [138, 124, 110, 255]);
   }
   // Top and bottom armrests
-  canvas.fillRect(x + 2, y + 2, w - 4, 6, [168, 154, 138, 255]);
-  canvas.fillRect(x + 2, y + h - 8, w - 4, 6, [168, 154, 138, 255]);
+  canvas.fillRect(x + 1, y + 1, w - 2, 4, [168, 154, 138, 255]);
+  canvas.fillRect(x + 1, y + h - 5, w - 2, 4, [168, 154, 138, 255]);
 }
 
 function drawNeutralCouchHorizontal(canvas, cStart, rStart, cEnd, rEnd) {
-  const x = cStart * 16 + 2;
-  const y = rStart * 16 + 2;
-  const w = (cEnd - cStart + 1) * 16 - 4;
-  const h = (rEnd - rStart + 1) * 16 - 4;
+  const x = cStart * 16 + 1;
+  const y = rStart * 16 + 1;
+  const w = (cEnd - cStart + 1) * 16 - 2;
+  const h = (rEnd - rStart + 1) * 16 - 2;
 
   canvas.fillRect(x + 2, y + 2, w, h, [20, 16, 24, 110]);
   canvas.fillRect(x, y, w, h, [34, 28, 26, 255]);
+  const backH = Math.max(4, Math.floor(h * 0.34));
   // Backrest along top
-  canvas.fillRect(x + 2, y + 2, w - 4, 8, [156, 142, 126, 255]);
-  canvas.fillRect(x + 3, y + 3, w - 6, 6, [178, 164, 148, 255]);
+  canvas.fillRect(x + 1, y + 1, w - 2, backH, [156, 142, 126, 255]);
+  canvas.fillRect(x + 2, y + 2, w - 4, backH - 2, [178, 164, 148, 255]);
   // 3 seat cushions
-  const cw = Math.floor((w - 16) / 3);
+  const cw = Math.floor((w - 10) / 3);
   for (let i = 0; i < 3; i++) {
-    const cx = x + 8 + i * cw;
-    canvas.fillRect(cx, y + 10, cw - 1, h - 12, [198, 186, 170, 255]);
-    canvas.fillRect(cx + 1, y + 11, cw - 3, h - 14, [214, 202, 186, 255]);
+    const cx = x + 5 + i * cw;
+    canvas.fillRect(cx, y + backH + 1, cw - 1, h - backH - 2, [198, 186, 170, 255]);
+    canvas.fillRect(cx + 1, y + backH + 2, cw - 3, h - backH - 4, [214, 202, 186, 255]);
   }
   // Left & right armrests
-  canvas.fillRect(x + 2, y + 2, 6, h - 4, [168, 154, 138, 255]);
-  canvas.fillRect(x + w - 8, y + 2, 6, h - 4, [168, 154, 138, 255]);
+  canvas.fillRect(x + 1, y + 1, 4, h - 2, [168, 154, 138, 255]);
+  canvas.fillRect(x + w - 5, y + 1, 4, h - 2, [168, 154, 138, 255]);
 }
+
+const BASEMENT_MAP_MATRIX_FOR_PNG = [
+  //0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [0,0,0,0,0,0,21,21,21,21,21,21,21,21,0,0,0,0,0,0,0,0,0], // 6
+  [0,0,0,0,0,0,21,21,21,21,21,21,21,21,0,0,0,0,21,21,21,21,21], // 7
+  [0,0,0,0,0,0,21,16,16,16,16,16,22,21,0,0,0,0,21,18,18,22,21], // 8
+  [0,0,0,0,0,0,21,22,16,16,16,16,22,21,0,0,0,0,21,22,18,18,21], // 9
+  [0,0,0,0,0,0,21,22,16,16,16,16,16,21,0,0,0,0,21,22,18,18,21], // 10
+  [0,0,0,0,0,0,21,22,16,16,16,22,22,21,0,0,0,0,21,18,18,18,21], // 11
+  [0,0,0,0,0,0,21,16,16,16,16,22,22,21,21,21,21,21,21,21,18,21,21], // 12
+  [0,0,0,0,0,0,21,16,16,16,16,16,16,16,17,17,17,17,17,17,17,17,21], // 13
+  [0,0,0,0,0,0,21,16,22,22,22,16,16,16,17,17,17,17,17,17,17,17,21], // 14
+  [0,0,0,0,0,0,21,16,16,16,16,16,16,16,17,17,17,17,19,19,19,19,21], // 15
+  [0,0,0,0,0,0,21,16,16,16,16,16,16,21,17,17,17,17,19,19,19,19,21], // 16
+  [0,0,0,0,0,0,21,16,22,22,16,16,16,21,22,17,17,17,19,19,19,19,21], // 17
+  [0,0,0,0,0,0,21,16,16,16,16,16,16,21,22,17,17,17,19,19,19,19,21], // 18
+  [0,0,0,0,0,0,21,16,16,16,16,16,16,21,17,17,17,17,17,17,17,17,21], // 19
+  [0,0,0,0,0,0,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21], // 20
+];
 
 function generateBasementPng() {
   const canvas = new PixelCanvas(512, 448);
@@ -1964,25 +1991,23 @@ function generateBasementPng() {
   canvas.fillRect(0, 0, 512, 448, [0, 0, 0, 255]);
 
   // 2. Draw floor regions
-  // Library & Basement Living Room wooden floor (cols 4..14, rows 5..22)
-  drawWoodPlankFloor(canvas, 4, 5, 14, 22);
-  // Corridor & Basement Hallway reddish-orangish stone tiles (cols 15..24, rows 10..22)
-  drawStoneTileFloor(canvas, 15, 13, 18, 16);
-  drawStoneTileFloor(canvas, 19, 10, 24, 22);
-  // Threshold strip where wood floor meets stone tiles at col 15, rows 13..16
-  canvas.fillRect(15 * 16, 13 * 16, 2, 4 * 16, [112, 78, 46, 255]);
-  // Basement Bathroom ceramic tiles (cols 20..24, rows 4..9)
-  drawBathroomTileFloor(canvas, 20, 4, 24, 9);
+  // Library & Basement Living Room wooden floor (cols 7..13, rows 8..19)
+  drawWoodPlankFloor(canvas, 7, 8, 13, 19);
+  // Basement Hallway reddish-orangish stone tiles (cols 14..21, rows 13..19)
+  drawStoneTileFloor(canvas, 14, 13, 21, 19);
+  // Threshold strip where wood floor meets stone tiles at col 14, rows 13..15
+  canvas.fillRect(14 * 16, 13 * 16, 2, 3 * 16, [112, 78, 46, 255]);
+  // Basement Bathroom ceramic tiles (cols 19..21, rows 8..12) - directly north of the stairs
+  drawBathroomTileFloor(canvas, 19, 8, 21, 12);
 
-  // 3. Draw Stairs (cols 25..28, rows 14..17)
-  for (let c = 25; c <= 28; c++) {
+  // 3. Draw Stairs inside east side of hallway (cols 18..21, rows 15..18)
+  for (let c = 18; c <= 21; c++) {
     const sx = c * 16;
-    const sy = 14 * 16;
+    const sy = 15 * 16;
     const sh = 4 * 16;
-    // Two steps per tile column going up toward the east
     for (let step = 0; step < 2; step++) {
       const tx = sx + step * 8;
-      const shade = (c - 25) * 6 + step * 3;
+      const shade = (c - 18) * 6 + step * 3;
       canvas.fillRect(tx, sy, 7, sh, [176 + shade, 124 + shade, 76 + shade, 255]);
       canvas.fillRect(tx, sy, 2, sh, [212, 162, 108, 255]); // Step nosing highlight
       canvas.fillRect(tx + 7, sy, 1, sh, [88, 54, 30, 255]); // Step riser shadow
@@ -1992,51 +2017,21 @@ function generateBasementPng() {
     canvas.fillRect(sx, sy + sh - 3, 16, 3, [120, 74, 38, 255]);
   }
 
-  // 4. Draw Interior Walls from BASEMENT_TILES layout
-  // West Wing walls
-  for (let r = 3; r <= 23; r++) drawInteriorWallTile(canvas, 3, r);
-  for (let c = 4; c <= 14; c++) {
-    drawInteriorWallTile(canvas, c, 3);
-    drawInteriorWallTile(canvas, c, 4);
-    drawInteriorWallTile(canvas, c, 23);
-  }
-  for (let r = 3; r <= 12; r++) drawInteriorWallTile(canvas, 14, r);
-  for (let r = 17; r <= 23; r++) drawInteriorWallTile(canvas, 14, r);
-
-  // Corridor & Hallway walls
-  for (let c = 15; c <= 18; c++) {
-    drawInteriorWallTile(canvas, c, 12);
-    drawInteriorWallTile(canvas, c, 17);
-  }
-  for (let r = 9; r <= 12; r++) drawInteriorWallTile(canvas, 18, r);
-  for (let r = 17; r <= 23; r++) drawInteriorWallTile(canvas, 18, r);
-  for (let c = 18; c <= 25; c++) drawInteriorWallTile(canvas, c, 23);
-  for (let r = 9; r <= 13; r++) drawInteriorWallTile(canvas, 25, r);
-  for (let r = 18; r <= 23; r++) drawInteriorWallTile(canvas, 25, r);
-
-  // Bathroom walls (cols 19..25, rows 3..9, doorway at col 22, row 9)
-  for (let c = 19; c <= 25; c++) {
-    drawInteriorWallTile(canvas, c, 3);
-    if (c !== 22) drawInteriorWallTile(canvas, c, 9);
-  }
-  for (let r = 3; r <= 9; r++) {
-    drawInteriorWallTile(canvas, 19, r);
-    drawInteriorWallTile(canvas, 25, r);
+  // 4. Draw Interior Walls from BASEMENT_MAP_MATRIX_FOR_PNG
+  for (let r = 6; r <= 20; r++) {
+    for (let c = 6; c <= 22; c++) {
+      if (BASEMENT_MAP_MATRIX_FOR_PNG[r]?.[c] === 21) {
+        drawInteriorWallTile(canvas, c, r);
+      }
+    }
   }
 
-  // Stairs walls (cols 25..29, rows 13..18)
-  for (let c = 25; c <= 29; c++) {
-    drawInteriorWallTile(canvas, c, 13);
-    drawInteriorWallTile(canvas, c, 18);
-  }
-  for (let r = 13; r <= 18; r++) drawInteriorWallTile(canvas, 29, r);
-
-  // 5. THE LIBRARY DETAILS
-  // 5A. North Wall Bookshelf (cols 4..13, rows 3..4)
+  // 5. THE LIBRARY DETAILS (cols 7..12, rows 6..12)
+  // 5A. North Wall Bookshelf (cols 7..12, rows 6..7)
   {
-    const bx = 4 * 16;
-    const by = 3 * 16 + 2;
-    const bw = 10 * 16;
+    const bx = 7 * 16;
+    const by = 6 * 16 + 2;
+    const bw = 6 * 16;
     const bh = 2 * 16 - 2;
     canvas.fillRect(bx, by, bw, bh, [72, 42, 24, 255]);
     canvas.strokeRect(bx, by, bw, bh, [32, 18, 10, 255]);
@@ -2051,7 +2046,6 @@ function generateBasementPng() {
     for (let shelf = 0; shelf < 3; shelf++) {
       const sy = by + 3 + shelf * 9;
       canvas.fillRect(bx + 2, sy, bw - 4, 7, [44, 26, 16, 255]);
-      // Wooden shelf plank
       canvas.fillRect(bx + 1, sy + 7, bw - 2, 2, [138, 86, 48, 255]);
       let px = bx + 3;
       let bookIdx = shelf * 7;
@@ -2060,49 +2054,45 @@ function generateBasementPng() {
         const h = 5 + (bookIdx % 2);
         const col = bookColors[bookIdx % bookColors.length];
         canvas.fillRect(px, sy + (7 - h), w, h, col);
-        canvas.setPixel(px, sy + (7 - h) + 1, [245, 232, 196, 255]); // Gold spine stripe
+        canvas.setPixel(px, sy + (7 - h) + 1, [245, 232, 196, 255]);
         px += w + 1;
         bookIdx++;
       }
     }
   }
 
-  // 5B. Library Neutral Couch on west side (cols 4..5, rows 6..10)
-  drawNeutralCouchVertical(canvas, 4, 6, 5, 10);
+  // 5B. Library Neutral Couch on west side (col 7, rows 9..11)
+  drawNeutralCouchVertical(canvas, 7, 9, 7, 11);
 
-  // 5C. Stack of Firewood on east side (cols 12..13, rows 5..7) - box with horizontal log lines
+  // 5C. Stack of Firewood on east side (col 12, rows 8..9) - box with horizontal log lines
   {
     const wx = 12 * 16 + 1;
-    const wy = 5 * 16 + 2;
-    const ww = 2 * 16 - 2;
-    const wh = 3 * 16 - 4;
-    canvas.fillRect(wx + 2, wy + 2, ww, wh, [20, 14, 10, 100]);
+    const wy = 8 * 16 + 2;
+    const ww = 14;
+    const wh = 2 * 16 - 4;
+    canvas.fillRect(wx + 1, wy + 1, ww, wh, [20, 14, 10, 100]);
     canvas.fillRect(wx, wy, ww, wh, [58, 36, 20, 255]);
     canvas.strokeRect(wx, wy, ww, wh, [28, 18, 10, 255]);
-    // Horizontal stacked logs with bark lines & circular cut ends
-    for (let ly = wy + 3; ly < wy + wh - 4; ly += 6) {
-      canvas.fillRect(wx + 2, ly, ww - 4, 5, [134, 86, 46, 255]);
-      canvas.fillRect(wx + 2, ly + 1, ww - 4, 2, [164, 110, 64, 255]);
-      canvas.drawLine(wx + 2, ly + 4, wx + ww - 3, ly + 4, [78, 48, 24, 255]);
-      // Cut log ends on left & right
-      canvas.fillRect(wx + 2, ly + 1, 3, 3, [218, 184, 132, 255]);
-      canvas.fillRect(wx + ww - 5, ly + 1, 3, 3, [218, 184, 132, 255]);
+    for (let ly = wy + 2; ly < wy + wh - 3; ly += 5) {
+      canvas.fillRect(wx + 2, ly, ww - 4, 4, [134, 86, 46, 255]);
+      canvas.fillRect(wx + 2, ly + 1, ww - 4, 1, [164, 110, 64, 255]);
+      canvas.fillRect(wx + 2, ly + 1, 2, 2, [218, 184, 132, 255]);
+      canvas.fillRect(wx + ww - 4, ly + 1, 2, 2, [218, 184, 132, 255]);
     }
   }
 
-  // 5D. The Fireplace (cols 11..13, rows 9..12)
+  // 5D. The Fireplace (cols 11..12, rows 11..12)
   {
-    // Cozy red hearth rug right next to the fireplace where Santa spawns (cols 9..10, rows 10..11)
-    const rx = 9 * 16 + 2;
-    const ry = 10 * 16 + 2;
-    canvas.fillRect(rx, ry, 28, 28, [148, 42, 46, 255]);
-    canvas.strokeRect(rx + 2, ry + 2, 24, 24, [218, 176, 78, 255]);
+    // Cozy red hearth rug next to the fireplace where Santa spawns (cols 9..10, row 11)
+    const rx = 9 * 16 + 3;
+    const ry = 11 * 16 + 1;
+    canvas.fillRect(rx, ry, 24, 18, [148, 42, 46, 255]);
+    canvas.strokeRect(rx + 1, ry + 1, 22, 16, [218, 176, 78, 255]);
 
     const fx = 11 * 16;
-    const fy = 9 * 16;
-    const fw = 3 * 16;
-    const fh = 4 * 16;
-    // Stone & red brick hearth structure
+    const fy = 11 * 16;
+    const fw = 2 * 16;
+    const fh = 2 * 16;
     canvas.fillRect(fx, fy, fw, fh, [96, 88, 86, 255]);
     for (let py = fy + 2; py < fy + fh - 2; py++) {
       for (let px = fx + 2; px < fx + fw - 2; px++) {
@@ -2111,64 +2101,56 @@ function generateBasementPng() {
       }
     }
     canvas.strokeRect(fx, fy, fw, fh, [32, 26, 28, 255]);
-    // Dark firebox opening facing west/south-west into the library
-    canvas.fillRect(fx + 4, fy + 14, 26, 34, [24, 18, 20, 255]);
-    // Glowing logs & warm fire base
-    canvas.fillRect(fx + 8, fy + 36, 18, 6, [92, 52, 28, 255]);
-    canvas.fillRect(fx + 10, fy + 26, 14, 12, [244, 124, 38, 255]);
-    canvas.fillRect(fx + 12, fy + 28, 10, 8, [255, 212, 74, 255]);
+    // Dark firebox opening facing west into the library
+    canvas.fillRect(fx + 3, fy + 6, 18, 20, [24, 18, 20, 255]);
+    canvas.fillRect(fx + 5, fy + 20, 14, 4, [92, 52, 28, 255]);
+    canvas.fillRect(fx + 6, fy + 12, 12, 9, [244, 124, 38, 255]);
+    canvas.fillRect(fx + 8, fy + 14, 8, 6, [255, 212, 74, 255]);
   }
 
-  // 6. BASEMENT LIVING ROOM DETAILS
-  // 6A. Living Room Neutral Couch (cols 6..10, rows 14..15)
-  drawNeutralCouchHorizontal(canvas, 6, 14, 10, 15);
+  // 6. BASEMENT LIVING ROOM DETAILS (cols 7..12, rows 13..20)
+  // 6A. Living Room Neutral Couch (cols 8..10, row 14)
+  drawNeutralCouchHorizontal(canvas, 8, 14, 10, 14);
 
-  // 6B. Chess Board Table (cols 7..9, rows 18..19)
+  // 6B. Chess Board Table (cols 8..9, row 17)
   {
     // Decorative rug under chess table
-    canvas.fillRect(6 * 16 + 8, 17 * 16 + 8, 4 * 16, 3 * 16, [54, 96, 82, 255]);
-    canvas.strokeRect(6 * 16 + 10, 17 * 16 + 10, 4 * 16 - 4, 3 * 16 - 4, [198, 164, 88, 255]);
+    canvas.fillRect(7 * 16 + 10, 16 * 16 + 10, 44, 28, [54, 96, 82, 255]);
+    canvas.strokeRect(7 * 16 + 11, 16 * 16 + 11, 42, 26, [198, 164, 88, 255]);
 
-    const tx = 7 * 16 + 2;
-    const ty = 18 * 16 + 2;
-    const tw = 3 * 16 - 4;
-    const th = 2 * 16 - 4;
-    canvas.fillRect(tx + 2, ty + 2, tw, th, [20, 14, 10, 110]);
+    const tx = 8 * 16 + 1;
+    const ty = 17 * 16 + 1;
+    const tw = 2 * 16 - 2;
+    const th = 14;
+    canvas.fillRect(tx + 1, ty + 1, tw, th, [20, 14, 10, 110]);
     canvas.fillRect(tx, ty, tw, th, [104, 64, 36, 255]);
     canvas.strokeRect(tx, ty, tw, th, [42, 24, 14, 255]);
     canvas.fillRect(tx + 2, ty + 2, tw - 4, th - 4, [132, 84, 48, 255]);
 
-    // 8x8 Pixel Chess Board in the center of the table (16x16 px, 2x2 per square)
-    const bx = tx + Math.floor((tw - 18) / 2);
-    const by = ty + Math.floor((th - 18) / 2);
-    canvas.strokeRect(bx, by, 18, 18, [48, 28, 16, 255]);
+    // 8x8 Pixel Chess Board in the center of the table
+    const bx = tx + Math.floor((tw - 10) / 2);
+    const by = ty + 2;
+    canvas.strokeRect(bx - 1, by - 1, 10, 10, [48, 28, 16, 255]);
     for (let r = 0; r < 8; r++) {
       for (let c = 0; c < 8; c++) {
         const isLight = (r + c) % 2 === 0;
         const sqColor = isLight ? [238, 226, 198, 255] : [44, 38, 46, 255];
-        canvas.fillRect(bx + 1 + c * 2, by + 1 + r * 2, 2, 2, sqColor);
-        // Tiny chess pieces on ranks 0, 1 and 6, 7
-        if (r <= 1) {
-          canvas.setPixel(bx + 1 + c * 2, by + 1 + r * 2, [196, 54, 54, 255]);
-        } else if (r >= 6) {
-          canvas.setPixel(bx + 1 + c * 2, by + 1 + r * 2, [250, 244, 214, 255]);
-        }
+        canvas.setPixel(bx + c, by + r, sqColor);
       }
     }
   }
 
-  // 6C. Extra Big South Windows (cols 5..8, row 23 and cols 10..13, row 23)
+  // 6C. Extra Big South Windows (cols 7..9, row 20 and cols 10..12, row 20)
   for (const [cStart, cEnd] of [
-    [5, 8],
-    [10, 13],
+    [7, 9],
+    [10, 12],
   ]) {
-    const wx = cStart * 16;
-    const wy = 23 * 16 + 2;
-    const ww = (cEnd - cStart + 1) * 16;
+    const wx = cStart * 16 + 2;
+    const wy = 20 * 16 + 2;
+    const ww = (cEnd - cStart + 1) * 16 - 4;
     const wh = 12;
     canvas.fillRect(wx, wy, ww, wh, [28, 48, 82, 255]);
     canvas.fillRect(wx + 2, wy + 2, ww - 4, wh - 4, [68, 112, 168, 255]);
-    // Snow sill & window mullions
     canvas.fillRect(wx + 2, wy + wh - 4, ww - 4, 2, [236, 246, 255, 255]);
     for (let c = cStart + 1; c <= cEnd; c++) {
       canvas.fillRect(c * 16 - 1, wy + 1, 2, wh - 2, [218, 226, 238, 255]);
@@ -2176,37 +2158,34 @@ function generateBasementPng() {
     canvas.strokeRect(wx, wy, ww, wh, [218, 226, 238, 255]);
   }
 
-  // 7. BASEMENT HALLWAY DETAILS
-  // 7A. Locked Door on North Wall of Corridor (cols 16..17, row 12)
+  // 7. BASEMENT HALLWAY DETAILS (cols 14..21, rows 12..20)
+  // 7A. Locked Door on North Wall of Hallway (cols 15..16, row 12) - straight north of Front Door!
   {
-    const dx = 16 * 16 + 2;
+    const dx = 15 * 16 + 2;
     const dy = 12 * 16 + 1;
     canvas.fillRect(dx, dy, 28, 15, [112, 68, 38, 255]);
     canvas.strokeRect(dx, dy, 28, 15, [38, 22, 12, 255]);
     canvas.fillRect(dx + 3, dy + 3, 9, 9, [92, 54, 28, 255]);
     canvas.fillRect(dx + 16, dy + 3, 9, 9, [92, 54, 28, 255]);
-    canvas.fillRect(dx + 22, dy + 8, 2, 2, [238, 196, 68, 255]); // Brass doorknob
+    canvas.fillRect(dx + 22, dy + 8, 2, 2, [238, 196, 68, 255]);
   }
 
-  // 7B. Coat Hangers on West Wall of Hallway (col 19, rows 18..20)
+  // 7B. Coat Hangers on West Wall of Hallway (col 14, rows 17..18)
   {
-    const cx = 19 * 16 + 1;
-    const cy = 18 * 16 + 2;
-    const cw = 13;
-    const ch = 3 * 16 - 4;
-    // Wooden rack base & vertical post
+    const cx = 14 * 16 + 1;
+    const cy = 17 * 16 + 2;
+    const cw = 12;
+    const ch = 2 * 16 - 4;
     canvas.fillRect(cx, cy, cw, ch, [98, 60, 32, 255]);
     canvas.strokeRect(cx, cy, cw, ch, [38, 22, 12, 255]);
-    // Brass hooks & hanging winter coats (red coat, navy jacket, green scarf)
-    canvas.fillRect(cx + 3, cy + 5, 8, 12, [196, 46, 52, 255]); // Red winter coat
-    canvas.fillRect(cx + 3, cy + 19, 8, 12, [48, 78, 138, 255]); // Blue parka
-    canvas.fillRect(cx + 4, cy + 33, 6, 9, [46, 138, 78, 255]); // Green scarf & hat
+    canvas.fillRect(cx + 2, cy + 3, 7, 10, [196, 46, 52, 255]); // Red winter coat
+    canvas.fillRect(cx + 2, cy + 15, 7, 10, [48, 78, 138, 255]); // Blue parka
   }
 
-  // 7C. Locked Front Door on South Wall of Hallway (cols 21..22, row 23)
+  // 7C. Locked Front Door on South Wall of Hallway (cols 15..16, row 20) - straight south of North Door!
   {
-    const dx = 21 * 16 + 2;
-    const dy = 23 * 16 + 1;
+    const dx = 15 * 16 + 2;
+    const dy = 20 * 16 + 1;
     canvas.fillRect(dx, dy, 28, 15, [118, 72, 40, 255]);
     canvas.strokeRect(dx, dy, 28, 15, [38, 22, 12, 255]);
     canvas.drawLine(dx + 14, dy + 1, dx + 14, dy + 14, [48, 28, 16, 255]);
@@ -2214,24 +2193,24 @@ function generateBasementPng() {
     canvas.fillRect(dx + 15, dy + 6, 2, 3, [238, 196, 68, 255]);
   }
 
-  // 8. BASEMENT BATHROOM FIXTURES (cols 20..24, rows 4..8)
-  // 8A. Sink on west wall (col 20, rows 5..6)
+  // 8. BASEMENT BATHROOM FIXTURES (cols 19..21, rows 8..11)
+  // 8A. Sink on west wall (col 19, rows 9..10)
   {
-    const sx = 20 * 16 + 1;
-    const sy = 5 * 16 + 2;
-    canvas.fillRect(sx, sy, 13, 26, [236, 244, 252, 255]);
-    canvas.strokeRect(sx, sy, 13, 26, [122, 146, 168, 255]);
-    canvas.fillRect(sx + 3, sy + 5, 7, 16, [186, 218, 238, 255]); // Basin water/bowl
-    canvas.fillRect(sx + 1, sy + 11, 4, 3, [192, 204, 218, 255]); // Silver faucet
+    const sx = 19 * 16 + 1;
+    const sy = 9 * 16 + 2;
+    canvas.fillRect(sx, sy, 12, 24, [236, 244, 252, 255]);
+    canvas.strokeRect(sx, sy, 12, 24, [122, 146, 168, 255]);
+    canvas.fillRect(sx + 3, sy + 5, 6, 14, [186, 218, 238, 255]);
+    canvas.fillRect(sx + 1, sy + 10, 3, 3, [192, 204, 218, 255]);
   }
-  // 8B. Toilet on north-east wall (col 24, row 5)
+  // 8B. Toilet on north-east wall (col 21, row 8)
   {
-    const tx = 24 * 16 + 2;
-    const ty = 5 * 16 + 1;
-    canvas.fillRect(tx, ty, 12, 6, [238, 246, 255, 255]); // Tank
-    canvas.strokeRect(tx, ty, 12, 6, [122, 146, 168, 255]);
-    canvas.fillRect(tx + 1, ty + 6, 10, 9, [246, 250, 255, 255]); // Bowl
-    canvas.strokeRect(tx + 1, ty + 6, 10, 9, [122, 146, 168, 255]);
+    const tx = 21 * 16 + 2;
+    const ty = 8 * 16 + 1;
+    canvas.fillRect(tx, ty, 12, 5, [238, 246, 255, 255]);
+    canvas.strokeRect(tx, ty, 12, 5, [122, 146, 168, 255]);
+    canvas.fillRect(tx + 1, ty + 5, 10, 9, [246, 250, 255, 255]);
+    canvas.strokeRect(tx + 1, ty + 5, 10, 9, [122, 146, 168, 255]);
   }
 
   return canvas.toPngBuffer();
@@ -2282,7 +2261,6 @@ function generateUpstairsPng() {
   canvas.fillRect(0, 0, 512, 448, [0, 0, 0, 255]);
 
   // 2. Snowy night exterior strip outside the north kitchen windows (cols 8..15, rows 2..3)
-  // so the running Santa in the Rosanna cutscene is clearly visible outside the windows!
   for (let py = 2 * 16; py < 4 * 16; py++) {
     for (let px = 8 * 16; px < 16 * 16; px++) {
       const isSnowGround = py >= 3 * 16 - 4;
@@ -2295,30 +2273,30 @@ function generateUpstairsPng() {
   }
 
   // 3. Draw Floor Regions (WoodFloor in all rooms except Shower which has BathroomTileFloor)
-  // Dining Room & Living Room (cols 4..8, rows 5..19)
-  drawWoodPlankFloor(canvas, 4, 5, 8, 19);
-  // The Kitchen (cols 9..14, rows 5..10)
-  drawWoodPlankFloor(canvas, 9, 5, 14, 10);
-  // Hallway & Extra Room (cols 9..28, rows 11..14 and Extra Room cols 25..28, rows 15..18)
-  drawWoodPlankFloor(canvas, 9, 11, 28, 14);
-  drawWoodPlankFloor(canvas, 25, 15, 28, 18);
-  // Shower Room (cols 16..19, rows 5..10) -> BathroomTileFloor!
-  drawBathroomTileFloor(canvas, 16, 5, 19, 10);
+  // Dining Room & Living Room (cols 3..8, rows 5..16)
+  drawWoodPlankFloor(canvas, 3, 5, 8, 16);
+  // The Kitchen (cols 9..15, rows 5..10)
+  drawWoodPlankFloor(canvas, 9, 5, 15, 10);
+  // Narrow Hallway (cols 9..27, rows 11..12) and Narrower Extra Room (cols 26..27, rows 11..17)
+  drawWoodPlankFloor(canvas, 9, 11, 27, 12);
+  drawWoodPlankFloor(canvas, 26, 13, 27, 17);
+  // Shower Room (cols 17..19, rows 5..10) -> BathroomTileFloor!
+  drawBathroomTileFloor(canvas, 17, 5, 19, 10);
   // The Bedroom (cols 21..26, rows 5..10) -> WoodFloor
   drawWoodPlankFloor(canvas, 21, 5, 26, 10);
-  // Table Room (cols 10..13, rows 15..21) -> WoodFloor
-  drawWoodPlankFloor(canvas, 10, 15, 13, 21);
-  // The Office (cols 20..23, rows 15..21) -> WoodFloor
-  drawWoodPlankFloor(canvas, 20, 15, 23, 21);
+  // Table Room (cols 10..13, rows 13..19) -> WoodFloor
+  drawWoodPlankFloor(canvas, 10, 13, 13, 19);
+  // Wider Office (cols 20..24, rows 13..19) -> WoodFloor
+  drawWoodPlankFloor(canvas, 20, 13, 24, 19);
 
-  // 4. Draw Staircase (cols 15..18, rows 15..19)
-  for (let r = 15; r <= 19; r++) {
+  // 4. Draw Staircase (cols 15..18, rows 13..17)
+  for (let r = 13; r <= 17; r++) {
     const sy = r * 16;
     const sx = 15 * 16;
     const sw = 4 * 16;
     for (let step = 0; step < 2; step++) {
       const ty = sy + step * 8;
-      const shade = (19 - r) * 5 + step * 2;
+      const shade = (17 - r) * 5 + step * 2;
       canvas.fillRect(sx, ty, sw, 7, [168 + shade, 116 + shade, 68 + shade, 255]);
       canvas.fillRect(sx, ty, sw, 2, [206, 154, 102, 255]);
       canvas.fillRect(sx, ty + 7, sw, 1, [84, 50, 26, 255]);
@@ -2327,46 +2305,38 @@ function generateUpstairsPng() {
     canvas.fillRect(sx + sw - 3, sy, 3, 16, [118, 72, 36, 255]);
   }
 
-  // 5. Draw Interior Walls matching UPSTAIRS_TILES
+  // 5. Draw Interior Walls matching UPSTAIRS_MAP_MATRIX_FOR_PNG
   for (let r = 4; r <= 20; r++) {
-    for (let c = 3; c <= 29; c++) {
-      if (UPSTAIRS_MAP_MATRIX_FOR_PNG[r]?.[c] === 21) {
-        drawInteriorWallTile(canvas, c, r);
-      }
-    }
-  }
-  for (let r = 21; r <= 22; r++) {
-    for (let c = 9; c <= 24; c++) {
+    for (let c = 2; c <= 28; c++) {
       if (UPSTAIRS_MAP_MATRIX_FOR_PNG[r]?.[c] === 21) {
         drawInteriorWallTile(canvas, c, r);
       }
     }
   }
 
-  // 6. THE KITCHEN DETAILS (cols 9..14, rows 4..10)
-  // 3 North Kitchen Windows (cols 10, 12, 13, row 4)
-  for (const wc of [10, 12, 13]) {
+  // 6. THE KITCHEN DETAILS (cols 9..15, rows 4..10)
+  // 3 North Kitchen Windows (cols 10, 11, 13, row 4)
+  for (const wc of [10, 11, 13]) {
     const wx = wc * 16 + 1;
     const wy = 4 * 16 + 2;
     canvas.fillRect(wx, wy, 14, 12, [68, 118, 178, 255]);
     canvas.strokeRect(wx, wy, 14, 12, [224, 234, 246, 255]);
     canvas.drawLine(wx + 7, wy + 1, wx + 7, wy + 11, [224, 234, 246, 255]);
   }
-  // Kitchen Island (cols 11..12, rows 6..7)
+  // Kitchen Island shifted west (cols 10..11, rows 6..7)
   {
-    const ix = 11 * 16 + 1;
+    const ix = 10 * 16 + 1;
     const iy = 6 * 16 + 2;
     canvas.fillRect(ix, iy, 30, 28, [122, 78, 44, 255]);
-    canvas.fillRect(ix + 2, iy + 2, 26, 24, [218, 210, 198, 255]); // Butcher/marble counter top
+    canvas.fillRect(ix + 2, iy + 2, 26, 24, [218, 210, 198, 255]);
     canvas.strokeRect(ix, iy, 30, 28, [42, 26, 16, 255]);
   }
-  // Stove & Sink on east kitchen wall (col 14, rows 5..8)
+  // Stove & Sink on east kitchen wall (col 15, rows 5..8)
   {
-    const sx = 14 * 16 + 1;
+    const sx = 15 * 16 + 1;
     const sy = 5 * 16 + 1;
     canvas.fillRect(sx, sy, 14, 4 * 16 - 2, [186, 194, 204, 255]);
     canvas.strokeRect(sx, sy, 14, 4 * 16 - 2, [54, 60, 68, 255]);
-    // 4 Stove burners
     for (const [bx, by] of [
       [sx + 3, sy + 4],
       [sx + 8, sy + 4],
@@ -2376,37 +2346,36 @@ function generateUpstairsPng() {
       canvas.fillRect(bx, by, 3, 3, [32, 34, 40, 255]);
       canvas.setPixel(bx + 1, by + 1, [228, 64, 48, 255]);
     }
-    // Double sink basins
     canvas.fillRect(sx + 3, sy + 34, 8, 10, [132, 152, 172, 255]);
     canvas.fillRect(sx + 3, sy + 46, 8, 10, [132, 152, 172, 255]);
   }
-  // Kitchen Bar Counter (cols 9..10, row 9) & The Altar (cols 9..10, row 11)
-  canvas.fillRect(9 * 16 + 1, 9 * 16 + 3, 30, 10, [138, 88, 48, 255]);
-  canvas.strokeRect(9 * 16 + 1, 9 * 16 + 3, 30, 10, [46, 28, 14, 255]);
+  // Kitchen Bar Counter (cols 9..11, row 9) & The Altar (cols 10..11, row 10)
+  canvas.fillRect(9 * 16 + 1, 9 * 16 + 3, 3 * 16 - 2, 10, [138, 88, 48, 255]);
+  canvas.strokeRect(9 * 16 + 1, 9 * 16 + 3, 3 * 16 - 2, 10, [46, 28, 14, 255]);
   {
-    // The Altar (cols 9..10, row 11): ornate table with oval mirror & twin candles
-    const ax = 9 * 16 + 2;
-    const ay = 11 * 16 + 2;
+    // The Altar (cols 10..11, row 10): ornate table with oval mirror & twin candles
+    const ax = 10 * 16 + 2;
+    const ay = 10 * 16 + 2;
     canvas.fillRect(ax, ay, 28, 12, [116, 68, 38, 255]);
-    canvas.fillRect(ax + 4, ay + 2, 20, 8, [238, 232, 220, 255]); // Altar cloth
-    canvas.fillRect(ax + 11, ay - 3, 6, 6, [168, 214, 244, 255]); // Mirror
-    canvas.strokeRect(ax + 10, ay - 4, 8, 8, [228, 184, 58, 255]); // Gold frame
-    canvas.fillRect(ax + 5, ay + 2, 2, 4, [255, 214, 68, 255]); // Left candle
-    canvas.fillRect(ax + 21, ay + 2, 2, 4, [255, 214, 68, 255]); // Right candle
+    canvas.fillRect(ax + 4, ay + 2, 20, 8, [238, 232, 220, 255]);
+    canvas.fillRect(ax + 11, ay - 3, 6, 6, [168, 214, 244, 255]);
+    canvas.strokeRect(ax + 10, ay - 4, 8, 8, [228, 184, 58, 255]);
+    canvas.fillRect(ax + 5, ay + 2, 2, 4, [255, 214, 68, 255]);
+    canvas.fillRect(ax + 21, ay + 2, 2, 4, [255, 214, 68, 255]);
   }
 
-  // 7. DINING ROOM DETAILS (cols 3..8, rows 4..11)
-  // Cupboard against west wall (col 4, rows 6..8)
+  // 7. DINING ROOM DETAILS (cols 2..8, rows 4..10)
+  // Cupboard against west wall (col 3, rows 6..7)
   {
-    const cx = 4 * 16 + 1;
+    const cx = 3 * 16 + 1;
     const cy = 6 * 16 + 2;
-    canvas.fillRect(cx, cy, 13, 3 * 16 - 4, [112, 68, 36, 255]);
-    canvas.strokeRect(cx, cy, 13, 3 * 16 - 4, [42, 24, 12, 255]);
-    canvas.fillRect(cx + 3, cy + 4, 7, 16, [154, 192, 214, 255]); // Glass cupboard doors
+    canvas.fillRect(cx, cy, 13, 2 * 16 - 4, [112, 68, 36, 255]);
+    canvas.strokeRect(cx, cy, 13, 2 * 16 - 4, [42, 24, 12, 255]);
+    canvas.fillRect(cx + 3, cy + 4, 7, 12, [154, 192, 214, 255]);
   }
-  // Long Wooden Kitchen Table (cols 6..7, rows 5..9)
+  // Long Wooden Kitchen Table (cols 5..6, rows 5..9) - with extra distance to the kitchen!
   {
-    const tx = 6 * 16 + 2;
+    const tx = 5 * 16 + 2;
     const ty = 5 * 16 + 2;
     const tw = 2 * 16 - 4;
     const th = 5 * 16 - 4;
@@ -2414,26 +2383,22 @@ function generateUpstairsPng() {
     canvas.fillRect(tx, ty, tw, th, [138, 88, 46, 255]);
     canvas.fillRect(tx + 2, ty + 2, tw - 4, th - 4, [162, 106, 58, 255]);
     canvas.strokeRect(tx, ty, tw, th, [48, 28, 14, 255]);
-    // Festive red runner down center of long table
     canvas.fillRect(tx + 11, ty + 6, 6, th - 12, [196, 44, 48, 255]);
   }
 
-  // 8. LIVING ROOM DETAILS (cols 3..8, rows 12..20)
-  // Colorful Couch (cols 5..7, row 13) + Matching Colorful Armchairs (col 4, row 14 & col 8, row 14)
-  drawColorfulCouch(canvas, 5, 13, 7, 13);
-  drawColorfulArmchair(canvas, 4, 14);
-  drawColorfulArmchair(canvas, 8, 14);
-  // Xmas Tree in south-west corner (cols 4..5, rows 17..19)
+  // 8. LIVING ROOM DETAILS (moved north: cols 2..9, rows 11..17)
+  // Colorful Couch (cols 5..7, row 11) + Matching Colorful Armchairs (col 3, row 12 & col 8, row 13)
+  drawColorfulCouch(canvas, 5, 11, 7, 11);
+  drawColorfulArmchair(canvas, 3, 12);
+  drawColorfulArmchair(canvas, 8, 13);
+  // Xmas Tree in south-west corner (cols 3..4, rows 14..16)
   {
-    const cx = 5 * 16;
-    const ty = 17 * 16 + 2;
-    // Layered pine boughs
+    const cx = 4 * 16;
+    const ty = 14 * 16 + 2;
     canvas.fillEllipse(cx, ty + 32, 13, 9, [26, 92, 48, 255]);
     canvas.fillEllipse(cx, ty + 22, 10, 8, [34, 118, 60, 255]);
     canvas.fillEllipse(cx, ty + 12, 7, 6, [44, 142, 72, 255]);
-    // Golden star at top
     canvas.fillRect(cx - 2, ty + 2, 5, 5, [255, 218, 64, 255]);
-    // Ornaments
     for (const [ox, oy, col] of [
       [cx - 5, ty + 16, [228, 48, 58, 255]],
       [cx + 4, ty + 18, [255, 208, 64, 255]],
@@ -2443,19 +2408,19 @@ function generateUpstairsPng() {
     ]) {
       canvas.fillRect(ox, oy, 2, 2, col);
     }
-    // Wrapped Christmas presents under tree
     canvas.fillRect(cx - 10, ty + 36, 6, 5, [214, 46, 54, 255]);
     canvas.fillRect(cx - 8, ty + 36, 2, 5, [255, 214, 68, 255]);
     canvas.fillRect(cx + 4, ty + 37, 6, 4, [52, 118, 214, 255]);
     canvas.fillRect(cx + 6, ty + 37, 2, 4, [255, 214, 68, 255]);
   }
 
-  // 8B. Windows on South Walls (Living Room row 20, Table Room row 22, Office row 22, Extra Room row 19)
+  // 8B. Windows on South Walls (Living Room row 17, Table Room row 20, Office row 20, Extra Room row 18)
   for (const [cStart, cEnd, rWin] of [
-    [5, 8, 20],
-    [10, 13, 22],
-    [21, 22, 22],
-    [25, 28, 19],
+    [4, 5, 17],
+    [7, 8, 17],
+    [10, 13, 20],
+    [22, 23, 20],
+    [26, 27, 18],
     [18, 18, 4],
   ]) {
     const wx = cStart * 16 + 2;
@@ -2469,63 +2434,62 @@ function generateUpstairsPng() {
     }
   }
 
-  // 9. TABLE ROOM DETAILS (cols 9..14, rows 15..22)
-  // Second Big Wooden Kitchen Table (cols 11..13, rows 18..19)
+  // 9. TABLE ROOM DETAILS (cols 9..14, rows 13..20)
+  // Second Wooden Kitchen Table (cols 11..12, rows 16..17)
   {
     const tx = 11 * 16 + 2;
-    const ty = 18 * 16 + 2;
-    const tw = 3 * 16 - 4;
+    const ty = 16 * 16 + 2;
+    const tw = 2 * 16 - 4;
     const th = 2 * 16 - 4;
     canvas.fillRect(tx + 2, ty + 2, tw, th, [20, 14, 10, 110]);
     canvas.fillRect(tx, ty, tw, th, [142, 92, 48, 255]);
     canvas.fillRect(tx + 2, ty + 2, tw - 4, th - 4, [168, 112, 62, 255]);
     canvas.strokeRect(tx, ty, tw, th, [48, 28, 14, 255]);
-    canvas.fillRect(tx + 8, ty + 11, tw - 16, 6, [236, 228, 210, 255]);
+    canvas.fillRect(tx + 6, ty + 11, tw - 12, 6, [236, 228, 210, 255]);
   }
 
-  // 10. SHOWER ROOM DETAILS (cols 15..20, rows 4..10)
-  // Shower corner & head (col 16, row 5), drain (col 17, row 6), Sink (col 16, rows 7..8), Toilet (col 19, row 8)
-  canvas.strokeRect(16 * 16 + 1, 5 * 16 + 1, 22, 22, [156, 204, 228, 255]);
-  canvas.fillRect(16 * 16 + 3, 5 * 16 + 2, 6, 4, [192, 206, 220, 255]);
-  canvas.fillRect(17 * 16 + 5, 6 * 16 + 5, 6, 6, [118, 138, 154, 255]);
-  canvas.fillRect(16 * 16 + 1, 7 * 16 + 2, 12, 24, [236, 244, 252, 255]);
-  canvas.strokeRect(16 * 16 + 1, 7 * 16 + 2, 12, 24, [122, 146, 168, 255]);
+  // 10. SHOWER ROOM DETAILS (cols 16..20, rows 4..10)
+  canvas.strokeRect(17 * 16 + 1, 5 * 16 + 1, 18, 18, [156, 204, 228, 255]);
+  canvas.fillRect(17 * 16 + 3, 5 * 16 + 2, 5, 4, [192, 206, 220, 255]);
+  canvas.fillRect(18 * 16 + 5, 6 * 16 + 5, 5, 5, [118, 138, 154, 255]);
+  canvas.fillRect(17 * 16 + 1, 7 * 16 + 2, 11, 22, [236, 244, 252, 255]);
+  canvas.strokeRect(17 * 16 + 1, 7 * 16 + 2, 11, 22, [122, 146, 168, 255]);
   canvas.fillRect(19 * 16 + 2, 8 * 16 + 2, 12, 12, [242, 248, 255, 255]);
   canvas.strokeRect(19 * 16 + 2, 8 * 16 + 2, 12, 12, [122, 146, 168, 255]);
 
   // 11. THE BEDROOM DETAILS (cols 20..27, rows 4..10)
-  // Double Bed against east wall (cols 24..26, rows 5..8)
+  // Normal 2x2 Double Bed against east wall (cols 25..26, rows 6..7)
   {
-    const bx = 24 * 16 + 2;
-    const by = 5 * 16 + 2;
-    const bw = 3 * 16 - 4;
-    const bh = 4 * 16 - 4;
+    const bx = 25 * 16 + 2;
+    const by = 6 * 16 + 2;
+    const bw = 2 * 16 - 3;
+    const bh = 2 * 16 - 4;
     canvas.fillRect(bx, by, bw, bh, [104, 62, 34, 255]);
     canvas.strokeRect(bx, by, bw, bh, [38, 22, 12, 255]);
     // Quilted burgundy bedspread
-    canvas.fillRect(bx + 2, by + 2, bw - 14, bh - 4, [168, 48, 64, 255]);
-    // White sheet fold & two pillows on the east side
-    canvas.fillRect(bx + bw - 14, by + 2, 12, bh - 4, [238, 242, 248, 255]);
-    canvas.fillRect(bx + bw - 11, by + 5, 8, 18, [252, 254, 255, 255]);
-    canvas.fillRect(bx + bw - 11, by + bh - 23, 8, 18, [252, 254, 255, 255]);
+    canvas.fillRect(bx + 2, by + 2, bw - 11, bh - 4, [168, 48, 64, 255]);
+    // White sheet fold & two normal double-bed pillows on the east side
+    canvas.fillRect(bx + bw - 11, by + 2, 9, bh - 4, [238, 242, 248, 255]);
+    canvas.fillRect(bx + bw - 9, by + 3, 6, 9, [252, 254, 255, 255]);
+    canvas.fillRect(bx + bw - 9, by + bh - 12, 6, 9, [252, 254, 255, 255]);
   }
 
-  // 12. THE OFFICE DETAILS (cols 19..24, rows 15..22)
-  // Side desk (col 20, rows 17..18) & Corner Computer Desk + Chair (cols 20..22, rows 20..21)
-  canvas.fillRect(20 * 16 + 1, 17 * 16 + 2, 13, 28, [126, 80, 44, 255]);
-  canvas.strokeRect(20 * 16 + 1, 17 * 16 + 2, 13, 28, [44, 26, 14, 255]);
+  // 12. WIDER OFFICE DETAILS (cols 19..25, rows 13..20)
+  // Side desk (col 20, rows 15..16) & Corner Computer Desk + Chair (cols 20..22, rows 18..19)
+  canvas.fillRect(20 * 16 + 1, 15 * 16 + 2, 13, 28, [126, 80, 44, 255]);
+  canvas.strokeRect(20 * 16 + 1, 15 * 16 + 2, 13, 28, [44, 26, 14, 255]);
   {
     const ox = 20 * 16 + 1;
-    const oy = 20 * 16 + 2;
+    const oy = 18 * 16 + 2;
     canvas.fillRect(ox, oy, 3 * 16 - 4, 28, [126, 80, 44, 255]);
     canvas.strokeRect(ox, oy, 3 * 16 - 4, 28, [44, 26, 14, 255]);
     // Swivel Office Chair in front of desk
-    canvas.fillRect(ox + 10, oy - 8, 10, 8, [54, 62, 78, 255]);
-    canvas.strokeRect(ox + 10, oy - 8, 10, 8, [26, 30, 38, 255]);
+    canvas.fillRect(ox + 12, oy - 8, 10, 8, [54, 62, 78, 255]);
+    canvas.strokeRect(ox + 12, oy - 8, 10, 8, [26, 30, 38, 255]);
     // Computer Monitor & Keyboard
-    canvas.fillRect(ox + 6, oy + 12, 14, 10, [48, 56, 68, 255]);
-    canvas.fillRect(ox + 8, oy + 14, 10, 6, [88, 184, 238, 255]); // Glowing screen
-    canvas.fillRect(ox + 8, oy + 4, 12, 5, [196, 204, 214, 255]); // Keyboard
+    canvas.fillRect(ox + 8, oy + 12, 14, 10, [48, 56, 68, 255]);
+    canvas.fillRect(ox + 10, oy + 14, 10, 6, [88, 184, 238, 255]);
+    canvas.fillRect(ox + 10, oy + 4, 12, 5, [196, 204, 214, 255]);
   }
 
   return canvas.toPngBuffer();
@@ -2536,25 +2500,23 @@ const UPSTAIRS_MAP_MATRIX_FOR_PNG = [
   [],
   [],
   [],
-  [0,0,0,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,0,0,0,0], // 4
-  [0,0,0,21,16,16,22,22,16,16,16,16,16,16,22,21,18,18,18,18,21,16,16,16,22,22,22,21,0,0,0,0], // 5
-  [0,0,0,21,22,16,22,22,16,16,16,22,22,16,22,21,18,18,18,18,21,16,16,16,22,22,22,21,0,0,0,0], // 6
-  [0,0,0,21,22,16,22,22,16,16,16,22,22,16,22,21,22,18,18,18,21,16,16,16,22,22,22,21,0,0,0,0], // 7
-  [0,0,0,21,22,16,22,22,16,16,16,16,16,16,22,21,22,18,18,22,21,16,16,16,22,22,22,21,0,0,0,0], // 8
-  [0,0,0,21,16,16,22,22,16,22,22,16,16,16,21,21,18,18,18,18,21,16,16,16,16,16,16,21,0,0,0,0], // 9
-  [0,0,0,21,16,16,16,16,16,21,21,16,16,16,21,21,21,18,21,21,21,21,16,21,21,21,21,21,21,21,0,0], // 10
-  [0,0,0,21,16,16,16,16,16,22,22,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,21,0,0], // 11
-  [0,0,0,21,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,21,0,0], // 12
-  [0,0,0,21,16,22,22,22,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,21,0,0], // 13
-  [0,0,0,21,22,16,16,16,22,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,21,0,0], // 14
-  [0,0,0,21,16,16,16,16,16,21,16,21,21,21,21,19,19,19,19,21,21,16,21,21,21,16,16,16,16,21,0,0], // 15
-  [0,0,0,21,16,16,16,16,16,21,16,16,16,16,21,19,19,19,19,21,16,16,16,21,21,16,16,16,16,21,0,0], // 16
-  [0,0,0,21,22,22,16,16,16,21,16,16,16,16,21,19,19,19,19,21,22,16,16,21,21,16,16,16,16,21,0,0], // 17
-  [0,0,0,21,22,22,16,16,16,21,16,22,22,22,21,19,19,19,19,21,22,16,16,21,21,16,16,16,16,21,0,0], // 18
-  [0,0,0,21,22,22,16,16,16,21,16,22,22,22,21,19,19,19,19,21,16,16,16,21,21,21,21,21,21,21,0,0], // 19
-  [0,0,0,21,21,21,21,21,21,21,16,16,16,16,21,21,21,21,21,21,22,22,22,21,0,0,0,0,0,0,0,0], // 20
-  [0,0,0,0,0,0,0,0,0,21,16,16,16,16,21,0,0,0,0,21,22,22,16,21,0,0,0,0,0,0,0,0], // 21
-  [0,0,0,0,0,0,0,0,0,21,21,21,21,21,21,0,0,0,0,21,21,21,21,21,0,0,0,0,0,0,0,0], // 22
+  [0,0,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,0,0,0,0], // 4
+  [0,0,21,16,16,22,22,16,16,16,16,16,16,16,16,22,21,18,18,18,21,16,16,16,16,16,16,21,0,0,0,0], // 5
+  [0,0,21,22,16,22,22,16,16,16,22,22,16,16,16,22,21,18,18,18,21,16,16,16,16,22,22,21,0,0,0,0], // 6
+  [0,0,21,22,16,22,22,16,16,16,22,22,16,16,16,22,21,22,18,18,21,16,16,16,16,22,22,21,0,0,0,0], // 7
+  [0,0,21,16,16,22,22,16,16,16,16,16,16,16,16,22,21,22,18,22,21,16,16,16,16,16,16,21,0,0,0,0], // 8
+  [0,0,21,16,16,22,22,16,16,22,22,22,16,16,16,21,21,18,18,18,21,16,16,16,16,16,16,21,0,0,0,0], // 9
+  [0,0,21,16,16,16,16,16,16,21,22,22,16,16,16,21,21,21,18,21,21,21,21,16,21,21,21,21,21,0,0,0], // 10
+  [0,0,21,16,16,22,22,22,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,21,0,0,0], // 11
+  [0,0,21,22,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,21,0,0,0], // 12
+  [0,0,21,16,16,16,16,16,22,21,21,16,21,21,21,19,19,19,19,21,21,16,21,21,21,21,16,16,21,0,0,0], // 13
+  [0,0,21,22,22,16,16,16,16,21,16,16,16,16,21,19,19,19,19,21,16,16,16,16,16,21,16,16,21,0,0,0], // 14
+  [0,0,21,22,22,16,16,16,16,21,16,16,16,16,21,19,19,19,19,21,22,16,16,16,16,21,16,16,21,0,0,0], // 15
+  [0,0,21,22,22,16,16,16,16,21,16,22,22,16,21,19,19,19,19,21,22,16,16,16,16,21,16,16,21,0,0,0], // 16
+  [0,0,21,21,21,21,21,21,21,21,16,22,22,16,21,19,19,19,19,21,16,16,16,16,16,21,16,16,21,0,0,0], // 17
+  [0,0,0,0,0,0,0,0,0,21,16,16,16,16,21,21,21,21,21,21,22,22,22,16,16,21,21,21,21,0,0,0], // 18
+  [0,0,0,0,0,0,0,0,0,21,16,16,16,16,21,0,0,0,0,21,22,22,22,16,16,21,0,0,0,0,0,0], // 19
+  [0,0,0,0,0,0,0,0,0,21,21,21,21,21,21,0,0,0,0,21,21,21,21,21,21,21,0,0,0,0,0,0], // 20
 ];
 
 const spritesDir = path.join(process.cwd(), 'assets/sprites');
