@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { applyKeyEvent, createEmptyInput, createVirtualJoystick } from '../src/core/input';
+import {
+  applyKeyEvent,
+  computeViewportLayout,
+  createEmptyInput,
+  createVirtualJoystick,
+} from '../src/core/input';
 import {
   DOG_AGGRO_DISTANCE,
   DOG_DEAGGRO_DISTANCE,
@@ -703,5 +708,38 @@ describe('Player walking & 2x Rensbo map layout', () => {
     // Width measurement is proportional and positive
     expect(measurePixelText('Hi!')).toBeGreaterThan(0);
     expect(measurePixelText('W')).toBeGreaterThan(measurePixelText('I'));
+  });
+
+  it('recomputes layout across portrait and landscape orientations so everything fits and centers', () => {
+    // 1. Mobile Portrait (390x844)
+    const portrait = computeViewportLayout(390, 844);
+    expect(portrait.isLandscape).toBe(false);
+    expect(portrait.containerWidth).toBe(390);
+    expect(portrait.containerHeight).toBe(844);
+    expect(portrait.canvasWidth).toBeLessThanOrEqual(390 - 24);
+    expect(portrait.canvasHeight).toBeLessThanOrEqual(844 - 24);
+    // Joystick is horizontally centered and bottom-aligned in portrait
+    expect(portrait.joystickSize).toBe(195);
+    expect(portrait.joystickLeft).toBe(Math.round((390 - 195) / 2));
+    expect(portrait.joystickTop).toBe(844 - 195);
+    expect(portrait.actionBtnLeft).toBe(20);
+    expect(portrait.actionBtnBottom).toBe(24);
+    expect(portrait.actionBtnTop).toBeNull();
+
+    // 2. Rotate to Mobile Landscape (844x390)
+    const landscape = computeViewportLayout(844, 390);
+    expect(landscape.isLandscape).toBe(true);
+    expect(landscape.containerWidth).toBe(844);
+    expect(landscape.containerHeight).toBe(390);
+    expect(landscape.canvasWidth).toBeLessThanOrEqual(844 - 24);
+    expect(landscape.canvasHeight).toBeLessThanOrEqual(390 - 24);
+    // Joystick is aligned to the right of the long side and vertically centered in landscape
+    expect(landscape.joystickSize).toBe(195);
+    expect(landscape.joystickLeft).toBe(844 - 195);
+    expect(landscape.joystickTop).toBe(Math.round((390 - 195) / 2));
+    // Action button is on the left of the long side, vertically centered
+    expect(landscape.actionBtnLeft).toBe(20);
+    expect(landscape.actionBtnTop).toBe(Math.round(390 / 2));
+    expect(landscape.actionBtnBottom).toBeNull();
   });
 });

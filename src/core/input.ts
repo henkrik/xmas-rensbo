@@ -199,9 +199,78 @@ export interface VirtualJoystickController {
   show: () => void;
   hide: () => void;
   toggle: () => void;
+  reset: () => void;
   isVisible: () => boolean;
   isPointerActive: () => boolean;
   destroy: () => void;
+}
+
+export interface ViewportLayout {
+  isLandscape: boolean;
+  containerWidth: number;
+  containerHeight: number;
+  canvasWidth: number;
+  canvasHeight: number;
+  joystickSize: number;
+  joystickLeft: number;
+  joystickTop: number;
+  actionBtnLeft: number;
+  actionBtnTop: number | null;
+  actionBtnBottom: number | null;
+}
+
+/**
+ * Computes exact pixel layout for the game container, canvas, virtual joystick, and action button
+ * for any viewport dimensions (desktop, mobile portrait, and mobile landscape).
+ */
+export function computeViewportLayout(vw: number, vh: number): ViewportLayout {
+  const safeVw = Math.max(1, Math.round(vw));
+  const safeVh = Math.max(1, Math.round(vh));
+  const isLandscape = safeVw > safeVh;
+
+  const pad = 24;
+  const availW = Math.max(64, safeVw - pad);
+  const availH = Math.max(64, safeVh - pad);
+
+  const aspect = 256 / 224;
+  const canvasWidth = Math.floor(Math.min(availW, availH * aspect));
+  const canvasHeight = Math.floor(Math.min(availH, availW / aspect));
+
+  const shortSide = Math.min(safeVw, safeVh);
+  const maxAllowedJoy = Math.max(80, shortSide - 16);
+  const joystickSize = Math.round(
+    Math.min(maxAllowedJoy, Math.max(120, Math.min(320, shortSide * 0.5)))
+  );
+
+  if (isLandscape) {
+    return {
+      isLandscape: true,
+      containerWidth: safeVw,
+      containerHeight: safeVh,
+      canvasWidth,
+      canvasHeight,
+      joystickSize,
+      joystickLeft: safeVw - joystickSize,
+      joystickTop: Math.round((safeVh - joystickSize) / 2),
+      actionBtnLeft: 20,
+      actionBtnTop: Math.round(safeVh / 2),
+      actionBtnBottom: null,
+    };
+  }
+
+  return {
+    isLandscape: false,
+    containerWidth: safeVw,
+    containerHeight: safeVh,
+    canvasWidth,
+    canvasHeight,
+    joystickSize,
+    joystickLeft: Math.round((safeVw - joystickSize) / 2),
+    joystickTop: safeVh - joystickSize,
+    actionBtnLeft: 20,
+    actionBtnTop: null,
+    actionBtnBottom: 24,
+  };
 }
 
 export function createVirtualJoystick(
@@ -320,6 +389,11 @@ export function createVirtualJoystick(
         isDragging = false;
         resetStick();
       }
+    },
+    reset: () => {
+      activePointerId = null;
+      isDragging = false;
+      resetStick();
     },
     isVisible: () => container.style.display !== 'none',
     isPointerActive: () => isDragging,

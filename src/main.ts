@@ -2,6 +2,7 @@ import { loadAllAssets } from './assets';
 import {
   attachKeyboardListeners,
   attachPointerListeners,
+  computeViewportLayout,
   createEmptyInput,
   createVirtualJoystick,
 } from './core/input';
@@ -16,6 +17,7 @@ function getActionLabel(promptText: string): string {
 }
 
 async function startGame(): Promise<void> {
+  const gameContainer = document.getElementById('game-container');
   const canvas = document.getElementById('game-canvas') as HTMLCanvasElement | null;
   if (!canvas) {
     throw new Error('Could not find #game-canvas element');
@@ -55,9 +57,104 @@ async function startGame(): Promise<void> {
     }
   }
 
+  let lastVw = 0;
+  let lastVh = 0;
+  let lastOffsetLeft = 0;
+  let lastOffsetTop = 0;
+  let lastIsLandscape: boolean | null = null;
+
+  const applyViewportLayout = (force = false): void => {
+    if (typeof window === 'undefined') return;
+
+    if (window.scrollX !== 0 || window.scrollY !== 0) {
+      window.scrollTo(0, 0);
+    }
+
+    const vv = window.visualViewport;
+    const vw = Math.round(vv ? vv.width : window.innerWidth);
+    const vh = Math.round(vv ? vv.height : window.innerHeight);
+    const offsetLeft = Math.round(vv ? vv.offsetLeft : 0);
+    const offsetTop = Math.round(vv ? vv.offsetTop : 0);
+
+    if (
+      !force &&
+      vw === lastVw &&
+      vh === lastVh &&
+      offsetLeft === lastOffsetLeft &&
+      offsetTop === lastOffsetTop
+    ) {
+      return;
+    }
+
+    lastVw = vw;
+    lastVh = vh;
+    lastOffsetLeft = offsetLeft;
+    lastOffsetTop = offsetTop;
+
+    const layout = computeViewportLayout(vw, vh);
+
+    if (lastIsLandscape !== null && lastIsLandscape !== layout.isLandscape) {
+      joystick?.reset();
+    }
+    lastIsLandscape = layout.isLandscape;
+
+    if (gameContainer) {
+      gameContainer.style.left = `${offsetLeft}px`;
+      gameContainer.style.top = `${offsetTop}px`;
+      gameContainer.style.width = `${layout.containerWidth}px`;
+      gameContainer.style.height = `${layout.containerHeight}px`;
+    }
+
+    canvas.style.width = `${layout.canvasWidth}px`;
+    canvas.style.height = `${layout.canvasHeight}px`;
+
+    if (joystickContainer) {
+      joystickContainer.style.width = `${layout.joystickSize}px`;
+      joystickContainer.style.height = `${layout.joystickSize}px`;
+      joystickContainer.style.left = `${layout.joystickLeft}px`;
+      joystickContainer.style.top = `${layout.joystickTop}px`;
+      joystickContainer.style.right = 'auto';
+      joystickContainer.style.bottom = 'auto';
+      joystickContainer.style.transform = 'none';
+    }
+
+    if (mobileActionBtn) {
+      mobileActionBtn.style.left = `${layout.actionBtnLeft}px`;
+      mobileActionBtn.style.right = 'auto';
+      if (layout.actionBtnTop !== null) {
+        mobileActionBtn.style.top = `${layout.actionBtnTop}px`;
+        mobileActionBtn.style.bottom = 'auto';
+        mobileActionBtn.style.transform = 'translateY(-50%)';
+      } else {
+        mobileActionBtn.style.top = 'auto';
+        mobileActionBtn.style.bottom = `${layout.actionBtnBottom ?? 24}px`;
+        mobileActionBtn.style.transform = 'none';
+      }
+    }
+  };
+
+  const onOrientationOrResize = (): void => {
+    applyViewportLayout(true);
+    // Re-apply after mobile browser rotation animation settles
+    setTimeout(() => applyViewportLayout(true), 60);
+    setTimeout(() => applyViewportLayout(true), 180);
+    setTimeout(() => applyViewportLayout(true), 350);
+  };
+
+  applyViewportLayout(true);
+  window.addEventListener('resize', onOrientationOrResize);
+  window.addEventListener('orientationchange', onOrientationOrResize);
+  window.addEventListener('scroll', () => applyViewportLayout(false), { passive: true });
+  window.visualViewport?.addEventListener('resize', onOrientationOrResize);
+  window.visualViewport?.addEventListener('scroll', () => applyViewportLayout(false));
+  if (typeof screen !== 'undefined' && screen.orientation?.addEventListener) {
+    screen.orientation.addEventListener('change', onOrientationOrResize);
+  }
+
   attachKeyboardListeners(window, input, {
     onToggleJoystick: () => {
       joystick?.toggle();
+      applyViewportLayout(true);
     },
   });
 
@@ -102,19 +199,11 @@ async function startGame(): Promise<void> {
     isDialogueActive: () => state.activeDialogue !== null,
   });
 
-  const resetViewportScroll = (): void => {
-    if (typeof window !== 'undefined' && (window.scrollX !== 0 || window.scrollY !== 0)) {
-      window.scrollTo(0, 0);
-    }
-  };
-  window.addEventListener('resize', resetViewportScroll);
-  window.addEventListener('orientationchange', resetViewportScroll);
-  window.addEventListener('scroll', resetViewportScroll, { passive: true });
-  window.visualViewport?.addEventListener('resize', resetViewportScroll);
-
   let lastTimestamp: number | null = null;
 
   function frame(now: number): void {
+    applyViewportLayout(false);
+
     const dtSeconds =
       lastTimestamp === null
         ? 0
