@@ -1936,6 +1936,15 @@
       isJoystickActive: () => joystick?.isPointerActive() ?? false,
       isDialogueActive: () => state.activeDialogue !== null
     });
+    const resetViewportScroll = () => {
+      if (typeof window !== "undefined" && (window.scrollX !== 0 || window.scrollY !== 0)) {
+        window.scrollTo(0, 0);
+      }
+    };
+    window.addEventListener("resize", resetViewportScroll);
+    window.addEventListener("orientationchange", resetViewportScroll);
+    window.addEventListener("scroll", resetViewportScroll, { passive: true });
+    window.visualViewport?.addEventListener("resize", resetViewportScroll);
     let lastTimestamp = null;
     function frame(now) {
       const dtSeconds = lastTimestamp === null ? 0 : Math.max(0, Math.min((now - lastTimestamp) / 1e3, 0.1));

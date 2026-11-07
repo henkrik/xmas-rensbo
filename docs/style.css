@@ -11,26 +11,43 @@ body {
   padding: 0;
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  overflow: clip;
+  overscroll-behavior: none;
+  position: fixed;
+  inset: 0;
   background-color: #121824;
   color: #f0f4f8;
   font-family: 'Courier New', Courier, monospace;
+  touch-action: none;
 }
 
 #game-container {
-  width: 100vw;
-  height: 100vh;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  width: 100dvw;
+  height: 100dvh;
   padding: 12px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  overflow: clip;
+  overscroll-behavior: none;
+  touch-action: none;
 }
 
 #game-canvas {
+  display: block;
   width: min(calc(100vw - 24px), calc((100vh - 24px) * 256 / 224));
   height: min(calc(100vh - 24px), calc((100vw - 24px) * 224 / 256));
+  width: min(calc(100dvw - 24px), calc((100dvh - 24px) * 256 / 224));
+  height: min(calc(100dvh - 24px), calc((100dvw - 24px) * 224 / 256));
+  max-width: 100%;
+  max-height: 100%;
   aspect-ratio: 256 / 224;
+  margin: auto;
   border: 4px solid #e2e8f0;
   border-radius: 4px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.7);
@@ -49,10 +66,14 @@ body {
   transform: translateX(-50%);
   width: 50vw;
   height: 50vw;
-  max-width: 320px;
-  max-height: 320px;
-  min-width: 180px;
-  min-height: 180px;
+  width: 50dvw;
+  height: 50dvw;
+  max-width: min(320px, calc(100vw - 16px), calc(100vh - 16px));
+  max-height: min(320px, calc(100vw - 16px), calc(100vh - 16px));
+  max-width: min(320px, calc(100dvw - 16px), calc(100dvh - 16px));
+  max-height: min(320px, calc(100dvw - 16px), calc(100dvh - 16px));
+  min-width: 140px;
+  min-height: 140px;
   pointer-events: auto;
   touch-action: none;
   z-index: 100;
@@ -87,7 +108,7 @@ body {
   transform: translate(0px, 0px);
 }
 
-/* Mobile Action Button (Bottom Left) */
+/* Mobile Action Button (Bottom Left in Portrait, Left Center in Landscape) */
 #mobile-action-btn {
   position: fixed;
   bottom: 24px;
@@ -99,7 +120,7 @@ body {
   background: rgba(16, 26, 48, 0.92);
   color: #ffd166;
   font-family: 'Courier New', Courier, monospace;
-  font-size: 14px;
+  font-size: clamp(12px, 0.75rem + 0.5vw, 15px);
   font-weight: bold;
   letter-spacing: 0.5px;
   text-align: center;
@@ -114,5 +135,31 @@ body {
   transform: scale(0.94);
   background: rgba(28, 42, 74, 0.96);
   color: #ffffff;
+}
+
+/* Landscape layout: center game screen, align joystick to right of long side, action button to left of long side */
+@media (orientation: landscape) {
+  #virtual-joystick-container {
+    bottom: auto;
+    left: auto;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 50vh;
+    height: 50vh;
+    width: 50dvh;
+    height: 50dvh;
+  }
+
+  #mobile-action-btn {
+    bottom: auto;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  #mobile-action-btn:active {
+    transform: translateY(-50%) scale(0.94);
+  }
 }
 

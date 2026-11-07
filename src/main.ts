@@ -102,6 +102,16 @@ async function startGame(): Promise<void> {
     isDialogueActive: () => state.activeDialogue !== null,
   });
 
+  const resetViewportScroll = (): void => {
+    if (typeof window !== 'undefined' && (window.scrollX !== 0 || window.scrollY !== 0)) {
+      window.scrollTo(0, 0);
+    }
+  };
+  window.addEventListener('resize', resetViewportScroll);
+  window.addEventListener('orientationchange', resetViewportScroll);
+  window.addEventListener('scroll', resetViewportScroll, { passive: true });
+  window.visualViewport?.addEventListener('resize', resetViewportScroll);
+
   let lastTimestamp: number | null = null;
 
   function frame(now: number): void {
