@@ -20,14 +20,46 @@ body {
   touch-action: none;
 }
 
-#game-container {
+/* Outermost wrapper: always covers the whole window (the browser's layout viewport).
+   All game elements are laid out relative to this box. */
+#viewport-frame {
   position: fixed;
+  inset: 0;
+  overflow: hidden;
+  overflow: clip;
+  touch-action: none;
+}
+
+/* Debug mode (?debug): green border + live size readout to verify the frame matches the screen */
+#viewport-frame.debug::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 3px solid #00ff00;
+  pointer-events: none;
+  z-index: 9998;
+}
+
+#viewport-debug-text {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 9999;
+  margin: 0;
+  padding: 4px 6px;
+  font: 10px/1.3 monospace;
+  color: #00ff00;
+  background: rgba(0, 0, 0, 0.75);
+  pointer-events: none;
+  white-space: pre;
+}
+
+#game-container {
+  position: absolute;
   left: 0;
   top: 0;
   width: 100%;
   height: 100%;
-  width: 100dvw;
-  height: 100dvh;
   padding: 12px;
   display: flex;
   flex-direction: column;

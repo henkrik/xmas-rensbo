@@ -6,6 +6,7 @@ import {
   createEmptyInput,
   createVirtualJoystick,
 } from './core/input';
+import { attachViewportDebugOverlay } from './core/viewportDebug';
 import { computeCamera, renderGame } from './rendering/renderer';
 import { createGameState, updateGameState } from './world/gameState';
 
@@ -159,14 +160,45 @@ async function startGame(): Promise<void> {
     setTimeout(() => applyViewportLayout(true), 500);
   };
 
+  // WebKit (Safari, and Chrome/Firefox on iOS) sometimes keeps the *portrait* layout viewport
+  // width after rotating to landscape, so pages only use the left part of the screen until reload.
+  // Re-writing the viewport <meta> with a changed (but visually harmless) argument forces WebKit
+  // to re-parse it and recompute the layout viewport for the new orientation.
+  const viewportMeta = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
+  const baseViewportContent = viewportMeta?.content ?? '';
+  const nudgeViewportMeta = (): void => {
+    if (!viewportMeta || !baseViewportContent) return;
+    const nudged = /maximum-scale=[\d.]+/.test(baseViewportContent)
+      ? baseViewportContent.replace(/maximum-scale=[\d.]+/, 'maximum-scale=1.001')
+      : `${baseViewportContent}, maximum-scale=1.001`;
+    viewportMeta.content = nudged;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        viewportMeta.content = baseViewportContent;
+        onOrientationOrResize();
+      });
+    });
+  };
+
+  const onOrientationChange = (): void => {
+    onOrientationOrResize();
+    // iOS fires orientation events before the rotation animation finishes, so nudge twice
+    nudgeViewportMeta();
+    setTimeout(nudgeViewportMeta, 350);
+  };
+
   applyViewportLayout(true);
   window.addEventListener('resize', onOrientationOrResize);
-  window.addEventListener('orientationchange', onOrientationOrResize);
+  window.addEventListener('orientationchange', onOrientationChange);
   window.addEventListener('scroll', () => applyViewportLayout(false), { passive: true });
   window.visualViewport?.addEventListener('resize', onOrientationOrResize);
   window.visualViewport?.addEventListener('scroll', () => applyViewportLayout(false));
   if (typeof screen !== 'undefined' && screen.orientation?.addEventListener) {
-    screen.orientation.addEventListener('change', onOrientationOrResize);
+    screen.orientation.addEventListener('change', onOrientationChange);
+  }
+
+  if (new URLSearchParams(window.location.search).has('debug')) {
+    attachViewportDebugOverlay(document.getElementById('viewport-frame'), gameContainer);
   }
 
   attachKeyboardListeners(window, input, {

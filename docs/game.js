@@ -348,6 +348,40 @@
     };
   }
 
+  // src/core/viewportDebug.ts
+  function attachViewportDebugOverlay(frame, gameContainer) {
+    if (!frame) return () => {
+    };
+    frame.classList.add("debug");
+    const el = document.createElement("pre");
+    el.id = "viewport-debug-text";
+    frame.appendChild(el);
+    const update = () => {
+      const frameRect = frame.getBoundingClientRect();
+      const vv = window.visualViewport;
+      const de = document.documentElement;
+      const rect = gameContainer?.getBoundingClientRect();
+      const legacyOrientation = window.orientation;
+      el.textContent = [
+        `FRAME: ${frameRect.width.toFixed(1)} x ${frameRect.height.toFixed(1)} @ (${frameRect.left.toFixed(0)}, ${frameRect.top.toFixed(0)})`,
+        `orientation: ${screen.orientation?.type ?? "n/a"} (legacy: ${legacyOrientation ?? "n/a"})`,
+        `inner: ${window.innerWidth} x ${window.innerHeight}`,
+        `docEl client: ${de.clientWidth} x ${de.clientHeight}`,
+        vv ? `visualViewport: ${vv.width.toFixed(1)} x ${vv.height.toFixed(1)} @${vv.scale.toFixed(3)}` : "visualViewport: n/a",
+        `screen: ${screen.width} x ${screen.height} dpr ${window.devicePixelRatio}`,
+        rect ? `game-container: ${rect.width.toFixed(0)} x ${rect.height.toFixed(0)} @ (${rect.left.toFixed(0)}, ${rect.top.toFixed(0)})` : "game-container: n/a",
+        `updated: ${(/* @__PURE__ */ new Date()).toLocaleTimeString()}`
+      ].join("\n");
+    };
+    update();
+    const id = window.setInterval(update, 1e3);
+    return () => {
+      window.clearInterval(id);
+      el.remove();
+      frame.classList.remove("debug");
+    };
+  }
+
   // src/world/tilemap.ts
   var TILE_SIZE = 16;
   var MAP_COLS = 32;
@@ -2023,14 +2057,35 @@
       setTimeout(() => applyViewportLayout(true), 300);
       setTimeout(() => applyViewportLayout(true), 500);
     };
+    const viewportMeta = document.querySelector('meta[name="viewport"]');
+    const baseViewportContent = viewportMeta?.content ?? "";
+    const nudgeViewportMeta = () => {
+      if (!viewportMeta || !baseViewportContent) return;
+      const nudged = /maximum-scale=[\d.]+/.test(baseViewportContent) ? baseViewportContent.replace(/maximum-scale=[\d.]+/, "maximum-scale=1.001") : `${baseViewportContent}, maximum-scale=1.001`;
+      viewportMeta.content = nudged;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          viewportMeta.content = baseViewportContent;
+          onOrientationOrResize();
+        });
+      });
+    };
+    const onOrientationChange = () => {
+      onOrientationOrResize();
+      nudgeViewportMeta();
+      setTimeout(nudgeViewportMeta, 350);
+    };
     applyViewportLayout(true);
     window.addEventListener("resize", onOrientationOrResize);
-    window.addEventListener("orientationchange", onOrientationOrResize);
+    window.addEventListener("orientationchange", onOrientationChange);
     window.addEventListener("scroll", () => applyViewportLayout(false), { passive: true });
     window.visualViewport?.addEventListener("resize", onOrientationOrResize);
     window.visualViewport?.addEventListener("scroll", () => applyViewportLayout(false));
     if (typeof screen !== "undefined" && screen.orientation?.addEventListener) {
-      screen.orientation.addEventListener("change", onOrientationOrResize);
+      screen.orientation.addEventListener("change", onOrientationChange);
+    }
+    if (new URLSearchParams(window.location.search).has("debug")) {
+      attachViewportDebugOverlay(document.getElementById("viewport-frame"), gameContainer);
     }
     attachKeyboardListeners(window, input, {
       onToggleJoystick: () => {
