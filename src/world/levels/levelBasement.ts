@@ -48,7 +48,7 @@ export const BASEMENT_TILES: TileType[][] = [
   [V, V, V, V, V, V, W, F, O, O, O, F, F, F, S, S, S, S, S, S, S, S, W, V, V, V, V, V, V, V, V, V], // 14: Living Room couch (8..10)
   [V, V, V, V, V, V, W, F, F, F, F, F, F, F, S, S, S, S, T, T, T, T, W, V, V, V, V, V, V, V, V, V], // 15: Stairs (18..21)
   [V, V, V, V, V, V, W, F, F, F, F, F, F, W, S, S, S, S, T, T, T, T, W, V, V, V, V, V, V, V, V, V], // 16: Dividing wall (13) | Stairs (18..21)
-  [V, V, V, V, V, V, W, F, O, O, F, F, F, W, O, S, S, S, T, T, T, T, W, V, V, V, V, V, V, V, V, V], // 17: Chess table (8..9) | Coat hangers (14) | Stairs (18..21)
+  [V, V, V, V, V, V, W, F, F, F, F, F, F, W, O, S, S, S, T, T, T, T, W, V, V, V, V, V, V, V, V, V], // 17: Chess table (8..9, non-collidable) | Coat hangers (14) | Stairs (18..21)
   [V, V, V, V, V, V, W, F, F, F, F, F, F, W, O, S, S, S, T, T, T, T, W, V, V, V, V, V, V, V, V, V], // 18: Coat hangers (14) | Stairs (18..21)
   [V, V, V, V, V, V, W, F, F, F, F, F, F, W, S, S, S, S, S, S, S, S, W, V, V, V, V, V, V, V, V, V], // 19: Window NPC at col 11, row 18.5
   [V, V, V, V, V, V, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, V, V, V, V, V, V, V, V, V], // 20: Big south windows (7..9, 10..12) | Front Door (15..16)

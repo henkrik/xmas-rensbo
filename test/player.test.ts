@@ -1564,10 +1564,13 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(basement.olexaConeOfSight.lines.length).toBe(5);
     expect(basement.olexaConeOfSight.direction).toBeCloseTo(-Math.PI / 2);
 
-    // Place Santa inside Olexa's cone of sight (north of Olexa)
-    const olexaTargetBox = basement.olexaConeOfSight.getAllBoxes()[5];
-    state.player.x = olexaTargetBox.x - 2;
-    state.player.y = olexaTargetBox.y - 2;
+    // Check that the chess board table (cols 8..9, row 17) is floor and not collidable
+    expect(basement.map.tiles[17][8]).toBe(TileType.WoodFloor);
+    expect(basement.map.tiles[17][9]).toBe(TileType.WoodFloor);
+
+    // Place Santa inside Olexa's cone of sight (north of Olexa, right at the chess table)
+    state.player.x = 8.5 * TILE_SIZE;
+    state.player.y = 17 * TILE_SIZE;
     updateGameState(state, input, 0.01);
 
     expect(state.activeDialogue).not.toBeNull();

@@ -3141,8 +3141,8 @@
     // 15: Stairs (18..21)
     [V2, V2, V2, V2, V2, V2, W2, F2, F2, F2, F2, F2, F2, W2, S, S, S, S, T2, T2, T2, T2, W2, V2, V2, V2, V2, V2, V2, V2, V2, V2],
     // 16: Dividing wall (13) | Stairs (18..21)
-    [V2, V2, V2, V2, V2, V2, W2, F2, O2, O2, F2, F2, F2, W2, O2, S, S, S, T2, T2, T2, T2, W2, V2, V2, V2, V2, V2, V2, V2, V2, V2],
-    // 17: Chess table (8..9) | Coat hangers (14) | Stairs (18..21)
+    [V2, V2, V2, V2, V2, V2, W2, F2, F2, F2, F2, F2, F2, W2, O2, S, S, S, T2, T2, T2, T2, W2, V2, V2, V2, V2, V2, V2, V2, V2, V2],
+    // 17: Chess table (8..9, non-collidable) | Coat hangers (14) | Stairs (18..21)
     [V2, V2, V2, V2, V2, V2, W2, F2, F2, F2, F2, F2, F2, W2, O2, S, S, S, T2, T2, T2, T2, W2, V2, V2, V2, V2, V2, V2, V2, V2, V2],
     // 18: Coat hangers (14) | Stairs (18..21)
     [V2, V2, V2, V2, V2, V2, W2, F2, F2, F2, F2, F2, F2, W2, S, S, S, S, S, S, S, S, W2, V2, V2, V2, V2, V2, V2, V2, V2, V2],
