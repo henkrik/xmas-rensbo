@@ -1,5 +1,6 @@
 import { debugLog } from '../core/debugConsole';
 import { consumeActionPress, InputState } from '../core/input';
+import { updateCat } from '../entities/cat';
 import { createDog, Dog, updateDog } from '../entities/dog';
 import {
   createPlayer,
@@ -554,6 +555,14 @@ export function updateGameState(
     updatePlayer(
       state.player,
       input,
+      dtSeconds,
+      upstairs.map,
+      upstairs.getSolidObstacles()
+    );
+    // Update the black cat in the extra room
+    updateCat(
+      upstairs.cat,
+      state.player,
       dtSeconds,
       upstairs.map,
       upstairs.getSolidObstacles()

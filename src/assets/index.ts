@@ -1,3 +1,4 @@
+import catSpriteUrl from '../../assets/sprites/cat.png';
 import dogSpriteUrl from '../../assets/sprites/dog.png';
 import santaSpriteUrl from '../../assets/sprites/santa.png';
 import snowballSpriteUrl from '../../assets/sprites/snowball.png';
@@ -10,6 +11,7 @@ import winterTilesUrl from '../../assets/tiles/winter-tiles.png';
 export interface GameAssets {
   santaSprite: HTMLImageElement;
   dogSprite: HTMLImageElement;
+  catSprite: HTMLImageElement;
   throwerSprite: HTMLImageElement;
   snowballSprite: HTMLImageElement;
   zKeySprite: HTMLImageElement;
@@ -51,6 +53,7 @@ export async function loadAllAssets(): Promise<GameAssets> {
   const [
     santaSprite,
     dogSprite,
+    catSprite,
     throwerSprite,
     snowballSprite,
     zKeySprite,
@@ -60,6 +63,7 @@ export async function loadAllAssets(): Promise<GameAssets> {
   ] = await Promise.all([
     loadImage(santaSpriteUrl),
     loadImage(dogSpriteUrl),
+    loadImage(catSpriteUrl),
     loadImage(throwerSpriteUrl),
     loadImage(snowballSpriteUrl),
     loadImage(zKeySpriteUrl),
@@ -70,6 +74,7 @@ export async function loadAllAssets(): Promise<GameAssets> {
   return {
     santaSprite,
     dogSprite,
+    catSprite,
     throwerSprite,
     snowballSprite,
     zKeySprite,

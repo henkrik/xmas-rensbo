@@ -1,4 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import {
+  CAT_RETRIGGER_FLEE_DISTANCE,
+  CAT_START_X,
+  CAT_START_Y,
+  EXTRA_ROOM_BOUNDS,
+} from '../src/entities/cat';
 import { debugConsole, debugLog } from '../src/core/debugConsole';
 import {
   applyKeyEvent,
@@ -1152,5 +1158,73 @@ describe('Player walking & 2x Rensbo map layout', () => {
     }
     input.up = false;
     expect(state.player.y).toBeLessThan(9 * TILE_SIZE);
+  });
+
+  it('manages black cat AI in the extra room: starts standing still, flees when player enters room, stops when > 5 tiles, reflee when <= 2 tiles, cannot cross walls', () => {
+    const state = createGameState({
+      initialLevelId: 'level-upstairs',
+      showIntroDialogue: false,
+    });
+    const input = createEmptyInput();
+    const upstairs = state.levels['level-upstairs'];
+    const cat = upstairs.cat;
+
+    // 1. Initial position near extra room window, standing still, not activated
+    expect(cat.x).toBe(CAT_START_X);
+    expect(cat.y).toBe(CAT_START_Y);
+    expect(cat.mode).toBe('standing');
+    expect(cat.hasBeenActivated).toBe(false);
+
+    // Player walking in hallway outside extra room does not activate the cat
+    state.player.x = 22 * TILE_SIZE;
+    state.player.y = 12 * TILE_SIZE;
+    updateGameState(state, input, 0.1);
+    expect(cat.mode).toBe('standing');
+    expect(cat.hasBeenActivated).toBe(false);
+
+    debugConsole.clear();
+
+    // 2. Player enters the extra room -> cat enters "flee" mode and flees away from player
+    state.player.x = EXTRA_ROOM_BOUNDS.x + 4;
+    state.player.y = EXTRA_ROOM_BOUNDS.y + 4;
+    updateGameState(state, input, 0.1);
+
+    expect(cat.hasBeenActivated).toBe(true);
+    expect(cat.mode).toBe('flee');
+    expect(cat.vx).not.toBe(0);
+    expect(debugConsole.getLines()).toContain('Cat state changed: standing -> flee');
+
+    // 3. Cat runs away and cannot pass through outer east wall (col 28) or south wall (row 18)
+    for (let i = 0; i < 40; i++) {
+      updateGameState(state, input, 0.05);
+    }
+    // Cat ran and stayed within map bounds without walking through walls
+    expect(cat.x).toBeLessThan(28 * TILE_SIZE);
+    expect(cat.y).toBeLessThan(18 * TILE_SIZE);
+    expect(
+      debugConsole.getLines().some((line) => line.startsWith('Cat wall force changed:'))
+    ).toBe(true);
+
+    // 4. If player moves far away (> 5 tiles distance from cat), cat goes back to "standing still"
+    state.player.x = 10 * TILE_SIZE;
+    state.player.y = 10 * TILE_SIZE;
+    // Advance enough time for cat deceleration to bring velocity to 0
+    for (let i = 0; i < 30; i++) {
+      updateGameState(state, input, 0.05);
+    }
+    expect(cat.mode).toBe('standing');
+    expect(cat.vx).toBe(0);
+    expect(cat.vy).toBe(0);
+    expect(debugConsole.getLines()).toContain('Cat state changed: flee -> standing');
+    expect(cat.wallForceDirX).toBe(0);
+    expect(cat.wallForceDirY).toBe(0);
+
+    // 5. If player approaches within 2 tiles distance, cat enters "flee" mode again
+    state.player.x = cat.x - (CAT_RETRIGGER_FLEE_DISTANCE - 4);
+    state.player.y = cat.y;
+    updateGameState(state, input, 0.05);
+    expect(cat.mode).toBe('flee');
+    expect(cat.vx).not.toBe(0);
+    expect(debugConsole.getLines()).toContain('Cat state changed: standing -> flee');
   });
 });

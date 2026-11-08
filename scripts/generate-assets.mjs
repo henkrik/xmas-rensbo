@@ -1749,6 +1749,106 @@ function generateDogSpritesheet() {
   return sheet.toPngBuffer();
 }
 
+function generateCatSpritesheet() {
+  const sheet = new PixelCanvas(48, 32);
+  const C = {
+    K: [18, 16, 24, 255], // Black fur shadow / dark outline
+    B: [36, 32, 44, 255], // Sleek black coat main
+    H: [62, 56, 74, 255], // Fur highlight
+    G: [116, 212, 102, 255], // Glowing green cat eyes
+    P: [238, 162, 178, 255], // Pink inner ear / nose
+    W: [248, 250, 255, 255], // Whiskers
+  };
+
+  // Frame 0: Cat sitting looking out / observant (facing right)
+  const rightSit = [
+    '................',
+    '................',
+    '........K..K....',
+    '.......KPKKPK...',
+    '......KBBHBBBK..',
+    '.....KBGHBGHBBK.',
+    '.....KBBBBBBBBK.',
+    '.....KBBBPBBBBK.',
+    '......KBBBBBBK..',
+    '.....KBBHHBBBK..',
+    '....K.KBBBBBBK..',
+    '...KBK.KBBBBBK..',
+    '...KHK.KBBBBBK..',
+    '....KK.KBBKBBK..',
+    '.......KBBKBBK..',
+    '.......KKKKKKK..',
+  ];
+
+  // Frame 1: Cat galloping / fleeing - stride A (facing right, extended)
+  const rightRun1 = [
+    '................',
+    '................',
+    '.........K..K...',
+    '........KPKKPK..',
+    '.......KBBHBBBK.',
+    '......KBGHBGHBBK',
+    '......KBBBBBBBBK',
+    '......KBBBPBBBBK',
+    '..KK...KBBBBBBK.',
+    '.KBHK.KBBHHBBBK.',
+    'KBBBBBBBBBBBBK..',
+    '.KKKBBBBBBBBK...',
+    '...KBBK....KBBK.',
+    '..KBBK......KBBK',
+    '..KKKK......KKKK',
+    '................',
+  ];
+
+  // Frame 2: Cat galloping / fleeing - stride B (facing right, gathered)
+  const rightRun2 = [
+    '................',
+    '................',
+    '.........K..K...',
+    '........KPKKPK..',
+    '.......KBBHBBBK.',
+    '......KBGHBGHBBK',
+    '......KBBBBBBBBK',
+    '......KBBBPBBBBK',
+    '.......KBBBBBBK.',
+    '...KK.KBBHHBBBK.',
+    '..KBHKBBBBBBBK..',
+    '..KBBBBBBBBBK...',
+    '...KKKBBKBBK....',
+    '....KBBK..KBBK..',
+    '....KKKK..KKKK..',
+    '................',
+  ];
+
+  function flipH(grid) {
+    return grid.map((r) => r.split('').reverse().join(''));
+  }
+
+  function drawCatFrame(ox, oy, grid) {
+    sheet.fillEllipse(ox + 8, oy + 14, 5.0, 1.6, [12, 16, 26, 100]);
+    for (let y = 0; y < 16; y++) {
+      for (let x = 0; x < 16; x++) {
+        const ch = grid[y][x];
+        if (ch !== '.' && C[ch]) {
+          sheet.setPixel(ox + x, oy + y, C[ch]);
+        }
+      }
+    }
+  }
+
+  // Row 0: Facing Right
+  drawCatFrame(0, 0, rightSit);
+  drawCatFrame(16, 0, rightRun1);
+  drawCatFrame(32, 0, rightRun2);
+
+  // Row 1: Facing Left
+  drawCatFrame(0, 16, flipH(rightSit));
+  drawCatFrame(16, 16, flipH(rightRun1));
+  drawCatFrame(32, 16, flipH(rightRun2));
+
+  return sheet.toPngBuffer();
+}
+
 // ============================================================================
 // 5. RENSBO 32x28 MAP MATRIX (Matches src/world/tilemap.ts)
 // Tile 14 = Electric Car parked on the driveway (cols 17..19, rows 21..22)
@@ -2673,6 +2773,7 @@ fs.mkdirSync(tilesDir, { recursive: true });
 
 fs.writeFileSync(path.join(spritesDir, 'santa.png'), generateSantaSpritesheet());
 fs.writeFileSync(path.join(spritesDir, 'dog.png'), generateDogSpritesheet());
+fs.writeFileSync(path.join(spritesDir, 'cat.png'), generateCatSpritesheet());
 fs.writeFileSync(path.join(spritesDir, 'thrower.png'), generateThrowerSpritesheet());
 fs.writeFileSync(path.join(spritesDir, 'snowball.png'), generateSnowballSprite());
 fs.writeFileSync(path.join(spritesDir, 'z-key.png'), generateZKeySprite());

@@ -1,3 +1,4 @@
+import { Cat, createCat } from '../../entities/cat';
 import { Direction, Player, Rect, rectsIntersect } from '../../entities/player';
 import { Interactable } from '../interaction';
 import { MAP_COLS, MAP_ROWS, TILE_SIZE, TileMap, TileType } from '../tilemap';
@@ -205,8 +206,10 @@ export class LevelUpstairs implements GameLevel {
   public readonly map: TileMap = UPSTAIRS_MAP;
   public doors: CollidableDoor[];
   public rosannaCutscene: RosannaCutsceneState | null = null;
+  public cat: Cat;
 
   constructor() {
+    this.cat = createCat();
     this.doors = [
       {
         id: 'upstairs-shower-door',

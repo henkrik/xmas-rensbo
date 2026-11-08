@@ -1,4 +1,5 @@
 import { GameAssets } from '../assets';
+import { Cat } from '../entities/cat';
 import { Dog } from '../entities/dog';
 import { Direction, Footprint, Rect } from '../entities/player';
 import { GameState, MotorcycleState } from '../world/gameState';
@@ -267,6 +268,37 @@ function drawDogAndHearts(
       drawPixelHeart(ctx, heart.x, heart.y, alpha);
     }
   }
+}
+
+/**
+ * Renders the black cat in the extra room upstairs.
+ */
+function drawCat(
+  ctx: CanvasRenderingContext2D,
+  cat: Cat,
+  catSprite: HTMLImageElement
+): void {
+  const drawX = Math.round(cat.x - (TILE_SIZE - cat.width) / 2);
+  const drawY = Math.round(cat.y - (TILE_SIZE - cat.height));
+
+  const speed = Math.hypot(cat.vx, cat.vy);
+  let frameCol = 0;
+  if (cat.mode === 'flee' || speed > 4) {
+    frameCol = Math.floor(cat.animTimer * 12) % 2 === 0 ? 1 : 2;
+  }
+  const dirRow = cat.facing === 'left' ? 1 : 0;
+
+  ctx.drawImage(
+    catSprite,
+    frameCol * TILE_SIZE,
+    dirRow * TILE_SIZE,
+    TILE_SIZE,
+    TILE_SIZE,
+    drawX,
+    drawY,
+    TILE_SIZE,
+    TILE_SIZE
+  );
 }
 
 /**
@@ -979,6 +1011,9 @@ export function renderGame(
         TILE_SIZE
       );
     }
+
+    // Draw black cat in extra room
+    drawCat(ctx, upstairs.cat, assets.catSprite);
 
     // Closed doors & black fog-of-war over unopened rooms (shower, bedroom, office, table room)
     for (const door of upstairs.doors) {

@@ -4,6 +4,9 @@
   var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
   var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
+  // assets/sprites/cat.png
+  var cat_default = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAgCAYAAABU1PscAAABd0lEQVR42u1XsQ3CQAxMAwUVoqKkoGQAKgZgDsQETMQIzMIcrBBkpI8eE7/P9pOAlEgWL/J38Rk/OTfNdP34tVqu2771kBxuPG1+XG8tfeZr68MjHG48bdpudq847I/dmgJNIMrhxifg5X7ugPkaSSDKEcLnyqVABXg5QngOpr6LCrByhHMoVaAPmA5ZhCOag3h4tAOU9tO+dM/KwYvgwb/9z6LqkV5Ff8G8CKHe10T0/QIpvAcPLYTaOlIbWJMoVVlrIb7P9P5JBLP54mQh4vcJ3xdeHkiI9jC0epqAPPjzJZ4SThTCQSiBlDwFYkGi+On6W/8/mu+v4d1H8/3Si8RjnT3YGvgP30G+m6+Rl5cVWwMf9t6j+v4SCfffFgEotga+ine3YL8xN4gHyTq/athkFjVLXsK75uCcINLLkblCEq8mwK11jQMpVTI0EyAC8lmh5hxQ2osIV4G5M0WSG3wOQARItrbGHFDikb5vNAIpqSH8vAX/BGp3DBlFBmAgAAAAAElFTkSuQmCC";
+
   // assets/sprites/dog.png
   var dog_default = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAgCAYAAABU1PscAAABv0lEQVR42uVXy20CQQzdC+KQK+JEBShlcEoFtICUMlIClVAEJVBBjhxzyG0jIznyPvyb2QE2AcliYOc922/nY3fdf/4sF6ueDMf35qgOfr9d98ePTY/je3MUC8DOzof3gZFz+s6QtOQoFoAmSEf0/f11/v2ddT6GY5QA0jk5RStNoIZjlAD08PN1M7D+9HYxC4ikHgeNNR5c71UCMJDB0iwgqiU5kMcKQOMoFaDTskcFNMe8uTBhTQBPhAyPycFBR0l4r56DkKa9iWgZWhwunoGYACribR7p3FPZem7Ny+KuNhEq4BHQ/5kTJppnPc/ymypECshlFCXgzbOeZ/m72fxlR4YZZ7NnvGc3w8tJmLE0iyTj3AtiLP7xCjbAP3cP8LDaHy8zPm2io7MVtokAXPFpV3nm4qnFNhOAM8aylQPLnO012FYCDG46adkEarEtBBgQyZJVWpQAlrsWVlvbWQFSjQwDsY3zlJABaDjGWqpmBEi9EVRCBiJVKElCM9ygWWy4sTUirUewijBNeaztrYJMw1vY8DSwlg72DJPpA7S2TirgbaJJ9QGlPcCk+gAtWzn+E9Vo1APcup5/yn7gB5S1COEgjiPNAAAAAElFTkSuQmCC";
 
@@ -61,6 +64,7 @@
     const [
       santaSprite,
       dogSprite,
+      catSprite,
       throwerSprite,
       snowballSprite,
       zKeySprite,
@@ -70,6 +74,7 @@
     ] = await Promise.all([
       loadImage(santa_default),
       loadImage(dog_default),
+      loadImage(cat_default),
       loadImage(thrower_default),
       loadImage(snowball_default),
       loadImage(z_key_default),
@@ -80,6 +85,7 @@
     return {
       santaSprite,
       dogSprite,
+      catSprite,
       throwerSprite,
       snowballSprite,
       zKeySprite,
@@ -878,6 +884,27 @@
       }
     }
   }
+  function drawCat(ctx, cat, catSprite) {
+    const drawX = Math.round(cat.x - (TILE_SIZE - cat.width) / 2);
+    const drawY = Math.round(cat.y - (TILE_SIZE - cat.height));
+    const speed = Math.hypot(cat.vx, cat.vy);
+    let frameCol = 0;
+    if (cat.mode === "flee" || speed > 4) {
+      frameCol = Math.floor(cat.animTimer * 12) % 2 === 0 ? 1 : 2;
+    }
+    const dirRow = cat.facing === "left" ? 1 : 0;
+    ctx.drawImage(
+      catSprite,
+      frameCol * TILE_SIZE,
+      dirRow * TILE_SIZE,
+      TILE_SIZE,
+      TILE_SIZE,
+      drawX,
+      drawY,
+      TILE_SIZE,
+      TILE_SIZE
+    );
+  }
   function drawGroundLadder(ctx) {
     const x = Math.round(GROUND_LADDER_BOUNDS.x);
     const y = Math.round(GROUND_LADDER_BOUNDS.y);
@@ -1367,6 +1394,7 @@
           TILE_SIZE
         );
       }
+      drawCat(ctx, upstairs.cat, assets.catSprite);
       for (const door of upstairs.doors) {
         drawClosedDoorAndHiddenMask(ctx, door);
       }
@@ -1563,6 +1591,160 @@
           player.x = player.x + slideStep;
           break;
         }
+      }
+    }
+  }
+
+  // src/entities/cat.ts
+  var CAT_START_X = 26.5 * TILE_SIZE;
+  var CAT_START_Y = 17 * TILE_SIZE;
+  var CAT_MAX_SPEED = 60;
+  var CAT_ACCELERATION = 120;
+  var CAT_DECELERATION = 100;
+  var EXTRA_ROOM_BOUNDS = {
+    x: 25.5 * TILE_SIZE,
+    y: 11 * TILE_SIZE,
+    width: 2.5 * TILE_SIZE,
+    height: 7 * TILE_SIZE
+  };
+  var CAT_STOP_FLEE_DISTANCE = 5 * TILE_SIZE;
+  var CAT_RETRIGGER_FLEE_DISTANCE = 2 * TILE_SIZE;
+  function createCat(x = CAT_START_X, y = CAT_START_Y) {
+    return {
+      x,
+      y,
+      width: 10,
+      height: 10,
+      vx: 0,
+      vy: 0,
+      maxSpeed: CAT_MAX_SPEED,
+      acceleration: CAT_ACCELERATION,
+      deceleration: CAT_DECELERATION,
+      mode: "standing",
+      facing: "left",
+      animTimer: 0,
+      hasBeenActivated: false,
+      wallForceDirX: 0,
+      wallForceDirY: 0
+    };
+  }
+  function updateCat(cat, player, dtSeconds, map, solidObstacles = []) {
+    const catCenterX = cat.x + cat.width / 2;
+    const catCenterY = cat.y + cat.height / 2;
+    const playerCenterX = player.x + player.width / 2;
+    const playerCenterY = player.y + player.height / 2;
+    const dx = playerCenterX - catCenterX;
+    const dy = playerCenterY - catCenterY;
+    const dist = Math.hypot(dx, dy);
+    const collidesAt = (testX, testY) => {
+      if (isRectCollidingWithMap(map, testX, testY, cat.width, cat.height)) {
+        return true;
+      }
+      const testRect = {
+        x: testX,
+        y: testY,
+        width: cat.width,
+        height: cat.height
+      };
+      return solidObstacles.some((obs) => rectsIntersect(testRect, obs));
+    };
+    const prevMode = cat.mode;
+    if (!cat.hasBeenActivated) {
+      if (rectsIntersect(player, EXTRA_ROOM_BOUNDS)) {
+        cat.hasBeenActivated = true;
+        cat.mode = "flee";
+      }
+    } else {
+      if (cat.mode === "flee") {
+        if (dist > CAT_STOP_FLEE_DISTANCE) {
+          cat.mode = "standing";
+        }
+      } else if (cat.mode === "standing") {
+        if (dist <= CAT_RETRIGGER_FLEE_DISTANCE) {
+          cat.mode = "flee";
+        }
+      }
+    }
+    if (cat.mode !== prevMode) {
+      debugLog(`Cat state changed: ${prevMode} -> ${cat.mode}`);
+    }
+    if (cat.mode === "flee") {
+      const lookDist = 8;
+      const wallWest = collidesAt(cat.x - lookDist, cat.y);
+      const wallEast = collidesAt(cat.x + lookDist, cat.y);
+      const wallNorth = collidesAt(cat.x, cat.y - lookDist);
+      const wallSouth = collidesAt(cat.x, cat.y + lookDist);
+      let forceDirX = 0;
+      let forceDirY = 0;
+      if (wallWest) forceDirX += 1;
+      if (wallEast) forceDirX -= 1;
+      if (wallNorth) forceDirY += 1;
+      if (wallSouth) forceDirY -= 1;
+      if (forceDirX !== cat.wallForceDirX || forceDirY !== cat.wallForceDirY) {
+        debugLog(
+          `Cat wall force changed: (${cat.wallForceDirX}, ${cat.wallForceDirY}) -> (${forceDirX}, ${forceDirY})`
+        );
+        cat.wallForceDirX = forceDirX;
+        cat.wallForceDirY = forceDirY;
+      }
+      let ux = dist > 1e-3 ? -dx / dist : -1;
+      let uy = dist > 1e-3 ? -dy / dist : 0;
+      const targetVx = ux * cat.maxSpeed;
+      const targetVy = uy * cat.maxSpeed;
+      const dvx = targetVx - cat.vx;
+      const dvy = targetVy - cat.vy;
+      const dvLen = Math.hypot(dvx, dvy);
+      const maxDeltaV = cat.acceleration * dtSeconds;
+      if (dvLen <= maxDeltaV || dvLen === 0) {
+        cat.vx = targetVx;
+        cat.vy = targetVy;
+      } else {
+        cat.vx += dvx / dvLen * maxDeltaV;
+        cat.vy += dvy / dvLen * maxDeltaV;
+      }
+      if (forceDirX !== 0 || forceDirY !== 0) {
+        const forceLen = Math.hypot(forceDirX, forceDirY);
+        const normFx = forceDirX / forceLen;
+        const normFy = forceDirY / forceLen;
+        cat.vx += normFx * cat.acceleration * dtSeconds;
+        cat.vy += normFy * cat.acceleration * dtSeconds;
+      }
+      if (Math.abs(cat.vx) > 2) {
+        cat.facing = cat.vx < 0 ? "left" : "right";
+      } else if (Math.abs(dx) > 0.5) {
+        cat.facing = dx > 0 ? "left" : "right";
+      }
+    } else {
+      if (cat.wallForceDirX !== 0 || cat.wallForceDirY !== 0) {
+        debugLog(
+          `Cat wall force changed: (${cat.wallForceDirX}, ${cat.wallForceDirY}) -> (0, 0)`
+        );
+        cat.wallForceDirX = 0;
+        cat.wallForceDirY = 0;
+      }
+      const speed = Math.hypot(cat.vx, cat.vy);
+      const maxDrop = cat.deceleration * dtSeconds;
+      if (speed <= maxDrop) {
+        cat.vx = 0;
+        cat.vy = 0;
+      } else {
+        cat.vx -= cat.vx / speed * maxDrop;
+        cat.vy -= cat.vy / speed * maxDrop;
+      }
+    }
+    if (cat.vx !== 0 || cat.vy !== 0) {
+      cat.animTimer += dtSeconds;
+      const nextX = cat.x + cat.vx * dtSeconds;
+      if (!collidesAt(nextX, cat.y)) {
+        cat.x = nextX;
+      } else {
+        cat.vx = 0;
+      }
+      const nextY = cat.y + cat.vy * dtSeconds;
+      if (!collidesAt(cat.x, nextY)) {
+        cat.y = nextY;
+      } else {
+        cat.vy = 0;
       }
     }
   }
@@ -2327,6 +2509,8 @@
       __publicField(this, "map", UPSTAIRS_MAP);
       __publicField(this, "doors");
       __publicField(this, "rosannaCutscene", null);
+      __publicField(this, "cat");
+      this.cat = createCat();
       this.doors = [
         {
           id: "upstairs-shower-door",
@@ -2779,6 +2963,13 @@
       updatePlayer(
         state.player,
         input,
+        dtSeconds,
+        upstairs.map,
+        upstairs.getSolidObstacles()
+      );
+      updateCat(
+        upstairs.cat,
+        state.player,
         dtSeconds,
         upstairs.map,
         upstairs.getSolidObstacles()
