@@ -2265,7 +2265,7 @@
   var UPSTAIRS_BEDROOM_HIDDEN_MASK = {
     x: 21 * TILE_SIZE,
     y: 4 * TILE_SIZE,
-    width: 7 * TILE_SIZE,
+    width: 8 * TILE_SIZE,
     height: 6 * TILE_SIZE
   };
   var UPSTAIRS_OFFICE_DOOR_BOUNDS = {
@@ -2278,7 +2278,7 @@
     x: 20 * TILE_SIZE,
     y: 14 * TILE_SIZE,
     width: 5 * TILE_SIZE,
-    height: 4 * TILE_SIZE
+    height: 5 * TILE_SIZE
   };
   var UPSTAIRS_TABLE_ROOM_DOOR_BOUNDS = {
     x: 11 * TILE_SIZE,
@@ -2286,12 +2286,30 @@
     width: TILE_SIZE,
     height: TILE_SIZE
   };
-  var UPSTAIRS_TABLE_ROOM_HIDDEN_MASK = {
-    x: 9 * TILE_SIZE,
-    y: 16 * TILE_SIZE,
-    width: 6 * TILE_SIZE,
-    height: 6 * TILE_SIZE
-  };
+  var UPSTAIRS_TABLE_ROOM_HIDDEN_MASKS = [
+    // Row 16: interior cols 10..13 (excluding west wall col 9 & east wall col 14)
+    {
+      x: 10 * TILE_SIZE,
+      y: 16 * TILE_SIZE,
+      width: 4 * TILE_SIZE,
+      height: 1 * TILE_SIZE
+    },
+    // Row 17: west wall col 9 + interior cols 10..13 (excluding east wall col 14)
+    {
+      x: 9 * TILE_SIZE,
+      y: 17 * TILE_SIZE,
+      width: 5 * TILE_SIZE,
+      height: 1 * TILE_SIZE
+    },
+    // Rows 18..21: full width cols 9..14 (west wall, interior, east wall, and south wall)
+    {
+      x: 9 * TILE_SIZE,
+      y: 18 * TILE_SIZE,
+      width: 6 * TILE_SIZE,
+      height: 4 * TILE_SIZE
+    }
+  ];
+  var UPSTAIRS_TABLE_ROOM_HIDDEN_MASK = UPSTAIRS_TABLE_ROOM_HIDDEN_MASKS[0];
   var KITCHEN_TRIGGER_BOUNDS = {
     x: 9 * TILE_SIZE,
     y: 5 * TILE_SIZE,
@@ -2328,7 +2346,7 @@
         {
           id: "upstairs-table-room-door",
           bounds: { ...UPSTAIRS_TABLE_ROOM_DOOR_BOUNDS },
-          hiddenRegions: [{ ...UPSTAIRS_TABLE_ROOM_HIDDEN_MASK }]
+          hiddenRegions: UPSTAIRS_TABLE_ROOM_HIDDEN_MASKS.map((r) => ({ ...r }))
         }
       ];
     }

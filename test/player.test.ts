@@ -40,11 +40,14 @@ import {
   KITCHEN_ROSANNA_STATE_KEY,
   KITCHEN_TRIGGER_BOUNDS,
   UPSTAIRS_BEDROOM_DOOR_BOUNDS,
+  UPSTAIRS_BEDROOM_HIDDEN_MASK,
   UPSTAIRS_OFFICE_DOOR_BOUNDS,
+  UPSTAIRS_OFFICE_HIDDEN_MASK,
   UPSTAIRS_SHOWER_DOOR_BOUNDS,
   UPSTAIRS_STAIRS_SPAWN,
   UPSTAIRS_STAIRS_TRIGGER_BOUNDS,
   UPSTAIRS_TABLE_ROOM_DOOR_BOUNDS,
+  UPSTAIRS_TABLE_ROOM_HIDDEN_MASKS,
 } from '../src/world/levels/levelUpstairs';
 import {
   CLIMB_DURATION_SECONDS,
@@ -913,6 +916,23 @@ describe('Player walking & 2x Rensbo map layout', () => {
       'upstairs-office-door',
       'upstairs-table-room-door',
     ]);
+
+    // Fog-of-war masks validation:
+    // Office fog-of-war covers the southern wall (rows 14..18 -> height: 5 tiles)
+    const officeDoor = upstairs.doors.find((d) => d.id === 'upstairs-office-door')!;
+    expect(officeDoor.hiddenRegions[0].height).toBe(5 * TILE_SIZE);
+    expect(officeDoor.hiddenRegions[0]).toEqual(UPSTAIRS_OFFICE_HIDDEN_MASK);
+
+    // Bedroom fog-of-war covers the eastern wall (cols 21..28 -> width: 8 tiles)
+    const bedroomDoor = upstairs.doors.find((d) => d.id === 'upstairs-bedroom-door')!;
+    expect(bedroomDoor.hiddenRegions[0].width).toBe(8 * TILE_SIZE);
+    expect(bedroomDoor.hiddenRegions[0]).toEqual(UPSTAIRS_BEDROOM_HIDDEN_MASK);
+
+    // Table Room fog-of-war:
+    // Does not cover 2 northernmost tiles of west wall (rows 15..16) or 3 northernmost tiles of east wall (rows 15..17)
+    const tableRoomDoor = upstairs.doors.find((d) => d.id === 'upstairs-table-room-door')!;
+    expect(tableRoomDoor.hiddenRegions).toEqual(UPSTAIRS_TABLE_ROOM_HIDDEN_MASKS);
+    expect(tableRoomDoor.hiddenRegions.length).toBe(3);
 
     for (const [doorId, bounds, offsetY] of [
       ['upstairs-shower-door', UPSTAIRS_SHOWER_DOOR_BOUNDS, TILE_SIZE + 2],
