@@ -7,6 +7,7 @@ import zKeySpriteUrl from '../../assets/sprites/z-key.png';
 import basementTilesUrl from '../../assets/tiles/basement-tiles.png';
 import upstairsTilesUrl from '../../assets/tiles/upstairs-tiles.png';
 import winterTilesUrl from '../../assets/tiles/winter-tiles.png';
+import portraitsAtlasUrl from '../../assets/portraits/portraits-atlas.png';
 
 export interface GameAssets {
   santaSprite: HTMLImageElement;
@@ -18,6 +19,7 @@ export interface GameAssets {
   winterTiles: HTMLImageElement;
   basementTiles: HTMLImageElement;
   upstairsTiles: HTMLImageElement;
+  portraitsAtlas: HTMLImageElement;
 }
 
 export function loadImage(src: string): Promise<HTMLImageElement> {
@@ -60,6 +62,7 @@ export async function loadAllAssets(): Promise<GameAssets> {
     winterTiles,
     basementTiles,
     upstairsTiles,
+    portraitsAtlas,
   ] = await Promise.all([
     loadImage(santaSpriteUrl),
     loadImage(dogSpriteUrl),
@@ -70,6 +73,7 @@ export async function loadAllAssets(): Promise<GameAssets> {
     loadImage(winterTilesUrl),
     loadImage(basementTilesUrl),
     loadImage(upstairsTilesUrl),
+    loadImage(portraitsAtlasUrl),
   ]);
   return {
     santaSprite,
@@ -81,5 +85,6 @@ export async function loadAllAssets(): Promise<GameAssets> {
     winterTiles,
     basementTiles,
     upstairsTiles,
+    portraitsAtlas,
   };
 }

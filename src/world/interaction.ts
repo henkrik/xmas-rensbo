@@ -17,12 +17,14 @@ export interface Interactable {
   bounds: Rect;
   promptText: string; // e.g., "Z: Talk to" or "Z: Open door"
   dialogueLines: string[];
+  speakerPortrait?: string; // name of person for portrait display, e.g. "Henrik"
 }
 
 export interface DialogueState {
   lines: string[];
   currentIndex: number;
   onClose?: () => void;
+  speakerPortrait?: string;
 }
 
 export interface LadderInteractionOptions {

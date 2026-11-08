@@ -119,11 +119,103 @@ function drawInteractionPrompt(
   ctx.restore();
 }
 
+import { PersonNpc } from '../world/levels/levelPeople';
+
+const PORTRAIT_ORDER = [
+  'albin',
+  'alex',
+  'anne-marie',
+  'annelotte',
+  'diana',
+  'hanneloes',
+  'henrik',
+  'olexa',
+  'simon',
+  'sylvester',
+  'tanja',
+];
+
+function drawPortrait(
+  ctx: CanvasRenderingContext2D,
+  speakerName: string,
+  portraitsAtlas: HTMLImageElement,
+  x: number,
+  y: number
+): void {
+  const norm = speakerName.toLowerCase();
+  const idx = PORTRAIT_ORDER.indexOf(norm);
+  if (idx === -1) return;
+
+  const portraitSize = 40;
+  const frameWidth = portraitSize + 4;
+  const frameHeight = portraitSize + 4;
+
+  ctx.save();
+  // Draw SNES frame for portrait
+  drawSnesFrame(ctx, x, y, frameWidth, frameHeight);
+
+  // Draw 40x40 pixel-art portrait image inside the frame
+  ctx.drawImage(
+    portraitsAtlas,
+    idx * portraitSize,
+    0,
+    portraitSize,
+    portraitSize,
+    x + 2,
+    y + 2,
+    portraitSize,
+    portraitSize
+  );
+
+  ctx.restore();
+}
+
+function drawPersonNpc(
+  ctx: CanvasRenderingContext2D,
+  npc: PersonNpc
+): void {
+  const x = Math.round(npc.bounds.x - 2);
+  const y = Math.round(npc.bounds.y - 4);
+
+  // Soft floor shadow
+  ctx.fillStyle = 'rgba(12, 10, 16, 0.4)';
+  ctx.fillRect(x + 3, y + 13, 10, 3);
+
+  // Hair & head outline
+  ctx.fillStyle = '#181420';
+  ctx.fillRect(x + 4, y + 1, 8, 6);
+  ctx.fillStyle = npc.hairColor;
+  ctx.fillRect(x + 5, y + 2, 6, 4);
+
+  // Face (front facing down)
+  ctx.fillStyle = '#ffcfab';
+  ctx.fillRect(x + 5, y + 4, 6, 3);
+  ctx.fillStyle = '#181420';
+  ctx.fillRect(x + 6, y + 5, 1, 1); // Left eye
+  ctx.fillRect(x + 9, y + 5, 1, 1); // Right eye
+
+  // Shirt / sweater
+  ctx.fillStyle = '#181420';
+  ctx.fillRect(x + 3, y + 7, 10, 5);
+  ctx.fillStyle = npc.shirtColor;
+  ctx.fillRect(x + 4, y + 8, 8, 3);
+
+  // Trousers & boots
+  ctx.fillStyle = '#2c3e5a';
+  ctx.fillRect(x + 4, y + 11, 3, 3);
+  ctx.fillRect(x + 9, y + 11, 3, 3);
+  ctx.fillStyle = '#181420';
+  ctx.fillRect(x + 4, y + 14, 3, 1);
+  ctx.fillRect(x + 9, y + 14, 3, 1);
+}
+
 function drawDialogueBox(
   ctx: CanvasRenderingContext2D,
   text: string,
   zKeySprite: HTMLImageElement,
-  showZKey: boolean = true
+  showZKey: boolean = true,
+  speakerPortrait?: string,
+  portraitsAtlas?: HTMLImageElement
 ): void {
   ctx.save();
   const margin = 8;
@@ -136,6 +228,14 @@ function drawDialogueBox(
   const boxHeight = Math.max(52, textHeight + (showZKey ? 22 : 16));
   const boxX = margin;
   const boxY = ctx.canvas.height - boxHeight - margin;
+
+  // If a speaker portrait is specified, render the portrait above the dialogue box on the left
+  if (speakerPortrait && portraitsAtlas) {
+    const portraitFrameH = 44;
+    const portraitX = boxX;
+    const portraitY = boxY - portraitFrameH + 2;
+    drawPortrait(ctx, speakerPortrait, portraitsAtlas, portraitX, portraitY);
+  }
 
   drawSnesFrame(ctx, boxX, boxY, boxWidth, boxHeight);
 
@@ -1087,6 +1187,37 @@ export function renderGame(
     for (const door of upstairs.doors) {
       drawClosedDoorAndHiddenMask(ctx, door);
     }
+  } else if (state.currentLevelId === 'level-people') {
+    const peopleLevel = state.levels['level-people'];
+    // Draw the wooden floor and wall tiles
+    const { map } = peopleLevel;
+    const startCol = Math.max(0, Math.floor(camera.x / TILE_SIZE));
+    const endCol = Math.min(map.cols - 1, Math.ceil((camera.x + camera.width) / TILE_SIZE));
+    const startRow = Math.max(0, Math.floor(camera.y / TILE_SIZE));
+    const endRow = Math.min(map.rows - 1, Math.ceil((camera.y + camera.height) / TILE_SIZE));
+
+    for (let r = startRow; r <= endRow; r++) {
+      for (let c = startCol; c <= endCol; c++) {
+        const tileType = map.tiles[r][c];
+        if (tileType === TileType.VoidBlack) continue;
+        ctx.drawImage(
+          assets.upstairsTiles,
+          c * TILE_SIZE,
+          r * TILE_SIZE,
+          TILE_SIZE,
+          TILE_SIZE,
+          c * TILE_SIZE,
+          r * TILE_SIZE,
+          TILE_SIZE,
+          TILE_SIZE
+        );
+      }
+    }
+
+    // Draw all 11 Person NPCs in the room
+    for (const npc of peopleLevel.npcs) {
+      drawPersonNpc(ctx, npc);
+    }
   }
 
   // Draw Santa (electrocuted OR 4-directional SNES spritesheet + 3-frame walk cycle + hit blinking)
@@ -1162,7 +1293,14 @@ export function renderGame(
   // Screen-space UI overlay: Dialogue box OR bottom Z-key interaction prompt
   if (activeDialogue) {
     const line = activeDialogue.lines[activeDialogue.currentIndex] ?? '';
-    drawDialogueBox(ctx, line, assets.zKeySprite, !state.joystickActive);
+    drawDialogueBox(
+      ctx,
+      line,
+      assets.zKeySprite,
+      !state.joystickActive,
+      activeDialogue.speakerPortrait,
+      assets.portraitsAtlas
+    );
   } else if (nearbyInteractable && !state.joystickActive) {
     drawInteractionPrompt(ctx, nearbyInteractable.promptText, assets.zKeySprite);
   }

@@ -32,6 +32,7 @@ import {
   MotorcycleStatus,
 } from './levels/levelOutside';
 import { LevelUpstairs } from './levels/levelUpstairs';
+import { LevelPeople } from './levels/levelPeople';
 import { GameLevel, LevelId, LevelTransitionContext } from './levels/types';
 import {
   CLIMB_DURATION_SECONDS,
@@ -58,6 +59,7 @@ export interface LevelRegistry {
   'level-outside': LevelOutside;
   'level-basement': LevelBasement;
   'level-upstairs': LevelUpstairs;
+  'level-people': LevelPeople;
 }
 
 export interface GameState {
@@ -195,6 +197,9 @@ export function parseLevelQueryParam(
   if (normalized === 'upstairs' || normalized === 'level-upstairs') {
     return 'level-upstairs';
   }
+  if (normalized === 'people' || normalized === 'level-people') {
+    return 'level-people';
+  }
   if (
     normalized === 'outdoors' ||
     normalized === 'outside' ||
@@ -246,11 +251,13 @@ export function createGameState(
   const levelOutside = new LevelOutside(map);
   const levelBasement = new LevelBasement();
   const levelUpstairs = new LevelUpstairs();
+  const levelPeople = new LevelPeople();
 
   const levels: LevelRegistry = {
     'level-outside': levelOutside,
     'level-basement': levelBasement,
     'level-upstairs': levelUpstairs,
+    'level-people': levelPeople,
   };
 
   const activeLevel = levels[initialLevelId];
@@ -525,8 +532,17 @@ export function updateGameState(
 
   const transitionCtx: LevelTransitionContext = {
     loadLevel: (nextId: LevelId) => loadLevel(state, nextId),
-    openDialogue: (lines: string[], onClose?: () => void) => {
-      state.activeDialogue = { lines, currentIndex: 0, onClose };
+    openDialogue: (
+      lines: string[],
+      onClose?: () => void,
+      speakerPortrait?: string
+    ) => {
+      state.activeDialogue = {
+        lines,
+        currentIndex: 0,
+        onClose,
+        speakerPortrait,
+      };
     },
   };
 
@@ -590,6 +606,15 @@ export function updateGameState(
       refreshInteractables(state);
       return;
     }
+  } else if (state.currentLevelId === 'level-people') {
+    const peopleLevel = state.levels['level-people'];
+    updatePlayer(
+      state.player,
+      input,
+      dtSeconds,
+      peopleLevel.map,
+      peopleLevel.getSolidObstacles()
+    );
   }
 
   // Check if Santa is close enough to an interactable object to show the Z prompt
@@ -637,6 +662,7 @@ export function updateGameState(
       state.activeDialogue = {
         lines: target.dialogueLines,
         currentIndex: 0,
+        speakerPortrait: target.speakerPortrait,
       };
     }
   }

@@ -61,6 +61,11 @@ import {
   UPSTAIRS_TABLE_ROOM_HIDDEN_MASKS,
 } from '../src/world/levels/levelUpstairs';
 import {
+  LevelPeople,
+  PEOPLE_NAMES,
+  PEOPLE_PLAYER_SPAWN,
+} from '../src/world/levels/levelPeople';
+import {
   CLIMB_DURATION_SECONDS,
   DAMAGED_WIRE_HAZARD,
   ELECTROCUTION_DURATION_SECONDS,
@@ -1458,5 +1463,65 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(state.activeDialogue).toBeNull();
     expect(state.currentLevelId).toBe('level-basement');
     expect(state.player.blinkTimer).toBeGreaterThan(0);
+  });
+
+  it('supports the people level (?level=people), spawning 11 NPCs and talking to each with their portrait', () => {
+    // 1. Parsing query parameter ?level=people
+    expect(parseLevelQueryParam('?level=people')).toBe('level-people');
+    expect(parseLevelQueryParam('people')).toBe('level-people');
+
+    // 2. Load level-people
+    const state = createGameState({ initialLevelId: 'level-people' });
+    const input = createEmptyInput();
+    const peopleLevel = state.levels['level-people'] as LevelPeople;
+
+    expect(state.currentLevelId).toBe('level-people');
+    expect(state.player.x).toBe(PEOPLE_PLAYER_SPAWN.x);
+    expect(state.player.y).toBe(PEOPLE_PLAYER_SPAWN.y);
+
+    // 3. Exactly 11 NPCs matching inspiration person names
+    expect(peopleLevel.npcs.length).toBe(11);
+    expect(peopleLevel.npcs.map((npc) => npc.name)).toEqual([...PEOPLE_NAMES]);
+
+    // 4. Test walking up to Henrik and talking to him
+    const henrikNpc = peopleLevel.npcs.find((n) => n.name === 'Henrik')!;
+    state.player.x = henrikNpc.bounds.x;
+    state.player.y = henrikNpc.bounds.y + henrikNpc.bounds.height + 2;
+    updateGameState(state, input, 0.01);
+
+    expect(state.nearbyInteractable?.id).toBe('person-henrik');
+    expect(state.nearbyInteractable?.promptText).toBe('Talk to Henrik');
+    expect(state.nearbyInteractable?.speakerPortrait).toBe('Henrik');
+
+    // Press Z to talk
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+
+    expect(state.activeDialogue).not.toBeNull();
+    expect(state.activeDialogue?.lines[0]).toBe('Henrik says hello.');
+    expect(state.activeDialogue?.speakerPortrait).toBe('Henrik');
+
+    // Dismiss dialogue
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.activeDialogue).toBeNull();
+
+    // 5. Test talking to Olexa
+    const olexaNpc = peopleLevel.npcs.find((n) => n.name === 'Olexa')!;
+    state.player.x = olexaNpc.bounds.x;
+    state.player.y = olexaNpc.bounds.y + olexaNpc.bounds.height + 2;
+    updateGameState(state, input, 0.01);
+
+    expect(state.nearbyInteractable?.id).toBe('person-olexa');
+    expect(state.nearbyInteractable?.speakerPortrait).toBe('Olexa');
+
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+
+    expect(state.activeDialogue?.lines[0]).toBe('Olexa says hello.');
+    expect(state.activeDialogue?.speakerPortrait).toBe('Olexa');
   });
 });

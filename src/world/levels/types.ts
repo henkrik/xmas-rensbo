@@ -2,7 +2,7 @@ import { Player, Rect } from '../../entities/player';
 import { Interactable } from '../interaction';
 import { TileMap } from '../tilemap';
 
-export type LevelId = 'level-outside' | 'level-basement' | 'level-upstairs';
+export type LevelId = 'level-outside' | 'level-basement' | 'level-upstairs' | 'level-people';
 
 export interface CollidableDoor {
   id: string;
@@ -13,7 +13,11 @@ export interface CollidableDoor {
 
 export interface LevelTransitionContext {
   loadLevel: (levelId: LevelId) => void;
-  openDialogue: (lines: string[], onClose?: () => void) => void;
+  openDialogue: (
+    lines: string[],
+    onClose?: () => void,
+    speakerPortrait?: string
+  ) => void;
 }
 
 export interface GameLevel {
