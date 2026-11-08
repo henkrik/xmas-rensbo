@@ -41,6 +41,14 @@ export function createMotorcycle(): MotorcycleState {
   };
 }
 
+export const OUTSIDE_ALEX_NPC: Rect & { facing: 'down' | 'left' | 'right' | 'up' } = {
+  x: 4 * TILE_SIZE + 2,
+  y: 19 * TILE_SIZE + 2,
+  width: 12,
+  height: 12,
+  facing: 'down',
+};
+
 export class LevelOutside implements GameLevel {
   public readonly id: LevelId = 'level-outside';
   public readonly map: TileMap;
@@ -48,6 +56,7 @@ export class LevelOutside implements GameLevel {
   public motorcycle: MotorcycleState;
   public throwers: SnowballThrower[];
   public snowballs: Snowball[];
+  public readonly alexNpc = { ...OUTSIDE_ALEX_NPC };
   public hasLadder: boolean = false;
   public ladderPlaced: boolean = false;
   public isOnRoof: boolean = false;
@@ -71,7 +80,7 @@ export class LevelOutside implements GameLevel {
   }
 
   public getSolidObstacles(): readonly Rect[] {
-    return [...this.throwers, this.motorcycle];
+    return [...this.throwers, this.motorcycle, this.alexNpc];
   }
 
   public getInteractables(): Interactable[] {
@@ -80,6 +89,7 @@ export class LevelOutside implements GameLevel {
       ladderPlaced: this.ladderPlaced,
       isOnRoof: this.isOnRoof,
       motorcycleStatus: this.motorcycle.status,
+      alexNpc: this.alexNpc,
     });
   }
 

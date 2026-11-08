@@ -1116,6 +1116,30 @@ export function renderGame(
       const drawY = Math.round(sb.y - (TILE_SIZE - sb.height) / 2);
       ctx.drawImage(assets.snowballSprite, drawX, drawY, TILE_SIZE, TILE_SIZE);
     }
+
+    // 9. Draw Alex practicing his golf swings in the southwest above the blue house
+    const outsideLevel = state.levels['level-outside'];
+    if (outsideLevel?.alexNpc) {
+      drawPersonNpc(ctx, {
+        name: 'Alex' as any,
+        bounds: outsideLevel.alexNpc,
+        facing: outsideLevel.alexNpc.facing,
+        hairColor: '#a8b0a0',
+        shirtColor: '#988c88',
+      });
+
+      // Draw golf club in Alex's hands:
+      // Alex stands at (x, y) facing down.
+      // Club shaft: thin dark steel rod angled downwards from his right hand to the ground
+      const ax = Math.round(outsideLevel.alexNpc.x);
+      const ay = Math.round(outsideLevel.alexNpc.y);
+      ctx.fillStyle = '#8a94a0'; // Steel shaft
+      ctx.fillRect(ax + 10, ay + 7, 1, 6);
+      ctx.fillRect(ax + 11, ay + 11, 1, 3);
+      // Club head: iron head resting near the grass/snow
+      ctx.fillStyle = '#d0d8e0';
+      ctx.fillRect(ax + 11, ay + 13, 3, 2);
+    }
   } else if (state.currentLevelId === 'level-basement') {
     const basement = state.levels['level-basement'];
     ctx.drawImage(

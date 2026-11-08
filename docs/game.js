@@ -2521,6 +2521,23 @@
         const drawY = Math.round(sb.y - (TILE_SIZE - sb.height) / 2);
         ctx.drawImage(assets.snowballSprite, drawX, drawY, TILE_SIZE, TILE_SIZE);
       }
+      const outsideLevel = state.levels["level-outside"];
+      if (outsideLevel?.alexNpc) {
+        drawPersonNpc(ctx, {
+          name: "Alex",
+          bounds: outsideLevel.alexNpc,
+          facing: outsideLevel.alexNpc.facing,
+          hairColor: "#a8b0a0",
+          shirtColor: "#988c88"
+        });
+        const ax = Math.round(outsideLevel.alexNpc.x);
+        const ay = Math.round(outsideLevel.alexNpc.y);
+        ctx.fillStyle = "#8a94a0";
+        ctx.fillRect(ax + 10, ay + 7, 1, 6);
+        ctx.fillRect(ax + 11, ay + 11, 1, 3);
+        ctx.fillStyle = "#d0d8e0";
+        ctx.fillRect(ax + 11, ay + 13, 3, 2);
+      }
     } else if (state.currentLevelId === "level-basement") {
       const basement = state.levels["level-basement"];
       ctx.drawImage(
@@ -2979,7 +2996,8 @@
       hasLadder = false,
       ladderPlaced = false,
       isOnRoof = false,
-      motorcycleStatus = "parked"
+      motorcycleStatus = "parked",
+      alexNpc
     } = options;
     if (isOnRoof) {
       return [
@@ -3080,6 +3098,15 @@
         bounds: { ...HOUSE_WEST_LADDER_SPOT },
         promptText: "Climb ladder",
         dialogueLines: []
+      });
+    }
+    if (alexNpc) {
+      list.push({
+        id: "outside-alex",
+        bounds: { ...alexNpc },
+        promptText: "Talk to Alex",
+        dialogueLines: ["Just practicing my swings..."],
+        speakerPortrait: "Alex"
       });
     }
     return list;
@@ -3443,6 +3470,13 @@
       status: "parked"
     };
   }
+  var OUTSIDE_ALEX_NPC = {
+    x: 4 * TILE_SIZE + 2,
+    y: 19 * TILE_SIZE + 2,
+    width: 12,
+    height: 12,
+    facing: "down"
+  };
   var LevelOutside = class {
     constructor(map = STARTER_MAP) {
       __publicField(this, "id", "level-outside");
@@ -3451,6 +3485,7 @@
       __publicField(this, "motorcycle");
       __publicField(this, "throwers");
       __publicField(this, "snowballs");
+      __publicField(this, "alexNpc", { ...OUTSIDE_ALEX_NPC });
       __publicField(this, "hasLadder", false);
       __publicField(this, "ladderPlaced", false);
       __publicField(this, "isOnRoof", false);
@@ -3470,14 +3505,15 @@
       player.walkTimer = 0;
     }
     getSolidObstacles() {
-      return [...this.throwers, this.motorcycle];
+      return [...this.throwers, this.motorcycle, this.alexNpc];
     }
     getInteractables() {
       return buildInteractables(this.throwers, {
         hasLadder: this.hasLadder,
         ladderPlaced: this.ladderPlaced,
         isOnRoof: this.isOnRoof,
-        motorcycleStatus: this.motorcycle.status
+        motorcycleStatus: this.motorcycle.status,
+        alexNpc: this.alexNpc
       });
     }
     handleInteraction(interactableId, player, ctx) {

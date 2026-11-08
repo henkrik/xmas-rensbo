@@ -515,6 +515,35 @@ describe('Player walking & 2x Rensbo map layout', () => {
     applyKeyEvent(input, 'KeyZ', false);
 
     expect(state.activeDialogue).toBeNull();
+
+    // 3. Position Santa right below Alex on the southwest part of the map
+    const outside = state.levels['level-outside'];
+    expect(outside.alexNpc).toBeDefined();
+    state.player.x = outside.alexNpc.x;
+    state.player.y = outside.alexNpc.y + outside.alexNpc.height + 2;
+
+    updateGameState(state, input, 0.01);
+    expect(state.nearbyInteractable).not.toBeNull();
+    expect(state.nearbyInteractable?.promptText).toBe('Talk to Alex');
+    expect(state.nearbyInteractable?.speakerPortrait).toBe('Alex');
+
+    // Press Z to talk to Alex
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+
+    expect(state.activeDialogue).not.toBeNull();
+    expect(state.activeDialogue?.speakerPortrait).toBe('Alex');
+    expect(state.activeDialogue?.lines[state.activeDialogue.currentIndex]).toBe(
+      'Just practicing my swings...'
+    );
+
+    // Press Z again to close the dialogue
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+
+    expect(state.activeDialogue).toBeNull();
   });
 
   it('shows "Open door" at the main house door and advances through the two dialogue lines with Z', () => {

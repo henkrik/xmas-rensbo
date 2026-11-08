@@ -32,6 +32,7 @@ export interface LadderInteractionOptions {
   ladderPlaced?: boolean;
   isOnRoof?: boolean;
   motorcycleStatus?: 'parked' | 'driving' | 'crashed';
+  alexNpc?: Rect;
 }
 
 /**
@@ -55,6 +56,7 @@ export function buildInteractables(
     ladderPlaced = false,
     isOnRoof = false,
     motorcycleStatus = 'parked',
+    alexNpc,
   } = options;
 
   if (isOnRoof) {
@@ -160,6 +162,16 @@ export function buildInteractables(
       bounds: { ...HOUSE_WEST_LADDER_SPOT },
       promptText: 'Climb ladder',
       dialogueLines: [],
+    });
+  }
+
+  if (alexNpc) {
+    list.push({
+      id: 'outside-alex',
+      bounds: { ...alexNpc },
+      promptText: 'Talk to Alex',
+      dialogueLines: ['Just practicing my swings...'],
+      speakerPortrait: 'Alex',
     });
   }
 
