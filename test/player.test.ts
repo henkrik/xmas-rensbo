@@ -1743,7 +1743,7 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(state2.activeDialogue?.speakerPortrait).toBe('Tanja');
   });
 
-  it('detects Santa in upstairs living room via Diana and Simon lines of sight', () => {
+  it('detects Santa in upstairs living room via Diana and Simon cones of sight', () => {
     // 1. Diana detection (looking south)
     const stateDiana = createGameState({
       initialLevelId: 'level-upstairs',
@@ -1752,7 +1752,7 @@ describe('Player walking & 2x Rensbo map layout', () => {
     const input = createEmptyInput();
     const upstairsDiana = stateDiana.levels['level-upstairs'] as LevelUpstairs;
 
-    const dianaBox = upstairsDiana.dianaLine.boxes[3];
+    const dianaBox = upstairsDiana.dianaCone.getAllBoxes()[3];
     stateDiana.player.x = dianaBox.x - 2;
     stateDiana.player.y = dianaBox.y - 2;
     updateGameState(stateDiana, input, 0.01);
@@ -1776,8 +1776,8 @@ describe('Player walking & 2x Rensbo map layout', () => {
     });
     const upstairsSimon = stateSimon.levels['level-upstairs'] as LevelUpstairs;
 
-    // In Simon's line of sight east of Diana's column (col 6, index 1)
-    const simonBox = upstairsSimon.simonLine.boxes[1];
+    // In Simon's cone of sight east of Diana's cone (e.g. line 2 center line, box 1: x=110, y=234)
+    const simonBox = upstairsSimon.simonCone.lines[2].boxes[1];
     stateSimon.player.x = simonBox.x - 2;
     stateSimon.player.y = simonBox.y - 2;
     updateGameState(stateSimon, input, 0.01);

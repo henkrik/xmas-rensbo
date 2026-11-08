@@ -1264,9 +1264,9 @@
       __publicField(this, "tanjaNpc", { ...UPSTAIRS_TANJA_NPC });
       __publicField(this, "tanjaCone");
       __publicField(this, "dianaNpc", { ...UPSTAIRS_DIANA_NPC });
-      __publicField(this, "dianaLine");
+      __publicField(this, "dianaCone");
       __publicField(this, "simonNpc", { ...UPSTAIRS_SIMON_NPC });
-      __publicField(this, "simonLine");
+      __publicField(this, "simonCone");
       __publicField(this, "anneMarieNpc", { ...UPSTAIRS_ANNE_MARIE_NPC });
       __publicField(this, "anneMarieAngle", -Math.PI / 2);
       // Facing north initially
@@ -1316,18 +1316,18 @@
         void 0,
         this.map
       );
-      this.dianaLine = new LineOfSight(
+      this.dianaCone = new ConeOfSight(
         { x: this.dianaNpc.x + TILE_SIZE / 2, y: this.dianaNpc.y + TILE_SIZE / 2 },
         Math.PI / 2,
         // south
-        120,
+        void 0,
         this.map
       );
-      this.simonLine = new LineOfSight(
+      this.simonCone = new ConeOfSight(
         { x: this.simonNpc.x + TILE_SIZE / 2, y: this.simonNpc.y + TILE_SIZE / 2 },
         Math.PI,
         // west
-        120,
+        void 0,
         this.map
       );
       this.anneMarieCone = new ConeOfSight(
@@ -1366,16 +1366,16 @@
         void 0,
         this.map
       );
-      this.dianaLine = new LineOfSight(
+      this.dianaCone = new ConeOfSight(
         { x: this.dianaNpc.x + TILE_SIZE / 2, y: this.dianaNpc.y + TILE_SIZE / 2 },
         Math.PI / 2,
-        120,
+        void 0,
         this.map
       );
-      this.simonLine = new LineOfSight(
+      this.simonCone = new ConeOfSight(
         { x: this.simonNpc.x + TILE_SIZE / 2, y: this.simonNpc.y + TILE_SIZE / 2 },
         Math.PI,
-        120,
+        void 0,
         this.map
       );
       this.anneMarieAngle = -Math.PI / 2;
@@ -1563,7 +1563,7 @@
           return;
         }
       }
-      if (this.dianaLine.checkDetection(player)) {
+      if (this.dianaCone.checkDetection(player)) {
         this.triggerDetection(
           ctx,
           player,
@@ -1572,7 +1572,7 @@
         );
         return;
       }
-      if (this.simonLine.checkDetection(player)) {
+      if (this.simonCone.checkDetection(player)) {
         this.triggerDetection(
           ctx,
           player,
@@ -2381,6 +2381,8 @@
       ctx.strokeStyle = "#ffff00";
       const cones = [
         upstairs.albinCone,
+        upstairs.dianaCone,
+        upstairs.simonCone,
         upstairs.henrikCone,
         upstairs.tanjaCone,
         upstairs.anneMarieCone
@@ -2388,19 +2390,6 @@
       for (const cone of cones) {
         if (cone) {
           for (const box of cone.getAllBoxes()) {
-            ctx.strokeRect(
-              Math.round(box.x) + 0.5,
-              Math.round(box.y) + 0.5,
-              box.width - 1,
-              box.height - 1
-            );
-          }
-        }
-      }
-      const lines = [upstairs.dianaLine, upstairs.simonLine];
-      for (const line of lines) {
-        if (line) {
-          for (const box of line.boxes) {
             ctx.strokeRect(
               Math.round(box.x) + 0.5,
               Math.round(box.y) + 0.5,
@@ -2671,6 +2660,8 @@
       );
       const upstairsCones = [
         upstairs.albinCone,
+        upstairs.dianaCone,
+        upstairs.simonCone,
         ...isTableRoomDoorOpen ? [upstairs.henrikCone, upstairs.tanjaCone] : [],
         ...isBedroomDoorOpen ? [upstairs.anneMarieCone] : []
       ];

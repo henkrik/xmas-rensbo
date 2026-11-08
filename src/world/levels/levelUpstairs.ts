@@ -1,6 +1,6 @@
 import { Cat, createCat } from '../../entities/cat';
 import { Direction, Player, Rect, rectsIntersect } from '../../entities/player';
-import { ConeOfSight, LineOfSight } from '../../entities/sight';
+import { ConeOfSight } from '../../entities/sight';
 import { Interactable } from '../interaction';
 import { MAP_COLS, MAP_ROWS, TILE_SIZE, TileMap, TileType } from '../tilemap';
 import { CollidableDoor, GameLevel, LevelId, LevelTransitionContext } from './types';
@@ -288,10 +288,10 @@ export class LevelUpstairs implements GameLevel {
   public tanjaCone: ConeOfSight;
 
   public readonly dianaNpc = { ...UPSTAIRS_DIANA_NPC };
-  public dianaLine: LineOfSight;
+  public dianaCone: ConeOfSight;
 
   public readonly simonNpc = { ...UPSTAIRS_SIMON_NPC };
-  public simonLine: LineOfSight;
+  public simonCone: ConeOfSight;
 
   public readonly anneMarieNpc = { ...UPSTAIRS_ANNE_MARIE_NPC };
   public anneMarieAngle: number = -Math.PI / 2; // Facing north initially
@@ -346,17 +346,17 @@ export class LevelUpstairs implements GameLevel {
       this.map
     );
 
-    this.dianaLine = new LineOfSight(
+    this.dianaCone = new ConeOfSight(
       { x: this.dianaNpc.x + TILE_SIZE / 2, y: this.dianaNpc.y + TILE_SIZE / 2 },
       Math.PI / 2, // south
-      120,
+      undefined,
       this.map
     );
 
-    this.simonLine = new LineOfSight(
+    this.simonCone = new ConeOfSight(
       { x: this.simonNpc.x + TILE_SIZE / 2, y: this.simonNpc.y + TILE_SIZE / 2 },
       Math.PI, // west
-      120,
+      undefined,
       this.map
     );
 
@@ -402,17 +402,17 @@ export class LevelUpstairs implements GameLevel {
       this.map
     );
 
-    this.dianaLine = new LineOfSight(
+    this.dianaCone = new ConeOfSight(
       { x: this.dianaNpc.x + TILE_SIZE / 2, y: this.dianaNpc.y + TILE_SIZE / 2 },
       Math.PI / 2,
-      120,
+      undefined,
       this.map
     );
 
-    this.simonLine = new LineOfSight(
+    this.simonCone = new ConeOfSight(
       { x: this.simonNpc.x + TILE_SIZE / 2, y: this.simonNpc.y + TILE_SIZE / 2 },
       Math.PI,
-      120,
+      undefined,
       this.map
     );
 
@@ -644,7 +644,7 @@ export class LevelUpstairs implements GameLevel {
     }
 
     // 3. Diana & Simon in living room
-    if (this.dianaLine.checkDetection(player)) {
+    if (this.dianaCone.checkDetection(player)) {
       this.triggerDetection(
         ctx,
         player,
@@ -654,7 +654,7 @@ export class LevelUpstairs implements GameLevel {
       return;
     }
 
-    if (this.simonLine.checkDetection(player)) {
+    if (this.simonCone.checkDetection(player)) {
       this.triggerDetection(
         ctx,
         player,

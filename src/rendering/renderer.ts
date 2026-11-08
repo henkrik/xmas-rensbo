@@ -940,6 +940,8 @@ function drawCollisionDebugOutlines(
     ctx.strokeStyle = '#ffff00';
     const cones = [
       upstairs.albinCone,
+      upstairs.dianaCone,
+      upstairs.simonCone,
       upstairs.henrikCone,
       upstairs.tanjaCone,
       upstairs.anneMarieCone,
@@ -947,19 +949,6 @@ function drawCollisionDebugOutlines(
     for (const cone of cones) {
       if (cone) {
         for (const box of cone.getAllBoxes()) {
-          ctx.strokeRect(
-            Math.round(box.x) + 0.5,
-            Math.round(box.y) + 0.5,
-            box.width - 1,
-            box.height - 1
-          );
-        }
-      }
-    }
-    const lines = [upstairs.dianaLine, upstairs.simonLine];
-    for (const line of lines) {
-      if (line) {
-        for (const box of line.boxes) {
           ctx.strokeRect(
             Math.round(box.x) + 0.5,
             Math.round(box.y) + 0.5,
@@ -1302,6 +1291,8 @@ export function renderGame(
 
     const upstairsCones = [
       upstairs.albinCone,
+      upstairs.dianaCone,
+      upstairs.simonCone,
       ...(isTableRoomDoorOpen ? [upstairs.henrikCone, upstairs.tanjaCone] : []),
       ...(isBedroomDoorOpen ? [upstairs.anneMarieCone] : []),
     ];
