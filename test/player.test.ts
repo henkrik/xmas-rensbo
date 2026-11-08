@@ -2241,4 +2241,47 @@ Tanja -> Alex
       'Ehm... this is awkward. An error occurred, gift receiver unknown.'
     );
   });
+
+  it('supports URL parameter ?giveUpSorry loading an unclosable dialog box with the gift receiver', () => {
+    const sampleContent = 'Alex -> Arjan\nHenrik -> Sylvester';
+    const alexPid = btoa('Alex');
+    const secretSantaDB = new SecretSantaDB(sampleContent, alexPid);
+
+    const state = createGameState({
+      giveUpSorry: true,
+      secretSantaDB,
+    });
+
+    expect(state.worldFadedToBlack).toBe(true);
+    expect(state.activeDialogue).not.toBeNull();
+    expect(state.activeDialogue?.unclosable).toBe(true);
+    expect(state.activeDialogue?.lines).toEqual([
+      "Give up huh? Don't feel bad... Your secret santa gift receiver is...",
+      'Arjan',
+    ]);
+    expect(state.activeDialogue?.currentIndex).toBe(0);
+
+    // Advance to final line
+    const input = createEmptyInput();
+    input.actionJustPressed = true;
+    updateGameState(state, input, 0.016);
+    expect(state.activeDialogue?.currentIndex).toBe(1);
+    expect(state.activeDialogue?.lines[1]).toBe('Arjan');
+
+    // Attempting to advance beyond final line must remain unclosable
+    input.actionJustPressed = true;
+    updateGameState(state, input, 0.016);
+    expect(state.activeDialogue).not.toBeNull();
+    expect(state.activeDialogue?.currentIndex).toBe(1);
+
+    // Test fallback when receiver is unknown
+    const dbUnknown = new SecretSantaDB(sampleContent, null);
+    const stateUnknown = createGameState({
+      giveUpSorry: true,
+      secretSantaDB: dbUnknown,
+    });
+    expect(stateUnknown.activeDialogue?.lines[1]).toBe(
+      'Ehm... this is awkward. An error occurred, gift receiver unknown.'
+    );
+  });
 });

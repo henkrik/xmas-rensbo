@@ -223,6 +223,7 @@ async function startGame(): Promise<void> {
 
   const isDebug = searchParams.has('debug');
   const isCheat = searchParams.has('cheat');
+  const isGiveUpSorry = searchParams.has('giveUpSorry');
 
   const state = createGameState({
     isMobile: isMobileDevice,
@@ -230,6 +231,7 @@ async function startGame(): Promise<void> {
     initialLevelId,
     debug: isDebug,
     cheat: isCheat,
+    giveUpSorry: isGiveUpSorry,
     secretSantaDB,
   });
   state.joystickActive = isMobileDevice;

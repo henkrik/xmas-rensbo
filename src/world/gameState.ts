@@ -174,6 +174,7 @@ export interface CreateGameStateOptions {
   initialLevelId?: LevelId;
   debug?: boolean;
   cheat?: boolean;
+  giveUpSorry?: boolean;
   secretSantaDB?: SecretSantaDB | null;
 }
 
@@ -237,6 +238,7 @@ export function createGameState(
   let initialLevelId: LevelId = 'level-outside';
   let debugMode = false;
   let cheatMode = false;
+  let giveUpSorry = false;
   let secretSantaDB: SecretSantaDB | null = null;
 
   if (mapOrOptions && 'cols' in mapOrOptions && 'rows' in mapOrOptions) {
@@ -256,6 +258,9 @@ export function createGameState(
     }
     if (opts.cheat !== undefined) {
       cheatMode = opts.cheat;
+    }
+    if (opts.giveUpSorry !== undefined) {
+      giveUpSorry = opts.giveUpSorry;
     }
     if (opts.secretSantaDB !== undefined) {
       secretSantaDB = opts.secretSantaDB;
@@ -280,6 +285,30 @@ export function createGameState(
   const activeLevel = levels[initialLevelId];
   activeLevel.enter(player);
 
+  let activeDialogue: DialogueState | null = null;
+  let worldFadedToBlack = false;
+
+  if (giveUpSorry) {
+    worldFadedToBlack = true;
+    const playerName = secretSantaDB?.playerName;
+    const receiver =
+      playerName && secretSantaDB
+        ? secretSantaDB.getGiftReceiverOf(playerName)
+        : undefined;
+    const finalLine =
+      receiver ?? 'Ehm... this is awkward. An error occurred, gift receiver unknown.';
+    activeDialogue = {
+      lines: [
+        "Give up huh? Don't feel bad... Your secret santa gift receiver is...",
+        finalLine,
+      ],
+      currentIndex: 0,
+      unclosable: true,
+    };
+  } else if (showIntroDialogue) {
+    activeDialogue = createIntroDialogue(isMobile);
+  }
+
   const state: GameState = {
     currentLevelId: initialLevelId,
     levels,
@@ -298,11 +327,11 @@ export function createGameState(
     joystickActive: false,
     interactables: activeLevel.getInteractables(player),
     nearbyInteractable: null,
-    activeDialogue: showIntroDialogue ? createIntroDialogue(isMobile) : null,
+    activeDialogue,
     elapsedTime: 0,
     debugMode,
     cheatMode,
-    worldFadedToBlack: false,
+    worldFadedToBlack,
     secretSantaDB,
   };
 

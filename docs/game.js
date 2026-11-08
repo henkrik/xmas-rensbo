@@ -4121,6 +4121,7 @@
     let initialLevelId = "level-outside";
     let debugMode = false;
     let cheatMode = false;
+    let giveUpSorry = false;
     let secretSantaDB = null;
     if (mapOrOptions && "cols" in mapOrOptions && "rows" in mapOrOptions) {
       map = mapOrOptions;
@@ -4140,6 +4141,9 @@
       if (opts.cheat !== void 0) {
         cheatMode = opts.cheat;
       }
+      if (opts.giveUpSorry !== void 0) {
+        giveUpSorry = opts.giveUpSorry;
+      }
       if (opts.secretSantaDB !== void 0) {
         secretSantaDB = opts.secretSantaDB;
       }
@@ -4158,6 +4162,24 @@
     };
     const activeLevel = levels[initialLevelId];
     activeLevel.enter(player);
+    let activeDialogue = null;
+    let worldFadedToBlack = false;
+    if (giveUpSorry) {
+      worldFadedToBlack = true;
+      const playerName = secretSantaDB?.playerName;
+      const receiver = playerName && secretSantaDB ? secretSantaDB.getGiftReceiverOf(playerName) : void 0;
+      const finalLine = receiver ?? "Ehm... this is awkward. An error occurred, gift receiver unknown.";
+      activeDialogue = {
+        lines: [
+          "Give up huh? Don't feel bad... Your secret santa gift receiver is...",
+          finalLine
+        ],
+        currentIndex: 0,
+        unclosable: true
+      };
+    } else if (showIntroDialogue) {
+      activeDialogue = createIntroDialogue(isMobile);
+    }
     const state = {
       currentLevelId: initialLevelId,
       levels,
@@ -4176,11 +4198,11 @@
       joystickActive: false,
       interactables: activeLevel.getInteractables(player),
       nearbyInteractable: null,
-      activeDialogue: showIntroDialogue ? createIntroDialogue(isMobile) : null,
+      activeDialogue,
       elapsedTime: 0,
       debugMode,
       cheatMode,
-      worldFadedToBlack: false,
+      worldFadedToBlack,
       secretSantaDB
     };
     debugLog(`Loaded level: ${initialLevelId}`);
@@ -4651,12 +4673,14 @@
     const hasLevelOverride = searchParams.has("level");
     const isDebug = searchParams.has("debug");
     const isCheat = searchParams.has("cheat");
+    const isGiveUpSorry = searchParams.has("giveUpSorry");
     const state = createGameState({
       isMobile: isMobileDevice,
       showIntroDialogue: !hasLevelOverride,
       initialLevelId,
       debug: isDebug,
       cheat: isCheat,
+      giveUpSorry: isGiveUpSorry,
       secretSantaDB
     });
     state.joystickActive = isMobileDevice;
