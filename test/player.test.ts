@@ -929,7 +929,8 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(bedroomDoor.hiddenRegions[0]).toEqual(UPSTAIRS_BEDROOM_HIDDEN_MASK);
 
     // Table Room fog-of-war:
-    // Does not cover 2 northernmost tiles of west wall (rows 15..16) or 3 northernmost tiles of east wall (rows 15..17)
+    // West wall fog starts at row 18 (row 17 west corner uncovered)
+    // East wall fog starts at row 19 (row 18 east corner uncovered)
     const tableRoomDoor = upstairs.doors.find((d) => d.id === 'upstairs-table-room-door')!;
     expect(tableRoomDoor.hiddenRegions).toEqual(UPSTAIRS_TABLE_ROOM_HIDDEN_MASKS);
     expect(tableRoomDoor.hiddenRegions.length).toBe(3);
