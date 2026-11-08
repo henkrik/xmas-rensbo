@@ -6,6 +6,7 @@ import {
   EXTRA_ROOM_BOUNDS,
 } from '../src/entities/cat';
 import { debugConsole, debugLog } from '../src/core/debugConsole';
+import { SecretSantaDB, initSecretSantaDB } from '../src/core/secretSantaDB';
 import {
   applyKeyEvent,
   computeViewportLayout,
@@ -2046,5 +2047,46 @@ describe('Player walking & 2x Rensbo map layout', () => {
     state.player.y = 248;
     updateGameState(state, input, 0.01);
     expect(state.activeDialogue).toBeNull();
+  });
+
+  it('populates SecretSantaDB from secret.txt format, provides getters, and debug logs entries', async () => {
+    debugConsole.clear();
+
+    const sampleContent = `
+Alex -> Arjan
+Anne Marie -> Annelotte
+Annelotte -> Olexa
+Arjan -> Hanneloes
+Hanneloes -> Anne Marie
+Henrik -> Sylvester
+Olexa -> Henrik
+Sylvester -> Tanja
+Tanja -> Alex
+`;
+
+    const db: SecretSantaDB = await initSecretSantaDB(sampleContent);
+
+    expect(db.giftGivers).toEqual([
+      'Alex',
+      'Anne Marie',
+      'Annelotte',
+      'Arjan',
+      'Hanneloes',
+      'Henrik',
+      'Olexa',
+      'Sylvester',
+      'Tanja',
+    ]);
+
+    expect(db.getGiftReceiverOf('Alex')).toBe('Arjan');
+    expect(db.getGiftReceiverOf('Anne Marie')).toBe('Annelotte');
+    expect(db.getGiftReceiverOf('Henrik')).toBe('Sylvester');
+    expect(db.getGiftReceiverOf('Tanja')).toBe('Alex');
+    expect(db.getGiftReceiverOf('Unknown')).toBeUndefined();
+
+    const logs = debugConsole.getLines();
+    expect(logs).toContain('Secret Santa: Alex -> Arjan');
+    expect(logs).toContain('Secret Santa: Henrik -> Sylvester');
+    expect(logs).toContain('Secret Santa: Tanja -> Alex');
   });
 });

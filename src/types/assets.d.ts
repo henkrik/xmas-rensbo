@@ -28,3 +28,8 @@ declare module '*.wav' {
   export default src;
 }
 
+declare module '*.txt' {
+  const content: string;
+  export default content;
+}
+

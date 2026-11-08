@@ -7,6 +7,8 @@ import {
   createVirtualJoystick,
 } from './core/input';
 import { attachDebugConsole } from './core/debugConsole';
+import { initSecretSantaDB } from './core/secretSantaDB';
+import secretText from '../inspiration/secret.txt';
 import { computeCamera, renderGame } from './rendering/renderer';
 import {
   createGameState,
@@ -204,6 +206,9 @@ async function startGame(): Promise<void> {
   if (new URLSearchParams(window.location.search).has('debug')) {
     attachDebugConsole(document.getElementById('viewport-frame'));
   }
+
+  // Initialize SecretSantaDB and debug log giver/receiver mappings
+  await initSecretSantaDB(secretText);
 
   attachKeyboardListeners(window, input, {
     onToggleJoystick: () => {

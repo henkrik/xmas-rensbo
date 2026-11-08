@@ -434,6 +434,74 @@
     globalThis.debugLog = debugLog;
   }
 
+  // src/core/secretSantaDB.ts
+  var SecretSantaDB = class {
+    constructor(content) {
+      __publicField(this, "giverToReceiver", /* @__PURE__ */ new Map());
+      if (content) {
+        this.loadFromText(content);
+      }
+    }
+    /**
+     * Parses non-empty lines formatted as "Name1 -> Name2" and populates the map.
+     */
+    loadFromText(content) {
+      this.giverToReceiver.clear();
+      const lines = content.split(/\r?\n/);
+      for (const rawLine of lines) {
+        const line = rawLine.trim();
+        if (!line) continue;
+        const parts = line.split("->");
+        if (parts.length === 2) {
+          const giftGiver = parts[0].trim();
+          const giftReceiver = parts[1].trim();
+          if (giftGiver && giftReceiver) {
+            this.giverToReceiver.set(giftGiver, giftReceiver);
+          }
+        }
+      }
+    }
+    /**
+     * Returns a list of all gift givers in insertion order.
+     */
+    get giftGivers() {
+      return Array.from(this.giverToReceiver.keys());
+    }
+    /**
+     * Looks up the gift receiver for a given gift giver name.
+     */
+    getGiftReceiverOf(giftGiver) {
+      return this.giverToReceiver.get(giftGiver);
+    }
+    /**
+     * Debug logs each gift giver's name and who they give presents to according to this map.
+     */
+    debugLogAll() {
+      for (const giver of this.giftGivers) {
+        const receiver = this.getGiftReceiverOf(giver);
+        debugLog(`Secret Santa: ${giver} -> ${receiver}`);
+      }
+    }
+  };
+  async function initSecretSantaDB(initialContent) {
+    let content = initialContent;
+    if (content === void 0 && typeof fetch === "function") {
+      try {
+        const res = await fetch("./secret.txt");
+        if (res.ok) {
+          content = await res.text();
+        }
+      } catch {
+      }
+    }
+    const db = new SecretSantaDB(content);
+    db.debugLogAll();
+    return db;
+  }
+
+  // inspiration/secret.txt
+  var secret_default = "Alex -> Arjan\nAnne Marie -> Annelotte\nAnnelotte -> Olexa\nArjan -> Hanneloes\nHanneloes -> Anne Marie\nHenrik -> Sylvester\nOlexa -> Henrik\nSylvester -> Tanja\nTanja -> Alex\nFoo -> Bar\nTesting -> Banana\n";
+
   // src/world/tilemap.ts
   var TILE_SIZE = 16;
   var MAP_COLS = 32;
@@ -4465,6 +4533,7 @@
     if (new URLSearchParams(window.location.search).has("debug")) {
       attachDebugConsole(document.getElementById("viewport-frame"));
     }
+    await initSecretSantaDB(secret_default);
     attachKeyboardListeners(window, input, {
       onToggleJoystick: () => {
         joystick?.toggle();

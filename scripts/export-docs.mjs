@@ -42,6 +42,14 @@ fs.copyFileSync(
   path.join(docsDir, 'style.css')
 );
 
+// 3b. Copy inspiration/secret.txt to docs/secret.txt
+if (fs.existsSync(path.join(rootDir, 'inspiration/secret.txt'))) {
+  fs.copyFileSync(
+    path.join(rootDir, 'inspiration/secret.txt'),
+    path.join(docsDir, 'secret.txt')
+  );
+}
+
 // 4. Bundle TypeScript + inline Base64 PNG assets into a single vanilla IIFE docs/game.js
 await esbuild.build({
   entryPoints: [path.join(rootDir, 'src/main.ts')],
@@ -57,10 +65,11 @@ await esbuild.build({
     '.mp3': 'dataurl',
     '.wav': 'dataurl',
     '.ogg': 'dataurl',
+    '.txt': 'text',
   },
 });
 
-for (const file of ['index.html', 'style.css', 'game.js']) {
+for (const file of ['index.html', 'style.css', 'secret.txt', 'game.js']) {
   const stats = fs.statSync(path.join(docsDir, file));
   const kb = (stats.size / 1024).toFixed(2);
   console.log(`Generated docs/${file} (${kb} KB)`);
