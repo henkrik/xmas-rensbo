@@ -1258,6 +1258,20 @@
       state.player.width - 1,
       state.player.height - 1
     );
+    if (state.currentLevelId === "level-basement") {
+      const basement = state.levels["level-basement"];
+      if (basement.coneOfSight) {
+        ctx.strokeStyle = "#ffff00";
+        for (const box of basement.coneOfSight.getAllBoxes()) {
+          ctx.strokeRect(
+            Math.round(box.x) + 0.5,
+            Math.round(box.y) + 0.5,
+            box.width - 1,
+            box.height - 1
+          );
+        }
+      }
+    }
     ctx.restore();
   }
   function renderGame(ctx, state, assets) {
@@ -2088,6 +2102,128 @@
     return closest;
   }
 
+  // src/entities/sight.ts
+  var LineOfSight = class {
+    constructor(position, direction, distance) {
+      __publicField(this, "position");
+      __publicField(this, "direction");
+      // in radians or degrees? We support radians, but can handle angle
+      __publicField(this, "distance");
+      __publicField(this, "boxes", []);
+      __publicField(this, "callbacks", []);
+      this.position = { ...position };
+      this.direction = direction;
+      this.distance = distance;
+      this.recomputeBoxes();
+    }
+    onDetection(cb) {
+      this.callbacks.push(cb);
+      return () => {
+        const idx = this.callbacks.indexOf(cb);
+        if (idx !== -1) {
+          this.callbacks.splice(idx, 1);
+        }
+      };
+    }
+    recomputeBoxes() {
+      this.boxes = [];
+      const dirX = Math.cos(this.direction);
+      const dirY = Math.sin(this.direction);
+      const distanceVector = {
+        x: dirX * this.distance,
+        y: dirY * this.distance
+      };
+      for (let i = 0; i < 10; i++) {
+        const px = this.position.x + distanceVector.x / 10 * i;
+        const py = this.position.y + distanceVector.y / 10 * i;
+        this.boxes.push({
+          x: px,
+          y: py,
+          width: 4,
+          height: 4
+        });
+      }
+    }
+    checkDetection(player) {
+      for (const box of this.boxes) {
+        if (rectsIntersect(player, box)) {
+          for (const cb of this.callbacks) {
+            cb(player);
+          }
+          return true;
+        }
+      }
+      return false;
+    }
+  };
+  var ConeOfSight = class {
+    constructor(position, direction, distance, fieldOfView = 45 * Math.PI / 180) {
+      __publicField(this, "position");
+      __publicField(this, "direction");
+      __publicField(this, "distance");
+      __publicField(this, "fieldOfView");
+      __publicField(this, "lines", []);
+      __publicField(this, "callbacks", []);
+      this.position = { ...position };
+      this.direction = direction;
+      this.distance = distance;
+      this.fieldOfView = fieldOfView;
+      this.recomputeLines();
+    }
+    onDetection(cb) {
+      this.callbacks.push(cb);
+      return () => {
+        const idx = this.callbacks.indexOf(cb);
+        if (idx !== -1) {
+          this.callbacks.splice(idx, 1);
+        }
+      };
+    }
+    recomputeLines() {
+      const forwardLine = new LineOfSight(
+        this.position,
+        this.direction,
+        this.distance
+      );
+      const plusLine = new LineOfSight(
+        this.position,
+        this.direction + this.fieldOfView / 2,
+        this.distance
+      );
+      const minusLine = new LineOfSight(
+        this.position,
+        this.direction - this.fieldOfView / 2,
+        this.distance
+      );
+      this.lines = [forwardLine, plusLine, minusLine];
+      for (const line of this.lines) {
+        line.onDetection((_player) => {
+        });
+      }
+    }
+    getAllBoxes() {
+      const all = [];
+      for (const line of this.lines) {
+        all.push(...line.boxes);
+      }
+      return all;
+    }
+    checkDetection(player) {
+      let detected = false;
+      for (const line of this.lines) {
+        if (line.checkDetection(player)) {
+          detected = true;
+        }
+      }
+      if (detected) {
+        for (const cb of this.callbacks) {
+          cb(player);
+        }
+      }
+      return detected;
+    }
+  };
+
   // src/world/levels/levelBasement.ts
   var V = 20 /* VoidBlack */;
   var W = 21 /* InteriorWall */;
@@ -2225,6 +2361,11 @@
       __publicField(this, "windowNpc", { ...BASEMENT_WINDOW_NPC });
       __publicField(this, "toiletNpc", { ...BASEMENT_TOILET_NPC });
       __publicField(this, "toiletCutscene", null);
+      __publicField(this, "coneOfSight");
+      __publicField(this, "npcSightAngle", -Math.PI / 2);
+      // North is -90 degrees in screen Y coordinates
+      __publicField(this, "npcSightTimer", 0);
+      __publicField(this, "intruderDetected", false);
       this.doors = [
         {
           id: "basement-bathroom-door",
@@ -2232,6 +2373,12 @@
           hiddenRegions: [{ ...BASEMENT_BATHROOM_HIDDEN_MASK }]
         }
       ];
+      this.coneOfSight = new ConeOfSight(
+        { x: this.windowNpc.x, y: this.windowNpc.y },
+        this.npcSightAngle,
+        5 * TILE_SIZE,
+        45 * Math.PI / 180
+      );
     }
     enter(player) {
       const hasUsedStairs = Boolean(player.states.get(USED_STAIRS_STATE_KEY));
@@ -2246,6 +2393,15 @@
       }
       player.isMoving = false;
       player.walkTimer = 0;
+      this.npcSightAngle = -Math.PI / 2;
+      this.npcSightTimer = 0;
+      this.intruderDetected = false;
+      this.coneOfSight = new ConeOfSight(
+        { x: this.windowNpc.x, y: this.windowNpc.y },
+        this.npcSightAngle,
+        5 * TILE_SIZE,
+        45 * Math.PI / 180
+      );
     }
     getSolidObstacles() {
       return [
@@ -2310,6 +2466,31 @@
         active: true,
         timer: 0
       };
+    }
+    updateNpcSight(dtSeconds, player, ctx) {
+      if (this.intruderDetected) {
+        return;
+      }
+      this.npcSightTimer += dtSeconds;
+      if (this.npcSightTimer >= 2) {
+        this.npcSightTimer -= 2;
+        this.npcSightAngle += Math.PI / 4;
+        this.coneOfSight = new ConeOfSight(
+          { x: this.windowNpc.x, y: this.windowNpc.y },
+          this.npcSightAngle,
+          5 * TILE_SIZE,
+          45 * Math.PI / 180
+        );
+      }
+      const detected = this.coneOfSight.checkDetection(player);
+      if (detected) {
+        this.intruderDetected = true;
+        player.isMoving = false;
+        ctx.openDialogue(["Intruder!!!"], () => {
+          ctx.loadLevel("level-basement");
+          player.blinkTimer = 2;
+        });
+      }
     }
     updateCutscene(dtSeconds, player, ctx) {
       if (!this.toiletCutscene?.active) {
@@ -3085,6 +3266,11 @@
         basement.map,
         basement.getSolidObstacles()
       );
+      basement.updateNpcSight(dtSeconds, state.player, transitionCtx);
+      if (state.activeDialogue) {
+        refreshInteractables(state);
+        return;
+      }
     } else if (state.currentLevelId === "level-upstairs") {
       const upstairs = state.levels["level-upstairs"];
       const movementLocked = upstairs.updateCutscene(

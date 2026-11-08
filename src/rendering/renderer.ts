@@ -844,6 +844,22 @@ function drawCollisionDebugOutlines(
     state.player.height - 1
   );
 
+  // 4. Line of Sight / Cone of Sight bounding boxes rendered in yellow
+  if (state.currentLevelId === 'level-basement') {
+    const basement = state.levels['level-basement'];
+    if (basement.coneOfSight) {
+      ctx.strokeStyle = '#ffff00';
+      for (const box of basement.coneOfSight.getAllBoxes()) {
+        ctx.strokeRect(
+          Math.round(box.x) + 0.5,
+          Math.round(box.y) + 0.5,
+          box.width - 1,
+          box.height - 1
+        );
+      }
+    }
+  }
+
   ctx.restore();
 }
 

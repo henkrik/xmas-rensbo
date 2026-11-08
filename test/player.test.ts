@@ -23,6 +23,7 @@ import {
   FOOTPRINT_DURATION_SECONDS,
   updatePlayer,
 } from '../src/entities/player';
+import { ConeOfSight, LineOfSight } from '../src/entities/sight';
 import { HIT_BLINK_DURATION_SECONDS } from '../src/entities/snowball';
 import { drawPixelText, measurePixelText } from '../src/rendering/pixelFont';
 import { wrapTextLines } from '../src/rendering/renderer';
@@ -1334,5 +1335,106 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(cat.mode).toBe('flee');
     expect(cat.vx).not.toBe(0);
     expect(debugConsole.getLines()).toContain('Cat state changed: standing -> flee');
+  });
+
+  it('calculates LineOfSight and ConeOfSight bounding boxes and triggers detection callbacks', () => {
+    // 1. LineOfSight unit test:
+    // Starts at (100, 100), facing east (direction = 0), distance = 50
+    const los = new LineOfSight({ x: 100, y: 100 }, 0, 50);
+    expect(los.boxes.length).toBe(10);
+    for (let i = 0; i < 10; i++) {
+      expect(los.boxes[i].x).toBeCloseTo(100 + (50 / 10) * i);
+      expect(los.boxes[i].y).toBeCloseTo(100);
+      expect(los.boxes[i].width).toBe(4);
+      expect(los.boxes[i].height).toBe(4);
+    }
+
+    let losDetectedCount = 0;
+    const unsubLos = los.onDetection(() => {
+      losDetectedCount++;
+    });
+
+    const player = createPlayer(0, 0);
+    // Player far away -> no detection
+    player.x = 20;
+    player.y = 20;
+    expect(los.checkDetection(player)).toBe(false);
+    expect(losDetectedCount).toBe(0);
+
+    // Player collides with box 4 at x = 120, y = 100
+    player.x = 118;
+    player.y = 98;
+    expect(los.checkDetection(player)).toBe(true);
+    expect(losDetectedCount).toBe(1);
+
+    // Unsubscribe
+    unsubLos();
+    expect(los.checkDetection(player)).toBe(true);
+    expect(losDetectedCount).toBe(1);
+
+    // 2. ConeOfSight unit test:
+    // 3 lines: forward, direction + fov/2, direction - fov/2
+    const fov = (60 * Math.PI) / 180;
+    const cone = new ConeOfSight({ x: 200, y: 200 }, 0, 60, fov);
+    expect(cone.lines.length).toBe(3);
+    expect(cone.getAllBoxes().length).toBe(30);
+
+    let coneDetectedCount = 0;
+    cone.onDetection(() => {
+      coneDetectedCount++;
+    });
+
+    // Player far away
+    player.x = 0;
+    player.y = 0;
+    expect(cone.checkDetection(player)).toBe(false);
+    expect(coneDetectedCount).toBe(0);
+
+    // Player inside +fov/2 line at 30 degrees
+    const boxOnPlusLine = cone.lines[1].boxes[5];
+    player.x = boxOnPlusLine.x;
+    player.y = boxOnPlusLine.y;
+    expect(cone.checkDetection(player)).toBe(true);
+    expect(coneDetectedCount).toBe(1);
+  });
+
+  it('rotates the basement window NPC cone of sight and damages Santa upon detection with "Intruder!!!" dialogue', () => {
+    const state = createGameState({ initialLevelId: 'level-basement' });
+    const input = createEmptyInput();
+    const basement = state.levels['level-basement'];
+
+    // 1. Initially looking north (-Math.PI / 2 radians, or 90 degrees absolute)
+    expect(basement.npcSightAngle).toBeCloseTo(-Math.PI / 2);
+    expect(basement.coneOfSight.distance).toBe(5 * 16);
+    expect(basement.coneOfSight.getAllBoxes().length).toBe(30);
+
+    // Every 2 seconds it deletes old cone of sight and spawns new one +45 degrees
+    updateGameState(state, input, 1.0);
+    expect(basement.npcSightAngle).toBeCloseTo(-Math.PI / 2);
+
+    updateGameState(state, input, 1.1); // total 2.1s
+    expect(basement.npcSightAngle).toBeCloseTo(-Math.PI / 2 + Math.PI / 4);
+
+    updateGameState(state, input, 2.0); // total 4.1s
+    expect(basement.npcSightAngle).toBeCloseTo(-Math.PI / 2 + (2 * Math.PI) / 4);
+
+    // 2. Test player detection: place Santa in the NPC's cone of sight
+    const targetBox = basement.coneOfSight.getAllBoxes()[5];
+    state.player.x = targetBox.x - 2;
+    state.player.y = targetBox.y - 2;
+    updateGameState(state, input, 0.01);
+
+    expect(state.activeDialogue).not.toBeNull();
+    expect(state.activeDialogue?.lines[0]).toBe('Intruder!!!');
+    expect(basement.intruderDetected).toBe(true);
+
+    // 3. Closing the dialogue triggers player damage (reloads level-basement and starts blinking)
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+
+    expect(state.activeDialogue).toBeNull();
+    expect(state.currentLevelId).toBe('level-basement');
+    expect(state.player.blinkTimer).toBeGreaterThan(0);
   });
 });

@@ -1,4 +1,5 @@
 import { Direction, Player, Rect } from '../../entities/player';
+import { ConeOfSight } from '../../entities/sight';
 import { Interactable } from '../interaction';
 import { MAP_COLS, MAP_ROWS, TILE_SIZE, TileMap, TileType } from '../tilemap';
 import { CollidableDoor, GameLevel, LevelId, LevelTransitionContext } from './types';
@@ -154,6 +155,10 @@ export class LevelBasement implements GameLevel {
   public readonly windowNpc = { ...BASEMENT_WINDOW_NPC };
   public readonly toiletNpc = { ...BASEMENT_TOILET_NPC };
   public toiletCutscene: ToiletCutsceneState | null = null;
+  public coneOfSight: ConeOfSight;
+  public npcSightAngle: number = -Math.PI / 2; // North is -90 degrees in screen Y coordinates
+  public npcSightTimer: number = 0;
+  public intruderDetected: boolean = false;
 
   constructor() {
     this.doors = [
@@ -163,6 +168,12 @@ export class LevelBasement implements GameLevel {
         hiddenRegions: [{ ...BASEMENT_BATHROOM_HIDDEN_MASK }],
       },
     ];
+    this.coneOfSight = new ConeOfSight(
+      { x: this.windowNpc.x, y: this.windowNpc.y },
+      this.npcSightAngle,
+      5 * TILE_SIZE,
+      (45 * Math.PI) / 180
+    );
   }
 
   public enter(player: Player): void {
@@ -178,6 +189,17 @@ export class LevelBasement implements GameLevel {
     }
     player.isMoving = false;
     player.walkTimer = 0;
+
+    // Reset NPC sight to looking north
+    this.npcSightAngle = -Math.PI / 2;
+    this.npcSightTimer = 0;
+    this.intruderDetected = false;
+    this.coneOfSight = new ConeOfSight(
+      { x: this.windowNpc.x, y: this.windowNpc.y },
+      this.npcSightAngle,
+      5 * TILE_SIZE,
+      (45 * Math.PI) / 180
+    );
   }
 
   public getSolidObstacles(): readonly Rect[] {
@@ -254,6 +276,41 @@ export class LevelBasement implements GameLevel {
       active: true,
       timer: 0,
     };
+  }
+
+  public updateNpcSight(
+    dtSeconds: number,
+    player: Player,
+    ctx: LevelTransitionContext
+  ): void {
+    if (this.intruderDetected) {
+      return;
+    }
+
+    this.npcSightTimer += dtSeconds;
+    if (this.npcSightTimer >= 2.0) {
+      this.npcSightTimer -= 2.0;
+      // Spawn new cone of sight that is +45 degrees from where the NPC was looking previously
+      this.npcSightAngle += Math.PI / 4;
+      this.coneOfSight = new ConeOfSight(
+        { x: this.windowNpc.x, y: this.windowNpc.y },
+        this.npcSightAngle,
+        5 * TILE_SIZE,
+        (45 * Math.PI) / 180
+      );
+    }
+
+    // Check if player is detected in cone of sight
+    const detected = this.coneOfSight.checkDetection(player);
+    if (detected) {
+      this.intruderDetected = true;
+      player.isMoving = false;
+      ctx.openDialogue(['Intruder!!!'], () => {
+        // Player takes damage: reload current level, make Santa blink
+        ctx.loadLevel('level-basement');
+        player.blinkTimer = 2.0; // HIT_BLINK_DURATION_SECONDS
+      });
+    }
   }
 
   public updateCutscene(

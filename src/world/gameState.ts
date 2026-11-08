@@ -553,6 +553,11 @@ export function updateGameState(
       basement.map,
       basement.getSolidObstacles()
     );
+    basement.updateNpcSight(dtSeconds, state.player, transitionCtx);
+    if (state.activeDialogue) {
+      refreshInteractables(state);
+      return;
+    }
   } else if (state.currentLevelId === 'level-upstairs') {
     const upstairs = state.levels['level-upstairs'];
     // Check if the Kitchen Rosanna cutscene is active or just triggered
