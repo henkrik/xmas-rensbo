@@ -606,6 +606,12 @@ export function updateGameState(
       refreshInteractables(state);
       return;
     }
+    // Update Upstairs NPCs sight detection
+    upstairs.updateNpcSight(dtSeconds, state.player, transitionCtx);
+    if (state.activeDialogue) {
+      refreshInteractables(state);
+      return;
+    }
   } else if (state.currentLevelId === 'level-people') {
     const peopleLevel = state.levels['level-people'];
     updatePlayer(

@@ -13,6 +13,7 @@ PEOPLE = [
     'Simon',
     'Sylvester',
     'Tanja',
+    'Arjan',
 ]
 
 def generate_portraits():

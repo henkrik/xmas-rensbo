@@ -3,6 +3,7 @@ import { Cat } from '../entities/cat';
 import { Dog } from '../entities/dog';
 import { Direction, Footprint, Rect } from '../entities/player';
 import { GameState, MotorcycleState } from '../world/gameState';
+import { UPSTAIRS_ALBIN_X } from '../world/levels/levelUpstairs';
 import { CollidableDoor } from '../world/levels/types';
 import {
   DAMAGED_WIRE_HAZARD,
@@ -133,6 +134,7 @@ const PORTRAIT_ORDER = [
   'simon',
   'sylvester',
   'tanja',
+  'arjan',
 ];
 
 function drawPortrait(
@@ -774,41 +776,6 @@ function drawClosedDoorAndHiddenMask(
   ctx.fillRect(x + width - 5, y + Math.floor(height / 2), 2, 2);
 }
 
-function drawWindowGazingNpc(
-  ctx: CanvasRenderingContext2D,
-  npcBounds: Rect
-): void {
-  const x = Math.round(npcBounds.x - 2);
-  const y = Math.round(npcBounds.y - 4);
-
-  // Soft floor shadow
-  ctx.fillStyle = 'rgba(12, 10, 16, 0.4)';
-  ctx.fillRect(x + 3, y + 13, 10, 3);
-
-  // Character standing facing south (looking out the big south window)
-  // Dark outline & hair
-  ctx.fillStyle = '#181420';
-  ctx.fillRect(x + 4, y + 1, 8, 6);
-  ctx.fillStyle = '#583822'; // Warm brown hair
-  ctx.fillRect(x + 5, y + 2, 6, 4);
-
-  // Cozy winter sweater (forest green with cream collar)
-  ctx.fillStyle = '#181420';
-  ctx.fillRect(x + 3, y + 7, 10, 5);
-  ctx.fillStyle = '#e8e2d5';
-  ctx.fillRect(x + 5, y + 7, 6, 1);
-  ctx.fillStyle = '#2e7d52';
-  ctx.fillRect(x + 4, y + 8, 8, 3);
-
-  // Trousers & boots
-  ctx.fillStyle = '#2c3e5a';
-  ctx.fillRect(x + 4, y + 11, 3, 3);
-  ctx.fillRect(x + 9, y + 11, 3, 3);
-  ctx.fillStyle = '#181420';
-  ctx.fillRect(x + 4, y + 14, 3, 1);
-  ctx.fillRect(x + 9, y + 14, 3, 1);
-}
-
 function drawToiletNpc(
   ctx: CanvasRenderingContext2D,
   npcBounds: Rect
@@ -947,8 +914,8 @@ function drawCollisionDebugOutlines(
   // 4. Line of Sight / Cone of Sight bounding boxes rendered in yellow
   if (state.currentLevelId === 'level-basement') {
     const basement = state.levels['level-basement'];
+    ctx.strokeStyle = '#ffff00';
     if (basement.coneOfSight) {
-      ctx.strokeStyle = '#ffff00';
       for (const box of basement.coneOfSight.getAllBoxes()) {
         ctx.strokeRect(
           Math.round(box.x) + 0.5,
@@ -956,6 +923,50 @@ function drawCollisionDebugOutlines(
           box.width - 1,
           box.height - 1
         );
+      }
+    }
+    if (basement.olexaConeOfSight) {
+      for (const box of basement.olexaConeOfSight.getAllBoxes()) {
+        ctx.strokeRect(
+          Math.round(box.x) + 0.5,
+          Math.round(box.y) + 0.5,
+          box.width - 1,
+          box.height - 1
+        );
+      }
+    }
+  } else if (state.currentLevelId === 'level-upstairs') {
+    const upstairs = state.levels['level-upstairs'];
+    ctx.strokeStyle = '#ffff00';
+    const cones = [
+      upstairs.albinCone,
+      upstairs.henrikCone,
+      upstairs.tanjaCone,
+      upstairs.anneMarieCone,
+    ];
+    for (const cone of cones) {
+      if (cone) {
+        for (const box of cone.getAllBoxes()) {
+          ctx.strokeRect(
+            Math.round(box.x) + 0.5,
+            Math.round(box.y) + 0.5,
+            box.width - 1,
+            box.height - 1
+          );
+        }
+      }
+    }
+    const lines = [upstairs.dianaLine, upstairs.simonLine];
+    for (const line of lines) {
+      if (line) {
+        for (const box of line.boxes) {
+          ctx.strokeRect(
+            Math.round(box.x) + 0.5,
+            Math.round(box.y) + 0.5,
+            box.width - 1,
+            box.height - 1
+          );
+        }
       }
     }
   }
@@ -1122,25 +1133,43 @@ export function renderGame(
     // Animated warm fire inside the library fireplace
     drawFireplaceAnimation(ctx, elapsedTime);
 
-    // Character standing by the extra big south windows in the basement living room
-    drawWindowGazingNpc(ctx, basement.windowNpc);
+    // Character standing by the extra big south windows in the basement living room (Arjan)
+    drawPersonNpc(ctx, {
+      name: 'Arjan' as any,
+      bounds: basement.windowNpc,
+      facing: basement.windowNpc.facing,
+      hairColor: '#3a2016',
+      shirtColor: '#9c3832',
+    });
 
-    // Person sitting on the toilet in the basement bathroom
+    // Olexa standing south of chess board looking north
+    drawPersonNpc(ctx, {
+      name: 'Olexa' as any,
+      bounds: basement.olexaNpc,
+      facing: basement.olexaNpc.facing,
+      hairColor: '#342618',
+      shirtColor: '#52446a',
+    });
+
+    // Person sitting on the toilet in the basement bathroom (Hanneloes)
     drawToiletNpc(ctx, basement.toiletNpc);
 
-    // Sight polygon of the window gazing NPC (80% transparent whitish yellowish polygon)
-    if (basement.coneOfSight?.sightPolygon.length > 2) {
-      ctx.save();
-      ctx.fillStyle = 'rgba(255, 250, 205, 0.20)'; // 80% transparent (0.20 alpha) whitish-yellowish (lemon chiffon)
-      ctx.beginPath();
-      const [first, ...rest] = basement.coneOfSight.sightPolygon;
-      ctx.moveTo(Math.round(first.x), Math.round(first.y));
-      for (const pt of rest) {
-        ctx.lineTo(Math.round(pt.x), Math.round(pt.y));
+    // Sight polygons of Arjan and Olexa
+    const basementCones = [basement.coneOfSight, basement.olexaConeOfSight];
+    for (const cone of basementCones) {
+      if (cone?.sightPolygon.length > 2) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(255, 250, 205, 0.20)'; // 80% transparent whitish-yellowish
+        ctx.beginPath();
+        const [first, ...rest] = cone.sightPolygon;
+        ctx.moveTo(Math.round(first.x), Math.round(first.y));
+        for (const pt of rest) {
+          ctx.lineTo(Math.round(pt.x), Math.round(pt.y));
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
       }
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
     }
 
     // Closed doors & black fog-of-war over unopened rooms (e.g. bathroom)
@@ -1182,6 +1211,92 @@ export function renderGame(
 
     // Draw black cat in extra room
     drawCat(ctx, upstairs.cat, assets.catSprite);
+
+    // Upstairs NPCs:
+    // Albin in dining room
+    drawPersonNpc(ctx, {
+      name: 'Albin' as any,
+      bounds: { x: UPSTAIRS_ALBIN_X, y: upstairs.albinY, width: 12, height: 12 },
+      facing: upstairs.albinDir === 1 ? 'down' : 'up',
+      hairColor: '#7a421c',
+      shirtColor: '#285890',
+    });
+
+    // Henrik & Tanja in table room (if door is open or always drawn under fog)
+    drawPersonNpc(ctx, {
+      name: 'Henrik' as any,
+      bounds: upstairs.henrikNpc,
+      facing: 'down',
+      hairColor: '#6e4624',
+      shirtColor: '#324a78',
+    });
+    drawPersonNpc(ctx, {
+      name: 'Tanja' as any,
+      bounds: upstairs.tanjaNpc,
+      facing: 'up',
+      hairColor: '#743c20',
+      shirtColor: '#783858',
+    });
+
+    // Diana & Simon in living room
+    drawPersonNpc(ctx, {
+      name: 'Diana' as any,
+      bounds: upstairs.dianaNpc,
+      facing: 'down',
+      hairColor: '#2a1a14',
+      shirtColor: '#3a6288',
+    });
+    drawPersonNpc(ctx, {
+      name: 'Simon' as any,
+      bounds: upstairs.simonNpc,
+      facing: 'left',
+      hairColor: '#583822',
+      shirtColor: '#647038',
+    });
+
+    // Anne-Marie in bedroom
+    drawPersonNpc(ctx, {
+      name: 'Anne-Marie' as any,
+      bounds: upstairs.anneMarieNpc,
+      facing: 'up',
+      hairColor: '#c88642',
+      shirtColor: '#428860',
+    });
+    // Draw book held by Anne-Marie
+    ctx.fillStyle = '#b03030';
+    ctx.fillRect(Math.round(upstairs.anneMarieNpc.x + 3), Math.round(upstairs.anneMarieNpc.y + 7), 5, 4);
+    ctx.fillStyle = '#f0ece0';
+    ctx.fillRect(Math.round(upstairs.anneMarieNpc.x + 4), Math.round(upstairs.anneMarieNpc.y + 8), 3, 2);
+
+    // Sight polygons of upstairs NPCs
+    const isTableRoomDoorOpen = !upstairs.doors.some(
+      (d) => d.id === 'upstairs-table-room-door'
+    );
+    const isBedroomDoorOpen = !upstairs.doors.some(
+      (d) => d.id === 'upstairs-bedroom-door'
+    );
+
+    const upstairsCones = [
+      upstairs.albinCone,
+      ...(isTableRoomDoorOpen ? [upstairs.henrikCone, upstairs.tanjaCone] : []),
+      ...(isBedroomDoorOpen ? [upstairs.anneMarieCone] : []),
+    ];
+
+    for (const cone of upstairsCones) {
+      if (cone?.sightPolygon.length > 2) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(255, 250, 205, 0.20)';
+        ctx.beginPath();
+        const [first, ...rest] = cone.sightPolygon;
+        ctx.moveTo(Math.round(first.x), Math.round(first.y));
+        for (const pt of rest) {
+          ctx.lineTo(Math.round(pt.x), Math.round(pt.y));
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+    }
 
     // Closed doors & black fog-of-war over unopened rooms (shower, bedroom, office, table room)
     for (const door of upstairs.doors) {

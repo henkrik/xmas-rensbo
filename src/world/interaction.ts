@@ -74,12 +74,34 @@ export function buildInteractables(
     ];
   }
 
-  const list: Interactable[] = throwers.map((t) => ({
-    id: t.id,
-    bounds: { x: t.x, y: t.y, width: t.width, height: t.height },
-    promptText: 'Talk to',
-    dialogueLines: ['Watch out!'],
-  }));
+  const list: Interactable[] = throwers.map((t) => {
+    if (t.id === 'thrower-sylvester') {
+      return {
+        id: t.id,
+        bounds: { x: t.x, y: t.y, width: t.width, height: t.height },
+        promptText: 'Talk to Sylvester',
+        dialogueLines: ['Watch out! Annelotte is crazy!'],
+        speakerPortrait: 'Sylvester',
+      };
+    }
+    if (t.id === 'thrower-annelotte') {
+      return {
+        id: t.id,
+        bounds: { x: t.x, y: t.y, width: t.width, height: t.height },
+        promptText: 'Talk to Annelotte',
+        dialogueLines: [
+          'It\'s good to talk about your feelings... how does a snowball in your face feel?',
+        ],
+        speakerPortrait: 'Annelotte',
+      };
+    }
+    return {
+      id: t.id,
+      bounds: { x: t.x, y: t.y, width: t.width, height: t.height },
+      promptText: 'Talk to',
+      dialogueLines: ['Watch out!'],
+    };
+  });
 
   list.push({
     id: 'house-door',

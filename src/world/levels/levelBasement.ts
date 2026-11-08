@@ -82,13 +82,22 @@ export const BASEMENT_STAIRS_SPAWN = {
   facing: 'left' as Direction,
 };
 
-/** Character standing by the extra big south windows in the basement living room, looking out. */
+/** Character standing by the extra big south windows in the basement living room, looking out (Arjan). */
 export const BASEMENT_WINDOW_NPC: Rect & { facing: Direction } = {
   x: 11 * TILE_SIZE + 2,
   y: 18.5 * TILE_SIZE + 2,
   width: 12,
   height: 12,
   facing: 'down',
+};
+
+/** Character standing one tile south of the chess board looking north (Olexa). */
+export const BASEMENT_OLEXA_NPC: Rect & { facing: Direction } = {
+  x: 8.5 * TILE_SIZE + 2,
+  y: 18 * TILE_SIZE + 2,
+  width: 12,
+  height: 12,
+  facing: 'up',
 };
 
 /** Person sitting on the toilet in the basement bathroom (facing west). */
@@ -153,9 +162,11 @@ export class LevelBasement implements GameLevel {
   public readonly map: TileMap = BASEMENT_MAP;
   public doors: CollidableDoor[];
   public readonly windowNpc = { ...BASEMENT_WINDOW_NPC };
+  public readonly olexaNpc = { ...BASEMENT_OLEXA_NPC };
   public readonly toiletNpc = { ...BASEMENT_TOILET_NPC };
   public toiletCutscene: ToiletCutsceneState | null = null;
   public coneOfSight: ConeOfSight;
+  public olexaConeOfSight: ConeOfSight;
   public npcSightAngle: number = -Math.PI / 2; // North is -90 degrees in screen Y coordinates
   public npcSightTimer: number = 0;
   public intruderDetected: boolean = false;
@@ -171,6 +182,12 @@ export class LevelBasement implements GameLevel {
     this.coneOfSight = new ConeOfSight(
       { x: this.windowNpc.x, y: this.windowNpc.y },
       this.npcSightAngle,
+      undefined,
+      this.map
+    );
+    this.olexaConeOfSight = new ConeOfSight(
+      { x: this.olexaNpc.x, y: this.olexaNpc.y },
+      -Math.PI / 2, // Looking north
       undefined,
       this.map
     );
@@ -200,11 +217,18 @@ export class LevelBasement implements GameLevel {
       undefined,
       this.map
     );
+    this.olexaConeOfSight = new ConeOfSight(
+      { x: this.olexaNpc.x, y: this.olexaNpc.y },
+      -Math.PI / 2,
+      undefined,
+      this.map
+    );
   }
 
   public getSolidObstacles(): readonly Rect[] {
     return [
       this.windowNpc,
+      this.olexaNpc,
       BASEMENT_STAIRS_TRIGGER_BOUNDS,
       ...this.doors.map((d) => d.bounds),
     ];
@@ -300,16 +324,38 @@ export class LevelBasement implements GameLevel {
       );
     }
 
-    // Check if player is detected in cone of sight
-    const detected = this.coneOfSight.checkDetection(player);
-    if (detected) {
+    // Check if player is detected in Arjan's cone of sight
+    const detectedArjan = this.coneOfSight.checkDetection(player);
+    if (detectedArjan) {
       this.intruderDetected = true;
       player.isMoving = false;
-      ctx.openDialogue(['Intruder!!!'], () => {
-        // Player takes damage: reload current level, make Santa blink
-        ctx.loadLevel('level-basement');
-        player.blinkTimer = 2.0; // HIT_BLINK_DURATION_SECONDS
-      });
+      ctx.openDialogue(
+        ["You're not supposed to be here! Check-mate."],
+        () => {
+          // Player takes damage: reload current level, make Santa blink
+          ctx.loadLevel('level-basement');
+          player.blinkTimer = 2.0; // HIT_BLINK_DURATION_SECONDS
+        },
+        'Arjan'
+      );
+      return;
+    }
+
+    // Check if player is detected in Olexa's cone of sight
+    const detectedOlexa = this.olexaConeOfSight.checkDetection(player);
+    if (detectedOlexa) {
+      this.intruderDetected = true;
+      player.isMoving = false;
+      ctx.openDialogue(
+        ['Nobody believed me when I said you were real...'],
+        () => {
+          // Player takes damage: reload current level, make Santa blink
+          ctx.loadLevel('level-basement');
+          player.blinkTimer = 2.0; // HIT_BLINK_DURATION_SECONDS
+        },
+        'Olexa'
+      );
+      return;
     }
   }
 
@@ -330,13 +376,17 @@ export class LevelBasement implements GameLevel {
       this.toiletCutscene.active = false;
       this.toiletCutscene = null;
       player.states.set(TOILET_EVENT_TRIGGERED_KEY, true);
-      ctx.openDialogue([
-        "What are you doing here?? I know you see me when I'm sleeping but this is not okay.",
-      ], () => {
-        // Player takes damage: reload current level, make Santa blink
-        ctx.loadLevel('level-basement');
-        player.blinkTimer = 2.0; // HIT_BLINK_DURATION_SECONDS
-      });
+      ctx.openDialogue(
+        [
+          "What are you doing here?? I know you see me when I'm sleeping but this is not okay.",
+        ],
+        () => {
+          // Player takes damage: reload current level, make Santa blink
+          ctx.loadLevel('level-basement');
+          player.blinkTimer = 2.0; // HIT_BLINK_DURATION_SECONDS
+        },
+        'Hanneloes'
+      );
     }
 
     return true;

@@ -48,6 +48,8 @@ import {
   ARJAN_KEY_STATE_KEY,
   KITCHEN_ROSANNA_STATE_KEY,
   KITCHEN_TRIGGER_BOUNDS,
+  LevelUpstairs,
+  UPSTAIRS_ALBIN_START_Y,
   UPSTAIRS_BEDROOM_DOOR_BOUNDS,
   UPSTAIRS_BEDROOM_HIDDEN_MASK,
   UPSTAIRS_COMPUTER_BOUNDS,
@@ -454,30 +456,60 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(state.nearbyInteractable).toBeNull();
   });
 
-  it('shows "Talk to" near a snowball thrower and displays "Watch out!" when Z is pressed', () => {
+  it('shows "Talk to Sylvester" and "Talk to Annelotte" near the snowball throwers with portraits and dialogue', () => {
     const state = createGameState();
     const input = createEmptyInput();
 
-    // Position Santa right below the left snowball thrower (almost touching)
-    const leftThrower = state.throwers[0];
-    state.player.x = leftThrower.x;
-    state.player.y = leftThrower.y + leftThrower.height + 2;
+    // 1. Position Santa right below the left snowball thrower (Sylvester)
+    const sylvester = state.throwers[0];
+    state.player.x = sylvester.x;
+    state.player.y = sylvester.y + sylvester.height + 2;
 
     updateGameState(state, input, 0.01);
     expect(state.nearbyInteractable).not.toBeNull();
-    expect(state.nearbyInteractable?.promptText).toBe('Talk to');
+    expect(state.nearbyInteractable?.promptText).toBe('Talk to Sylvester');
+    expect(state.nearbyInteractable?.speakerPortrait).toBe('Sylvester');
 
-    // Press Z to talk
+    // Press Z to talk to Sylvester
     applyKeyEvent(input, 'KeyZ', true);
     updateGameState(state, input, 0.01);
     applyKeyEvent(input, 'KeyZ', false);
 
     expect(state.activeDialogue).not.toBeNull();
+    expect(state.activeDialogue?.speakerPortrait).toBe('Sylvester');
     expect(state.activeDialogue?.lines[state.activeDialogue.currentIndex]).toBe(
-      'Watch out!'
+      'Watch out! Annelotte is crazy!'
     );
 
     // Press Z again to close the single-line dialogue
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+
+    expect(state.activeDialogue).toBeNull();
+
+    // 2. Position Santa right below the right snowball thrower (Annelotte)
+    const annelotte = state.throwers[1];
+    state.player.x = annelotte.x;
+    state.player.y = annelotte.y + annelotte.height + 2;
+
+    updateGameState(state, input, 0.01);
+    expect(state.nearbyInteractable).not.toBeNull();
+    expect(state.nearbyInteractable?.promptText).toBe('Talk to Annelotte');
+    expect(state.nearbyInteractable?.speakerPortrait).toBe('Annelotte');
+
+    // Press Z to talk to Annelotte
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+
+    expect(state.activeDialogue).not.toBeNull();
+    expect(state.activeDialogue?.speakerPortrait).toBe('Annelotte');
+    expect(state.activeDialogue?.lines[state.activeDialogue.currentIndex]).toBe(
+      "It's good to talk about your feelings... how does a snowball in your face feel?"
+    );
+
+    // Press Z again to close the dialogue
     applyKeyEvent(input, 'KeyZ', true);
     updateGameState(state, input, 0.01);
     applyKeyEvent(input, 'KeyZ', false);
@@ -896,6 +928,7 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(state.activeDialogue?.lines[0]).toBe(
       "What are you doing here?? I know you see me when I'm sleeping but this is not okay."
     );
+    expect(state.activeDialogue?.speakerPortrait).toBe('Hanneloes');
 
     // Close dialogue with KeyZ -> reloads level-basement and triggers damage blink
     applyKeyEvent(input, 'KeyZ', true);
@@ -1181,23 +1214,14 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(upstairsState.player.x).toBe(UPSTAIRS_STAIRS_SPAWN.x);
     expect(upstairsState.player.y).toBe(UPSTAIRS_STAIRS_SPAWN.y);
 
-    // 4. Player can walk past the armchairs to reach the Christmas tree in the living room
+    // 4. Player can walk freely along the hallway from the staircase
     const input = createEmptyInput();
-    upstairsState.player.x = 6 * TILE_SIZE;
-    upstairsState.player.y = 12 * TILE_SIZE; // next to couch
-    input.down = true;
-    for (let i = 0; i < 20; i++) {
-      updateGameState(upstairsState, input, 0.05);
-    }
-    input.down = false;
     input.left = true;
     for (let i = 0; i < 20; i++) {
       updateGameState(upstairsState, input, 0.05);
     }
     input.left = false;
-    // Christmas tree is at cols 2..3, rows 14..16 (x = 32..64)
-    expect(upstairsState.player.x).toBeLessThan(4.5 * TILE_SIZE);
-    expect(upstairsState.player.y).toBeGreaterThan(13 * TILE_SIZE);
+    expect(upstairsState.player.x).toBeLessThan(UPSTAIRS_STAIRS_SPAWN.x);
   });
 
   it('allows walking freely along row 5 north of the shortened dining table upstairs', () => {
@@ -1452,7 +1476,10 @@ describe('Player walking & 2x Rensbo map layout', () => {
     updateGameState(state, input, 0.01);
 
     expect(state.activeDialogue).not.toBeNull();
-    expect(state.activeDialogue?.lines[0]).toBe('Intruder!!!');
+    expect(state.activeDialogue?.lines[0]).toBe(
+      "You're not supposed to be here! Check-mate."
+    );
+    expect(state.activeDialogue?.speakerPortrait).toBe('Arjan');
     expect(basement.intruderDetected).toBe(true);
 
     // 3. Closing the dialogue triggers player damage (reloads level-basement and starts blinking)
@@ -1523,5 +1550,261 @@ describe('Player walking & 2x Rensbo map layout', () => {
 
     expect(state.activeDialogue?.lines[0]).toBe('Olexa says hello.');
     expect(state.activeDialogue?.speakerPortrait).toBe('Olexa');
+  });
+
+  it('detects Santa in basement Olexa cone of sight and damages player upon detection', () => {
+    const state = createGameState({
+      initialLevelId: 'level-basement',
+      showIntroDialogue: false,
+    });
+    const input = createEmptyInput();
+    const basement = state.levels['level-basement'] as LevelBasement;
+
+    // Olexa is 1 tile south of the chess board, cone of sight looking north (-Math.PI / 2)
+    expect(basement.olexaConeOfSight.lines.length).toBe(5);
+    expect(basement.olexaConeOfSight.direction).toBeCloseTo(-Math.PI / 2);
+
+    // Place Santa inside Olexa's cone of sight (north of Olexa)
+    const olexaTargetBox = basement.olexaConeOfSight.getAllBoxes()[5];
+    state.player.x = olexaTargetBox.x - 2;
+    state.player.y = olexaTargetBox.y - 2;
+    updateGameState(state, input, 0.01);
+
+    expect(state.activeDialogue).not.toBeNull();
+    expect(state.activeDialogue?.lines[0]).toBe(
+      'Nobody believed me when I said you were real...'
+    );
+    expect(state.activeDialogue?.speakerPortrait).toBe('Olexa');
+    expect(basement.intruderDetected).toBe(true);
+
+    // Close dialogue with KeyZ -> reloads level-basement and starts blinking
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+
+    expect(state.activeDialogue).toBeNull();
+    expect(state.currentLevelId).toBe('level-basement');
+    expect(state.player.blinkTimer).toBeGreaterThan(0);
+  });
+
+  it('patrols upstairs Albin in dining room with reversing cone of sight and damages Santa on detection', () => {
+    const state = createGameState({
+      initialLevelId: 'level-upstairs',
+      showIntroDialogue: false,
+    });
+    const input = createEmptyInput();
+    const upstairs = state.levels['level-upstairs'] as LevelUpstairs;
+
+    expect(upstairs.albinY).toBe(UPSTAIRS_ALBIN_START_Y);
+    expect(upstairs.albinDir).toBe(1); // Walking south
+    expect(upstairs.albinCone.direction).toBeCloseTo(Math.PI / 2);
+
+    // Advance 3 seconds: Albin moves at 30 px/s, travels > 64px, reaches end, reverses to walking north (-Math.PI / 2)
+    updateGameState(state, input, 3.0);
+    expect(upstairs.albinDir).toBe(-1);
+    expect(upstairs.albinCone.direction).toBeCloseTo(-Math.PI / 2);
+
+    // Place Santa in Albin's cone of sight
+    const targetBox = upstairs.albinCone.getAllBoxes()[5];
+    state.player.x = targetBox.x - 2;
+    state.player.y = targetBox.y - 2;
+    updateGameState(state, input, 0.01);
+
+    expect(state.activeDialogue).not.toBeNull();
+    expect(state.activeDialogue?.lines[0]).toBe(
+      'I was looking for Rosanna... but instead I found you!!'
+    );
+    expect(state.activeDialogue?.speakerPortrait).toBe('Albin');
+    expect(upstairs.intruderDetected).toBe(true);
+
+    // Dismiss dialogue -> damages Santa & reloads level-upstairs
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+
+    expect(state.activeDialogue).toBeNull();
+    expect(state.currentLevelId).toBe('level-upstairs');
+    expect(state.player.blinkTimer).toBeGreaterThan(0);
+  });
+
+  it('handles upstairs Henrik and Tanja in table room after opening door', () => {
+    // 1. When table room door is closed, Henrik does not detect player
+    const state = createGameState({
+      initialLevelId: 'level-upstairs',
+      showIntroDialogue: false,
+    });
+    const input = createEmptyInput();
+    const upstairs = state.levels['level-upstairs'] as LevelUpstairs;
+
+    // Henrik starts facing south (Math.PI / 2)
+    expect(upstairs.henrikAngle).toBeCloseTo(Math.PI / 2);
+
+    // Place Santa where Henrik would see him if door was open
+    const targetBoxClosed = upstairs.henrikCone.getAllBoxes()[5];
+    state.player.x = targetBoxClosed.x - 2;
+    state.player.y = targetBoxClosed.y - 2;
+    updateGameState(state, input, 0.01);
+    expect(state.activeDialogue).toBeNull(); // Door is closed, inactive
+
+    // 2. Open table room door
+    const tableRoomDoor = upstairs.doors.find(
+      (d) => d.id === 'upstairs-table-room-door'
+    )!;
+    state.player.x = tableRoomDoor.bounds.x + 2;
+    state.player.y = tableRoomDoor.bounds.y - 10;
+    updateGameState(state, input, 0.01);
+    expect(state.nearbyInteractable?.id).toBe('upstairs-table-room-door');
+
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(
+      upstairs.doors.some((d) => d.id === 'upstairs-table-room-door')
+    ).toBe(false);
+
+    // 3. Henrik rotates 45 degrees counter-clockwise every 3 seconds
+    updateGameState(state, input, 1.5);
+    expect(upstairs.henrikAngle).toBeCloseTo(Math.PI / 2);
+    updateGameState(state, input, 1.6); // Total 3.1s -> rotates by -Math.PI / 4
+    expect(upstairs.henrikAngle).toBeCloseTo(Math.PI / 2 - Math.PI / 4);
+
+    // 4. Henrik detects Santa
+    const henrikBox = upstairs.henrikCone.getAllBoxes()[5];
+    state.player.x = henrikBox.x - 2;
+    state.player.y = henrikBox.y - 2;
+    updateGameState(state, input, 0.01);
+
+    expect(state.activeDialogue).not.toBeNull();
+    expect(state.activeDialogue?.lines[0]).toBe(
+      'Santa? Perfect you can play with Asta!!'
+    );
+    expect(state.activeDialogue?.speakerPortrait).toBe('Henrik');
+
+    // Dismiss dialogue -> damages Santa & reloads
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.currentLevelId).toBe('level-upstairs');
+    expect(state.player.blinkTimer).toBeGreaterThan(0);
+
+    // 5. Tanja detection (always facing north)
+    const state2 = createGameState({
+      initialLevelId: 'level-upstairs',
+      showIntroDialogue: false,
+    });
+    const upstairs2 = state2.levels['level-upstairs'] as LevelUpstairs;
+    // Open door
+    upstairs2.doors = upstairs2.doors.filter(
+      (d) => d.id !== 'upstairs-table-room-door'
+    );
+    expect(upstairs2.tanjaCone.direction).toBeCloseTo(-Math.PI / 2);
+
+    const tanjaBox = upstairs2.tanjaCone.getAllBoxes()[5];
+    state2.player.x = tanjaBox.x - 2;
+    state2.player.y = tanjaBox.y - 2;
+    updateGameState(state2, input, 0.01);
+
+    expect(state2.activeDialogue).not.toBeNull();
+    expect(state2.activeDialogue?.lines[0]).toBe(
+      'I like your suit, red like the color of wine.'
+    );
+    expect(state2.activeDialogue?.speakerPortrait).toBe('Tanja');
+  });
+
+  it('detects Santa in upstairs living room via Diana and Simon lines of sight', () => {
+    // 1. Diana detection (looking south)
+    const stateDiana = createGameState({
+      initialLevelId: 'level-upstairs',
+      showIntroDialogue: false,
+    });
+    const input = createEmptyInput();
+    const upstairsDiana = stateDiana.levels['level-upstairs'] as LevelUpstairs;
+
+    const dianaBox = upstairsDiana.dianaLine.boxes[3];
+    stateDiana.player.x = dianaBox.x - 2;
+    stateDiana.player.y = dianaBox.y - 2;
+    updateGameState(stateDiana, input, 0.01);
+
+    expect(stateDiana.activeDialogue).not.toBeNull();
+    expect(stateDiana.activeDialogue?.lines[0]).toBe(
+      'Do you have any destilleries on the North pole?'
+    );
+    expect(stateDiana.activeDialogue?.speakerPortrait).toBe('Diana');
+
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(stateDiana, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(stateDiana.currentLevelId).toBe('level-upstairs');
+    expect(stateDiana.player.blinkTimer).toBeGreaterThan(0);
+
+    // 2. Simon detection (looking west)
+    const stateSimon = createGameState({
+      initialLevelId: 'level-upstairs',
+      showIntroDialogue: false,
+    });
+    const upstairsSimon = stateSimon.levels['level-upstairs'] as LevelUpstairs;
+
+    // In Simon's line of sight east of Diana's column (col 6, index 1)
+    const simonBox = upstairsSimon.simonLine.boxes[1];
+    stateSimon.player.x = simonBox.x - 2;
+    stateSimon.player.y = simonBox.y - 2;
+    updateGameState(stateSimon, input, 0.01);
+
+    expect(stateSimon.activeDialogue).not.toBeNull();
+    expect(stateSimon.activeDialogue?.lines[0]).toBe(
+      'If I knew you were around here, I would have moved back to Sweden a long time ago.'
+    );
+    expect(stateSimon.activeDialogue?.speakerPortrait).toBe('Simon');
+
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(stateSimon, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(stateSimon.currentLevelId).toBe('level-upstairs');
+    expect(stateSimon.player.blinkTimer).toBeGreaterThan(0);
+  });
+
+  it('handles upstairs Anne-Marie in bedroom after opening door', () => {
+    const state = createGameState({
+      initialLevelId: 'level-upstairs',
+      showIntroDialogue: false,
+    });
+    const input = createEmptyInput();
+    const upstairs = state.levels['level-upstairs'] as LevelUpstairs;
+
+    // 1. Inactive when door is closed
+    const targetBoxClosed = upstairs.anneMarieCone.getAllBoxes()[5];
+    state.player.x = targetBoxClosed.x - 2;
+    state.player.y = targetBoxClosed.y - 2;
+    updateGameState(state, input, 0.01);
+    expect(state.activeDialogue).toBeNull();
+
+    // 2. Open bedroom door
+    upstairs.doors = upstairs.doors.filter(
+      (d) => d.id !== 'upstairs-bedroom-door'
+    );
+
+    // 3. Rotates 45 degrees (+Math.PI / 4) every 3 seconds
+    expect(upstairs.anneMarieAngle).toBeCloseTo(-Math.PI / 2);
+    updateGameState(state, input, 3.1);
+    expect(upstairs.anneMarieAngle).toBeCloseTo(-Math.PI / 2 + Math.PI / 4);
+
+    // 4. Detects Santa
+    const targetBoxOpen = upstairs.anneMarieCone.getAllBoxes()[5];
+    state.player.x = targetBoxOpen.x - 2;
+    state.player.y = targetBoxOpen.y - 2;
+    updateGameState(state, input, 0.01);
+
+    expect(state.activeDialogue).not.toBeNull();
+    expect(state.activeDialogue?.lines[0]).toBe(
+      'What a coincidence, I was just reading a story about you.'
+    );
+    expect(state.activeDialogue?.speakerPortrait).toBe('Anne-Marie');
+
+    // Dismiss dialogue -> damages Santa & reloads
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.currentLevelId).toBe('level-upstairs');
+    expect(state.player.blinkTimer).toBeGreaterThan(0);
   });
 });

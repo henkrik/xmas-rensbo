@@ -1,5 +1,6 @@
 import { Cat, createCat } from '../../entities/cat';
 import { Direction, Player, Rect, rectsIntersect } from '../../entities/player';
+import { ConeOfSight, LineOfSight } from '../../entities/sight';
 import { Interactable } from '../interaction';
 import { MAP_COLS, MAP_ROWS, TILE_SIZE, TileMap, TileType } from '../tilemap';
 import { CollidableDoor, GameLevel, LevelId, LevelTransitionContext } from './types';
@@ -135,7 +136,54 @@ export const UPSTAIRS_OFFICE_HIDDEN_MASK: Rect = {
   height: 5 * TILE_SIZE,
 };
 
-/** Cupboard in dining room next to the long table (col 2, rows 6..7). */
+/** Albin walking NPC in dining room (col 7, rows 5..9). */
+export const UPSTAIRS_ALBIN_START_Y = 5 * TILE_SIZE + 2;
+export const UPSTAIRS_ALBIN_END_Y = 9 * TILE_SIZE + 2;
+export const UPSTAIRS_ALBIN_X = 7 * TILE_SIZE + 2;
+export const UPSTAIRS_ALBIN_SPEED = 30; // px/s
+
+/** Henrik & Tanja in table room (left and right of table at cols 11..12, row 17). */
+export const UPSTAIRS_HENRIK_NPC: Rect & { facing: Direction } = {
+  x: 10 * TILE_SIZE + 2,
+  y: 17 * TILE_SIZE + 2,
+  width: 12,
+  height: 12,
+  facing: 'down',
+};
+
+export const UPSTAIRS_TANJA_NPC: Rect & { facing: Direction } = {
+  x: 13 * TILE_SIZE + 2,
+  y: 17 * TILE_SIZE + 2,
+  width: 12,
+  height: 12,
+  facing: 'up',
+};
+
+/** Diana & Simon in living room. */
+export const UPSTAIRS_DIANA_NPC: Rect & { facing: Direction } = {
+  x: 5 * TILE_SIZE + 2, // 1 tile south of couch (col 5, row 12)
+  y: 12 * TILE_SIZE + 2,
+  width: 12,
+  height: 12,
+  facing: 'down',
+};
+
+export const UPSTAIRS_SIMON_NPC: Rect & { facing: Direction } = {
+  x: 7 * TILE_SIZE + 2, // 1 tile south of right armchair (col 7, row 14)
+  y: 14 * TILE_SIZE + 2,
+  width: 12,
+  height: 12,
+  facing: 'left',
+};
+
+/** Anne-Marie in bedroom (north of door below window). */
+export const UPSTAIRS_ANNE_MARIE_NPC: Rect & { facing: Direction } = {
+  x: 24 * TILE_SIZE + 2,
+  y: 5 * TILE_SIZE + 2,
+  width: 12,
+  height: 12,
+  facing: 'up',
+};
 export const UPSTAIRS_CUPBOARD_BOUNDS: Rect = {
   x: 2 * TILE_SIZE,
   y: 6 * TILE_SIZE,
@@ -226,6 +274,32 @@ export class LevelUpstairs implements GameLevel {
   public rosannaCutscene: RosannaCutsceneState | null = null;
   public cat: Cat;
 
+  // Upstairs NPCs
+  public albinY: number = UPSTAIRS_ALBIN_START_Y;
+  public albinDir: 1 | -1 = 1; // 1 = walking down (south), -1 = walking up (north)
+  public albinCone: ConeOfSight;
+
+  public readonly henrikNpc = { ...UPSTAIRS_HENRIK_NPC };
+  public henrikAngle: number = Math.PI / 2; // Facing south initially
+  public henrikTimer: number = 0;
+  public henrikCone: ConeOfSight;
+
+  public readonly tanjaNpc = { ...UPSTAIRS_TANJA_NPC };
+  public tanjaCone: ConeOfSight;
+
+  public readonly dianaNpc = { ...UPSTAIRS_DIANA_NPC };
+  public dianaLine: LineOfSight;
+
+  public readonly simonNpc = { ...UPSTAIRS_SIMON_NPC };
+  public simonLine: LineOfSight;
+
+  public readonly anneMarieNpc = { ...UPSTAIRS_ANNE_MARIE_NPC };
+  public anneMarieAngle: number = -Math.PI / 2; // Facing north initially
+  public anneMarieTimer: number = 0;
+  public anneMarieCone: ConeOfSight;
+
+  public intruderDetected: boolean = false;
+
   constructor() {
     this.cat = createCat();
     this.doors = [
@@ -250,6 +324,48 @@ export class LevelUpstairs implements GameLevel {
         hiddenRegions: UPSTAIRS_TABLE_ROOM_HIDDEN_MASKS.map((r) => ({ ...r })),
       },
     ];
+
+    this.albinCone = new ConeOfSight(
+      { x: UPSTAIRS_ALBIN_X, y: this.albinY },
+      Math.PI / 2, // south
+      undefined,
+      this.map
+    );
+
+    this.henrikCone = new ConeOfSight(
+      { x: this.henrikNpc.x, y: this.henrikNpc.y },
+      this.henrikAngle,
+      undefined,
+      this.map
+    );
+
+    this.tanjaCone = new ConeOfSight(
+      { x: this.tanjaNpc.x, y: this.tanjaNpc.y },
+      -Math.PI / 2, // north
+      undefined,
+      this.map
+    );
+
+    this.dianaLine = new LineOfSight(
+      { x: this.dianaNpc.x, y: this.dianaNpc.y },
+      Math.PI / 2, // south
+      120,
+      this.map
+    );
+
+    this.simonLine = new LineOfSight(
+      { x: this.simonNpc.x, y: this.simonNpc.y },
+      Math.PI, // west
+      120,
+      this.map
+    );
+
+    this.anneMarieCone = new ConeOfSight(
+      { x: this.anneMarieNpc.x, y: this.anneMarieNpc.y },
+      this.anneMarieAngle,
+      undefined,
+      this.map
+    );
   }
 
   public enter(player: Player): void {
@@ -258,11 +374,67 @@ export class LevelUpstairs implements GameLevel {
     player.facing = UPSTAIRS_STAIRS_SPAWN.facing;
     player.isMoving = false;
     player.walkTimer = 0;
+
+    // Reset Upstairs sight & timers
+    this.intruderDetected = false;
+    this.albinY = UPSTAIRS_ALBIN_START_Y;
+    this.albinDir = 1;
+    this.albinCone = new ConeOfSight(
+      { x: UPSTAIRS_ALBIN_X, y: this.albinY },
+      Math.PI / 2,
+      undefined,
+      this.map
+    );
+
+    this.henrikAngle = Math.PI / 2;
+    this.henrikTimer = 0;
+    this.henrikCone = new ConeOfSight(
+      { x: this.henrikNpc.x, y: this.henrikNpc.y },
+      this.henrikAngle,
+      undefined,
+      this.map
+    );
+
+    this.tanjaCone = new ConeOfSight(
+      { x: this.tanjaNpc.x, y: this.tanjaNpc.y },
+      -Math.PI / 2,
+      undefined,
+      this.map
+    );
+
+    this.dianaLine = new LineOfSight(
+      { x: this.dianaNpc.x, y: this.dianaNpc.y },
+      Math.PI / 2,
+      120,
+      this.map
+    );
+
+    this.simonLine = new LineOfSight(
+      { x: this.simonNpc.x, y: this.simonNpc.y },
+      Math.PI,
+      120,
+      this.map
+    );
+
+    this.anneMarieAngle = -Math.PI / 2;
+    this.anneMarieTimer = 0;
+    this.anneMarieCone = new ConeOfSight(
+      { x: this.anneMarieNpc.x, y: this.anneMarieNpc.y },
+      this.anneMarieAngle,
+      undefined,
+      this.map
+    );
   }
 
   public getSolidObstacles(): readonly Rect[] {
     return [
       UPSTAIRS_STAIRS_TRIGGER_BOUNDS,
+      { x: UPSTAIRS_ALBIN_X, y: this.albinY, width: 12, height: 12 },
+      this.henrikNpc,
+      this.tanjaNpc,
+      this.dianaNpc,
+      this.simonNpc,
+      this.anneMarieNpc,
       ...this.doors.map((d) => d.bounds),
     ];
   }
@@ -389,5 +561,154 @@ export class LevelUpstairs implements GameLevel {
     }
 
     return false;
+  }
+
+  /**
+   * Updates all Upstairs NPCs movement, rotation, and line/cone of sight detection.
+   */
+  public updateNpcSight(
+    dtSeconds: number,
+    player: Player,
+    ctx: LevelTransitionContext
+  ): void {
+    if (this.intruderDetected) {
+      return;
+    }
+
+    // 1. Albin walks up and down in dining room (col 7, rows 5..9)
+    this.albinY += this.albinDir * UPSTAIRS_ALBIN_SPEED * dtSeconds;
+    if (this.albinDir === 1 && this.albinY >= UPSTAIRS_ALBIN_END_Y) {
+      this.albinY = UPSTAIRS_ALBIN_END_Y;
+      this.albinDir = -1; // change to walking north
+    } else if (this.albinDir === -1 && this.albinY <= UPSTAIRS_ALBIN_START_Y) {
+      this.albinY = UPSTAIRS_ALBIN_START_Y;
+      this.albinDir = 1; // change to walking south
+    }
+
+    // Cone faces north (-PI/2) when walking north, south (PI/2) when walking south
+    const albinAngle = this.albinDir === 1 ? Math.PI / 2 : -Math.PI / 2;
+    this.albinCone = new ConeOfSight(
+      { x: UPSTAIRS_ALBIN_X, y: this.albinY },
+      albinAngle,
+      undefined,
+      this.map
+    );
+
+    if (this.albinCone.checkDetection(player)) {
+      this.triggerDetection(
+        ctx,
+        player,
+        'Albin',
+        'I was looking for Rosanna... but instead I found you!!'
+      );
+      return;
+    }
+
+    // 2. Henrik & Tanja in table room (only if table room door is opened!)
+    const isTableRoomDoorOpen = !this.doors.some(
+      (d) => d.id === 'upstairs-table-room-door'
+    );
+    if (isTableRoomDoorOpen) {
+      this.henrikTimer += dtSeconds;
+      if (this.henrikTimer >= 3.0) {
+        this.henrikTimer -= 3.0;
+        // rotates 45 degrees counter-clockwise (-PI/4)
+        this.henrikAngle -= Math.PI / 4;
+        this.henrikCone = new ConeOfSight(
+          { x: this.henrikNpc.x, y: this.henrikNpc.y },
+          this.henrikAngle,
+          undefined,
+          this.map
+        );
+      }
+
+      if (this.henrikCone.checkDetection(player)) {
+        this.triggerDetection(
+          ctx,
+          player,
+          'Henrik',
+          'Santa? Perfect you can play with Asta!!'
+        );
+        return;
+      }
+
+      if (this.tanjaCone.checkDetection(player)) {
+        this.triggerDetection(
+          ctx,
+          player,
+          'Tanja',
+          'I like your suit, red like the color of wine.'
+        );
+        return;
+      }
+    }
+
+    // 3. Diana & Simon in living room
+    if (this.dianaLine.checkDetection(player)) {
+      this.triggerDetection(
+        ctx,
+        player,
+        'Diana',
+        'Do you have any destilleries on the North pole?'
+      );
+      return;
+    }
+
+    if (this.simonLine.checkDetection(player)) {
+      this.triggerDetection(
+        ctx,
+        player,
+        'Simon',
+        'If I knew you were around here, I would have moved back to Sweden a long time ago.'
+      );
+      return;
+    }
+
+    // 4. Anne-Marie in bedroom (only if bedroom door is open!)
+    const isBedroomDoorOpen = !this.doors.some(
+      (d) => d.id === 'upstairs-bedroom-door'
+    );
+    if (isBedroomDoorOpen) {
+      this.anneMarieTimer += dtSeconds;
+      if (this.anneMarieTimer >= 3.0) {
+        this.anneMarieTimer -= 3.0;
+        // rotates 45 degrees
+        this.anneMarieAngle += Math.PI / 4;
+        this.anneMarieCone = new ConeOfSight(
+          { x: this.anneMarieNpc.x, y: this.anneMarieNpc.y },
+          this.anneMarieAngle,
+          undefined,
+          this.map
+        );
+      }
+
+      if (this.anneMarieCone.checkDetection(player)) {
+        this.triggerDetection(
+          ctx,
+          player,
+          'Anne-Marie',
+          'What a coincidence, I was just reading a story about you.'
+        );
+        return;
+      }
+    }
+  }
+
+  private triggerDetection(
+    ctx: LevelTransitionContext,
+    player: Player,
+    speaker: string,
+    dialogue: string
+  ): void {
+    this.intruderDetected = true;
+    player.isMoving = false;
+    ctx.openDialogue(
+      [dialogue],
+      () => {
+        ctx.loadLevel('level-upstairs');
+        player.blinkTimer = 2.0; // HIT_BLINK_DURATION_SECONDS
+      },
+      speaker
+    );
   }
 }

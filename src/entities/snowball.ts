@@ -3,6 +3,7 @@ import { TILE_SIZE } from '../world/tilemap';
 
 export interface SnowballThrower {
   id: string;
+  name?: string;
   x: number;
   y: number;
   width: number;
@@ -38,7 +39,8 @@ export function createDrivewayThrowers(): SnowballThrower[] {
 
   return [
     {
-      id: 'thrower-left',
+      id: 'thrower-sylvester',
+      name: 'Sylvester',
       x: leftX,
       y: rowY,
       width: 12,
@@ -50,7 +52,8 @@ export function createDrivewayThrowers(): SnowballThrower[] {
       throwTimer: 0.6,
     },
     {
-      id: 'thrower-right',
+      id: 'thrower-annelotte',
+      name: 'Annelotte',
       x: rightX,
       y: rowY,
       width: 12,
