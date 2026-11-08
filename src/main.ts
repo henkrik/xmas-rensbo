@@ -8,7 +8,11 @@ import {
 } from './core/input';
 import { attachDebugConsole } from './core/debugConsole';
 import { computeCamera, renderGame } from './rendering/renderer';
-import { createGameState, updateGameState } from './world/gameState';
+import {
+  createGameState,
+  parseLevelQueryParam,
+  updateGameState,
+} from './world/gameState';
 
 export function detectIsLandscape(): boolean {
   if (typeof window === 'undefined') return false;
@@ -208,9 +212,14 @@ async function startGame(): Promise<void> {
     },
   });
 
+  const searchParams = new URLSearchParams(window.location.search);
+  const initialLevelId = parseLevelQueryParam(searchParams.get('level'));
+  const hasLevelOverride = searchParams.has('level');
+
   const state = createGameState({
     isMobile: isMobileDevice,
-    showIntroDialogue: true,
+    showIntroDialogue: !hasLevelOverride,
+    initialLevelId,
   });
   state.joystickActive = isMobileDevice;
 

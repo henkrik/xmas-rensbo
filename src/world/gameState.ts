@@ -165,6 +165,43 @@ export interface CreateGameStateOptions {
   initialLevelId?: LevelId;
 }
 
+/**
+ * Parses the `?level=X` URL query parameter, mapping:
+ * - 'outdoors' / 'outside' / 'level-outside' -> 'level-outside' (default)
+ * - 'basement' / 'level-basement' -> 'level-basement'
+ * - 'upstairs' / 'level-upstairs' -> 'level-upstairs'
+ *
+ * Accepts either the entire search string (e.g. `window.location.search`)
+ * or the raw parameter value (e.g. `new URLSearchParams(location.search).get('level')`).
+ */
+export function parseLevelQueryParam(
+  searchOrParam: string | null | undefined
+): LevelId {
+  if (!searchOrParam) {
+    return 'level-outside';
+  }
+  let val = searchOrParam.trim();
+  if (val.startsWith('?')) {
+    const params = new URLSearchParams(val);
+    val = params.get('level') ?? '';
+  }
+  const normalized = val.toLowerCase().trim();
+  if (normalized === 'basement' || normalized === 'level-basement') {
+    return 'level-basement';
+  }
+  if (normalized === 'upstairs' || normalized === 'level-upstairs') {
+    return 'level-upstairs';
+  }
+  if (
+    normalized === 'outdoors' ||
+    normalized === 'outside' ||
+    normalized === 'level-outside'
+  ) {
+    return 'level-outside';
+  }
+  return 'level-outside';
+}
+
 export function createIntroDialogue(isMobile: boolean): DialogueState {
   const firstLine = isMobile
     ? 'Use the virtual joystick to move around. To interact with things, move close enough to it and an interaction button will appear. Click anywhere to close this window and start playing.'

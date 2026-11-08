@@ -1148,17 +1148,17 @@
   }
   function drawFireplaceAnimation(ctx, elapsedTime) {
     const fx = 11 * TILE_SIZE;
-    const fy = 9 * TILE_SIZE;
+    const fy = 11 * TILE_SIZE;
     const phase = Math.floor(elapsedTime * 10) % 3;
     const alpha = 0.12 + phase * 0.03;
     ctx.fillStyle = `rgba(255, 168, 52, ${alpha})`;
     ctx.fillRect(fx - 24, fy + 8, 40, 44);
     ctx.fillStyle = "#ff6b24";
-    ctx.fillRect(fx + 10, fy + 24 + phase % 2, 14, 12);
+    ctx.fillRect(fx + 3, fy + 8 + phase % 2, 14, 12);
     ctx.fillStyle = "#ffd644";
-    ctx.fillRect(fx + 12 + (phase === 1 ? 1 : 0), fy + 26, 9, 8);
+    ctx.fillRect(fx + 5 + (phase === 1 ? 1 : 0), fy + 10, 9, 8);
     ctx.fillStyle = "#fff6b8";
-    ctx.fillRect(fx + 14, fy + 29 - (phase === 2 ? 1 : 0), 5, 4);
+    ctx.fillRect(fx + 7, fy + 13 - (phase === 2 ? 1 : 0), 5, 4);
   }
   function drawBlinkingExclamation(ctx, playerDrawX, playerDrawY, elapsed) {
     if (Math.floor(elapsed * 8) % 2 !== 0) {
@@ -2429,6 +2429,27 @@
     refreshInteractables(state);
     debugLog(`Loaded level: ${levelId}`);
   }
+  function parseLevelQueryParam(searchOrParam) {
+    if (!searchOrParam) {
+      return "level-outside";
+    }
+    let val = searchOrParam.trim();
+    if (val.startsWith("?")) {
+      const params = new URLSearchParams(val);
+      val = params.get("level") ?? "";
+    }
+    const normalized = val.toLowerCase().trim();
+    if (normalized === "basement" || normalized === "level-basement") {
+      return "level-basement";
+    }
+    if (normalized === "upstairs" || normalized === "level-upstairs") {
+      return "level-upstairs";
+    }
+    if (normalized === "outdoors" || normalized === "outside" || normalized === "level-outside") {
+      return "level-outside";
+    }
+    return "level-outside";
+  }
   function createIntroDialogue(isMobile) {
     const firstLine = isMobile ? "Use the virtual joystick to move around. To interact with things, move close enough to it and an interaction button will appear. Click anywhere to close this window and start playing." : "Use the arrow keys to move around and Z to interact. Press Z to close this window and start playing.";
     return {
@@ -2892,9 +2913,13 @@
         applyViewportLayout(true);
       }
     });
+    const searchParams = new URLSearchParams(window.location.search);
+    const initialLevelId = parseLevelQueryParam(searchParams.get("level"));
+    const hasLevelOverride = searchParams.has("level");
     const state = createGameState({
       isMobile: isMobileDevice,
-      showIntroDialogue: true
+      showIntroDialogue: !hasLevelOverride,
+      initialLevelId
     });
     state.joystickActive = isMobileDevice;
     if (mobileActionBtn) {

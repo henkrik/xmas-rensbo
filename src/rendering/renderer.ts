@@ -680,7 +680,7 @@ function drawFireplaceAnimation(
   elapsedTime: number
 ): void {
   const fx = 11 * TILE_SIZE;
-  const fy = 9 * TILE_SIZE;
+  const fy = 11 * TILE_SIZE;
   const phase = Math.floor(elapsedTime * 10) % 3;
 
   // Warm flickering firelight on the hearth & floor
@@ -690,11 +690,11 @@ function drawFireplaceAnimation(
 
   // Animated flame tongues inside the firebox
   ctx.fillStyle = '#ff6b24';
-  ctx.fillRect(fx + 10, fy + 24 + (phase % 2), 14, 12);
+  ctx.fillRect(fx + 3, fy + 8 + (phase % 2), 14, 12);
   ctx.fillStyle = '#ffd644';
-  ctx.fillRect(fx + 12 + (phase === 1 ? 1 : 0), fy + 26, 9, 8);
+  ctx.fillRect(fx + 5 + (phase === 1 ? 1 : 0), fy + 10, 9, 8);
   ctx.fillStyle = '#fff6b8';
-  ctx.fillRect(fx + 14, fy + 29 - (phase === 2 ? 1 : 0), 5, 4);
+  ctx.fillRect(fx + 7, fy + 13 - (phase === 2 ? 1 : 0), 5, 4);
 }
 
 function drawBlinkingExclamation(

@@ -23,6 +23,7 @@ import { wrapTextLines } from '../src/rendering/renderer';
 import {
   createGameState,
   loadLevel,
+  parseLevelQueryParam,
   resetAfterSnowballHit,
   updateGameState,
 } from '../src/world/gameState';
@@ -944,8 +945,8 @@ describe('Player walking & 2x Rensbo map layout', () => {
 
     // 3. Walking into The Kitchen triggers the one-time Rosanna Santa event
     expect(state.player.states.get(KITCHEN_ROSANNA_STATE_KEY)).toBeUndefined();
-    state.player.x = KITCHEN_TRIGGER_BOUNDS.x + 16;
-    state.player.y = KITCHEN_TRIGGER_BOUNDS.y + 24;
+    state.player.x = 13 * TILE_SIZE;
+    state.player.y = KITCHEN_TRIGGER_BOUNDS.y + 8;
     updateGameState(state, input, 0.05);
 
     expect(state.player.states.get(KITCHEN_ROSANNA_STATE_KEY)).toBe(true);
@@ -1003,5 +1004,55 @@ describe('Player walking & 2x Rensbo map layout', () => {
 
     debugLog('Custom debug test');
     expect(debugConsole.getLines()).toContain('Custom debug test');
+  });
+
+  it('supports overriding the starting level via ?level=X URL argument', () => {
+    // 1. URL search parsing behavior
+    expect(parseLevelQueryParam('?level=outdoors')).toBe('level-outside');
+    expect(parseLevelQueryParam('?level=outside')).toBe('level-outside');
+    expect(parseLevelQueryParam('?level=basement')).toBe('level-basement');
+    expect(parseLevelQueryParam('?level=upstairs')).toBe('level-upstairs');
+    expect(parseLevelQueryParam('?level=UNKNOWN')).toBe('level-outside');
+    expect(parseLevelQueryParam('')).toBe('level-outside');
+    expect(parseLevelQueryParam(null)).toBe('level-outside');
+    expect(parseLevelQueryParam('basement')).toBe('level-basement');
+    expect(parseLevelQueryParam('upstairs')).toBe('level-upstairs');
+    expect(parseLevelQueryParam('outdoors')).toBe('level-outside');
+
+    // 2. Starting at basement spawns at the fireplace
+    const basementState = createGameState({
+      initialLevelId: parseLevelQueryParam('?level=basement'),
+      showIntroDialogue: false,
+    });
+    expect(basementState.currentLevelId).toBe('level-basement');
+    expect(basementState.player.x).toBe(BASEMENT_FIREPLACE_SPAWN.x);
+    expect(basementState.player.y).toBe(BASEMENT_FIREPLACE_SPAWN.y);
+
+    // 3. Starting upstairs spawns at the staircase
+    const upstairsState = createGameState({
+      initialLevelId: parseLevelQueryParam('?level=upstairs'),
+      showIntroDialogue: false,
+    });
+    expect(upstairsState.currentLevelId).toBe('level-upstairs');
+    expect(upstairsState.player.x).toBe(UPSTAIRS_STAIRS_SPAWN.x);
+    expect(upstairsState.player.y).toBe(UPSTAIRS_STAIRS_SPAWN.y);
+
+    // 4. Player can walk past the armchairs to reach the Christmas tree in the living room
+    const input = createEmptyInput();
+    upstairsState.player.x = 6 * TILE_SIZE;
+    upstairsState.player.y = 12 * TILE_SIZE; // next to couch
+    input.down = true;
+    for (let i = 0; i < 20; i++) {
+      updateGameState(upstairsState, input, 0.05);
+    }
+    input.down = false;
+    input.left = true;
+    for (let i = 0; i < 20; i++) {
+      updateGameState(upstairsState, input, 0.05);
+    }
+    input.left = false;
+    // Christmas tree is at cols 2..3, rows 14..16 (x = 32..64)
+    expect(upstairsState.player.x).toBeLessThan(4.5 * TILE_SIZE);
+    expect(upstairsState.player.y).toBeGreaterThan(13 * TILE_SIZE);
   });
 });
