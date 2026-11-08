@@ -171,8 +171,7 @@ export class LevelBasement implements GameLevel {
     this.coneOfSight = new ConeOfSight(
       { x: this.windowNpc.x, y: this.windowNpc.y },
       this.npcSightAngle,
-      7.5 * TILE_SIZE,
-      (45 * Math.PI) / 180,
+      undefined,
       this.map
     );
   }
@@ -198,8 +197,7 @@ export class LevelBasement implements GameLevel {
     this.coneOfSight = new ConeOfSight(
       { x: this.windowNpc.x, y: this.windowNpc.y },
       this.npcSightAngle,
-      7.5 * TILE_SIZE,
-      (45 * Math.PI) / 180,
+      undefined,
       this.map
     );
   }
@@ -297,8 +295,7 @@ export class LevelBasement implements GameLevel {
       this.coneOfSight = new ConeOfSight(
         { x: this.windowNpc.x, y: this.windowNpc.y },
         this.npcSightAngle,
-        7.5 * TILE_SIZE,
-        (45 * Math.PI) / 180,
+        undefined,
         this.map
       );
     }

@@ -1,5 +1,5 @@
 import { Player, Rect, rectsIntersect } from '../entities/player';
-import { isRectCollidingWithMap, TileMap } from '../world/tilemap';
+import { isRectCollidingWithMap, TILE_SIZE, TileMap } from '../world/tilemap';
 
 export interface Point2D {
   x: number;
@@ -7,6 +7,12 @@ export interface Point2D {
 }
 
 export type DetectionCallback = (player: Player) => void;
+
+/** Default distance in pixels for a cone of sight (7.5 tiles). */
+export const DEFAULT_CONE_OF_SIGHT_DISTANCE = 7.5 * TILE_SIZE;
+
+/** Default field of view angle in radians for a cone of sight (45 degrees). */
+export const DEFAULT_CONE_OF_SIGHT_FOV = (45 * Math.PI) / 180;
 
 /**
  * A line of sight that spawns bounding boxes (4x4 pixels) along a line
@@ -138,15 +144,37 @@ export class ConeOfSight {
   constructor(
     position: Point2D,
     direction: number,
-    distance: number,
-    fieldOfView: number = (45 * Math.PI) / 180,
+    distance?: number,
+    map?: TileMap,
+    fieldOfView?: number
+  );
+  constructor(
+    position: Point2D,
+    direction: number,
+    distance?: number,
+    fieldOfView?: number,
     map?: TileMap
+  );
+  constructor(
+    position: Point2D,
+    direction: number,
+    distance: number = DEFAULT_CONE_OF_SIGHT_DISTANCE,
+    fovOrMap: number | TileMap = DEFAULT_CONE_OF_SIGHT_FOV,
+    mapOrFov?: TileMap | number
   ) {
     this.position = { ...position };
     this.direction = direction;
     this.distance = distance;
-    this.fieldOfView = fieldOfView;
-    this.map = map;
+
+    if (typeof fovOrMap === 'number') {
+      this.fieldOfView = fovOrMap;
+      this.map = typeof mapOrFov === 'object' ? mapOrFov : undefined;
+    } else {
+      this.map = fovOrMap;
+      this.fieldOfView =
+        typeof mapOrFov === 'number' ? mapOrFov : DEFAULT_CONE_OF_SIGHT_FOV;
+    }
+
     this.recomputeLines();
   }
 

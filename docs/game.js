@@ -2116,6 +2116,8 @@
   }
 
   // src/entities/sight.ts
+  var DEFAULT_CONE_OF_SIGHT_DISTANCE = 7.5 * TILE_SIZE;
+  var DEFAULT_CONE_OF_SIGHT_FOV = 45 * Math.PI / 180;
   var LineOfSight = class {
     constructor(position, direction, distance, map) {
       __publicField(this, "position");
@@ -2194,7 +2196,7 @@
     }
   };
   var ConeOfSight = class {
-    constructor(position, direction, distance, fieldOfView = 45 * Math.PI / 180, map) {
+    constructor(position, direction, distance = DEFAULT_CONE_OF_SIGHT_DISTANCE, fovOrMap = DEFAULT_CONE_OF_SIGHT_FOV, mapOrFov) {
       __publicField(this, "position");
       __publicField(this, "direction");
       __publicField(this, "distance");
@@ -2206,8 +2208,13 @@
       this.position = { ...position };
       this.direction = direction;
       this.distance = distance;
-      this.fieldOfView = fieldOfView;
-      this.map = map;
+      if (typeof fovOrMap === "number") {
+        this.fieldOfView = fovOrMap;
+        this.map = typeof mapOrFov === "object" ? mapOrFov : void 0;
+      } else {
+        this.map = fovOrMap;
+        this.fieldOfView = typeof mapOrFov === "number" ? mapOrFov : DEFAULT_CONE_OF_SIGHT_FOV;
+      }
       this.recomputeLines();
     }
     onDetection(cb) {
@@ -2410,8 +2417,7 @@
       this.coneOfSight = new ConeOfSight(
         { x: this.windowNpc.x, y: this.windowNpc.y },
         this.npcSightAngle,
-        7.5 * TILE_SIZE,
-        45 * Math.PI / 180,
+        void 0,
         this.map
       );
     }
@@ -2434,8 +2440,7 @@
       this.coneOfSight = new ConeOfSight(
         { x: this.windowNpc.x, y: this.windowNpc.y },
         this.npcSightAngle,
-        7.5 * TILE_SIZE,
-        45 * Math.PI / 180,
+        void 0,
         this.map
       );
     }
@@ -2514,8 +2519,7 @@
         this.coneOfSight = new ConeOfSight(
           { x: this.windowNpc.x, y: this.windowNpc.y },
           this.npcSightAngle,
-          7.5 * TILE_SIZE,
-          45 * Math.PI / 180,
+          void 0,
           this.map
         );
       }
