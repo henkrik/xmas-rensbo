@@ -1338,16 +1338,35 @@ describe('Player walking & 2x Rensbo map layout', () => {
   });
 
   it('calculates LineOfSight and ConeOfSight bounding boxes and triggers detection callbacks', () => {
-    // 1. LineOfSight unit test:
+    // 1. LineOfSight unit test without map:
     // Starts at (100, 100), facing east (direction = 0), distance = 50
     const los = new LineOfSight({ x: 100, y: 100 }, 0, 50);
+    expect(los.n).toBe(10);
     expect(los.boxes.length).toBe(10);
     for (let i = 0; i < 10; i++) {
       expect(los.boxes[i].x).toBeCloseTo(100 + (50 / 10) * i);
       expect(los.boxes[i].y).toBeCloseTo(100);
       expect(los.boxes[i].width).toBe(4);
       expect(los.boxes[i].height).toBe(4);
+      // Getter points(i) returns center of box
+      expect(los.points(i).x).toBeCloseTo(100 + (50 / 10) * i + 2);
+      expect(los.points(i).y).toBeCloseTo(100 + 2);
     }
+
+    // LineOfSight with wall collision stop:
+    // A mock map where column 3 is a wall
+    const mockMap = {
+      cols: 10,
+      rows: 10,
+      tileSize: 16,
+      tiles: Array.from({ length: 10 }, () =>
+        Array.from({ length: 10 }, (_, col) => (col === 3 ? 21 : 16))
+      ),
+    };
+    // Starting at x = 16 (col 1), going east: box 0 (x=16, col 1), box 1 (x=32, col 2), box 2 (x=48, col 3 = wall!)
+    // Box 2 collides with wall, so box 3+ should not be spawned.
+    const losWithWall = new LineOfSight({ x: 16, y: 16 }, 0, 160, mockMap as any);
+    expect(losWithWall.n).toBe(3); // boxes 0, 1, 2 spawned; box 2 hit wall, so box 3 was not spawned
 
     let losDetectedCount = 0;
     const unsubLos = los.onDetection(() => {
@@ -1373,11 +1392,12 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(losDetectedCount).toBe(1);
 
     // 2. ConeOfSight unit test:
-    // 3 lines: forward, direction + fov/2, direction - fov/2
+    // 5 lines: -fov/2, -fov/4, forward, +fov/4, +fov/2
     const fov = (60 * Math.PI) / 180;
     const cone = new ConeOfSight({ x: 200, y: 200 }, 0, 60, fov);
-    expect(cone.lines.length).toBe(3);
-    expect(cone.getAllBoxes().length).toBe(30);
+    expect(cone.lines.length).toBe(5);
+    expect(cone.getAllBoxes().length).toBe(50);
+    expect(cone.sightPolygon.length).toBe(6); // position + 5 line tips
 
     let coneDetectedCount = 0;
     cone.onDetection(() => {
@@ -1390,8 +1410,8 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(cone.checkDetection(player)).toBe(false);
     expect(coneDetectedCount).toBe(0);
 
-    // Player inside +fov/2 line at 30 degrees
-    const boxOnPlusLine = cone.lines[1].boxes[5];
+    // Player inside +fov/2 line at 30 degrees (last line: index 4)
+    const boxOnPlusLine = cone.lines[4].boxes[5];
     player.x = boxOnPlusLine.x;
     player.y = boxOnPlusLine.y;
     expect(cone.checkDetection(player)).toBe(true);
@@ -1405,8 +1425,10 @@ describe('Player walking & 2x Rensbo map layout', () => {
 
     // 1. Initially looking north (-Math.PI / 2 radians, or 90 degrees absolute)
     expect(basement.npcSightAngle).toBeCloseTo(-Math.PI / 2);
-    expect(basement.coneOfSight.distance).toBe(5 * 16);
-    expect(basement.coneOfSight.getAllBoxes().length).toBe(30);
+    // Distance increased by +50%: 5 tiles * 1.5 = 7.5 tiles
+    expect(basement.coneOfSight.distance).toBe(7.5 * 16);
+    expect(basement.coneOfSight.lines.length).toBe(5);
+    expect(basement.coneOfSight.sightPolygon.length).toBe(6);
 
     // Every 2 seconds it deletes old cone of sight and spawns new one +45 degrees
     updateGameState(state, input, 1.0);

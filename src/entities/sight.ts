@@ -1,4 +1,5 @@
 import { Player, Rect, rectsIntersect } from '../entities/player';
+import { isRectCollidingWithMap, TileMap } from '../world/tilemap';
 
 export interface Point2D {
   x: number;
@@ -8,24 +9,55 @@ export interface Point2D {
 export type DetectionCallback = (player: Player) => void;
 
 /**
- * A line of sight that spawns 10 bounding boxes (4x4 pixels) along a line
+ * A line of sight that spawns bounding boxes (4x4 pixels) along a line
  * starting from `position` in `direction` for `distance` pixels.
  *
  * For each i in 0..9:
  *   p[i] = position + (distanceVector / 10) * i;
+ *
+ * We collision detection check on every i against the map/walls:
+ * only spawn the (i + 1)-th bounding box if the i-th bounding box did not collide with a wall.
  */
 export class LineOfSight {
   public position: Point2D;
-  public direction: number; // in radians or degrees? We support radians, but can handle angle
+  public direction: number;
   public distance: number;
+  public map?: TileMap;
   public boxes: Rect[] = [];
   private callbacks: DetectionCallback[] = [];
 
-  constructor(position: Point2D, direction: number, distance: number) {
+  constructor(
+    position: Point2D,
+    direction: number,
+    distance: number,
+    map?: TileMap
+  ) {
     this.position = { ...position };
     this.direction = direction;
     this.distance = distance;
+    this.map = map;
     this.recomputeBoxes();
+  }
+
+  /**
+   * Number of bounding boxes that were spawned (getter `n`).
+   */
+  public get n(): number {
+    return this.boxes.length;
+  }
+
+  /**
+   * Returns the point (center of the box) of the i-th box.
+   */
+  public points(i: number): Point2D {
+    if (i < 0 || i >= this.boxes.length) {
+      return { ...this.position };
+    }
+    const b = this.boxes[i];
+    return {
+      x: b.x + b.width / 2,
+      y: b.y + b.height / 2,
+    };
   }
 
   public onDetection(cb: DetectionCallback): () => void {
@@ -50,12 +82,23 @@ export class LineOfSight {
     for (let i = 0; i < 10; i++) {
       const px = this.position.x + (distanceVector.x / 10) * i;
       const py = this.position.y + (distanceVector.y / 10) * i;
-      this.boxes.push({
+      const box: Rect = {
         x: px,
         y: py,
         width: 4,
         height: 4,
-      });
+      };
+
+      this.boxes.push(box);
+
+      // Check collision with wall for this box
+      // "We must only spawn the i + 1 bounding box if the i-th bounding box did not collide with a wall."
+      if (
+        this.map &&
+        isRectCollidingWithMap(this.map, box.x, box.y, box.width, box.height)
+      ) {
+        break;
+      }
     }
   }
 
@@ -73,29 +116,37 @@ export class LineOfSight {
 }
 
 /**
- * A cone of sight that spawns three LineOfSight instances:
- * - Forward direction: direction
- * - Right/plus direction: direction + fieldOfView / 2
- * - Left/minus direction: direction - fieldOfView / 2
+ * A cone of sight that spawns five LineOfSight instances:
+ * - direction - fieldOfView / 2
+ * - direction - fieldOfView / 4
+ * - direction (forward)
+ * - direction + fieldOfView / 4
+ * - direction + fieldOfView / 2
+ *
+ * It also computes the "sight polygon" formed by [position, ...line.points(line.n - 1) for each line].
  */
 export class ConeOfSight {
   public position: Point2D;
   public direction: number;
   public distance: number;
   public fieldOfView: number;
+  public map?: TileMap;
   public lines: LineOfSight[] = [];
+  public sightPolygon: Point2D[] = [];
   private callbacks: DetectionCallback[] = [];
 
   constructor(
     position: Point2D,
     direction: number,
     distance: number,
-    fieldOfView: number = (45 * Math.PI) / 180
+    fieldOfView: number = (45 * Math.PI) / 180,
+    map?: TileMap
   ) {
     this.position = { ...position };
     this.direction = direction;
     this.distance = distance;
     this.fieldOfView = fieldOfView;
+    this.map = map;
     this.recomputeLines();
   }
 
@@ -110,29 +161,24 @@ export class ConeOfSight {
   }
 
   public recomputeLines(): void {
-    const forwardLine = new LineOfSight(
-      this.position,
-      this.direction,
-      this.distance
-    );
-    const plusLine = new LineOfSight(
-      this.position,
-      this.direction + this.fieldOfView / 2,
-      this.distance
-    );
-    const minusLine = new LineOfSight(
-      this.position,
+    const angles = [
       this.direction - this.fieldOfView / 2,
-      this.distance
+      this.direction - this.fieldOfView / 4,
+      this.direction,
+      this.direction + this.fieldOfView / 4,
+      this.direction + this.fieldOfView / 2,
+    ];
+
+    this.lines = angles.map(
+      (ang) => new LineOfSight(this.position, ang, this.distance, this.map)
     );
 
-    this.lines = [forwardLine, plusLine, minusLine];
-
-    for (const line of this.lines) {
-      line.onDetection((_player) => {
-        // notify cone callbacks (checkDetection handles de-duplication)
-      });
-    }
+    // Compute sight polygon:
+    // First vertex is position, followed by the tip points(line.n - 1) of the 5 lines of sight
+    this.sightPolygon = [
+      { ...this.position },
+      ...this.lines.map((line) => line.points(line.n - 1)),
+    ];
   }
 
   public getAllBoxes(): Rect[] {

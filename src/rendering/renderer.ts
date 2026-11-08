@@ -1028,6 +1028,21 @@ export function renderGame(
     // Person sitting on the toilet in the basement bathroom
     drawToiletNpc(ctx, basement.toiletNpc);
 
+    // Sight polygon of the window gazing NPC (80% transparent whitish yellowish polygon)
+    if (basement.coneOfSight?.sightPolygon.length > 2) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 250, 205, 0.20)'; // 80% transparent (0.20 alpha) whitish-yellowish (lemon chiffon)
+      ctx.beginPath();
+      const [first, ...rest] = basement.coneOfSight.sightPolygon;
+      ctx.moveTo(Math.round(first.x), Math.round(first.y));
+      for (const pt of rest) {
+        ctx.lineTo(Math.round(pt.x), Math.round(pt.y));
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
     // Closed doors & black fog-of-war over unopened rooms (e.g. bathroom)
     for (const door of basement.doors) {
       drawClosedDoorAndHiddenMask(ctx, door);

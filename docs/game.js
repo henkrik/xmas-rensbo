@@ -1398,6 +1398,19 @@
       drawFireplaceAnimation(ctx, elapsedTime);
       drawWindowGazingNpc(ctx, basement.windowNpc);
       drawToiletNpc(ctx, basement.toiletNpc);
+      if (basement.coneOfSight?.sightPolygon.length > 2) {
+        ctx.save();
+        ctx.fillStyle = "rgba(255, 250, 205, 0.20)";
+        ctx.beginPath();
+        const [first, ...rest] = basement.coneOfSight.sightPolygon;
+        ctx.moveTo(Math.round(first.x), Math.round(first.y));
+        for (const pt of rest) {
+          ctx.lineTo(Math.round(pt.x), Math.round(pt.y));
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
       for (const door of basement.doors) {
         drawClosedDoorAndHiddenMask(ctx, door);
       }
@@ -2104,17 +2117,37 @@
 
   // src/entities/sight.ts
   var LineOfSight = class {
-    constructor(position, direction, distance) {
+    constructor(position, direction, distance, map) {
       __publicField(this, "position");
       __publicField(this, "direction");
-      // in radians or degrees? We support radians, but can handle angle
       __publicField(this, "distance");
+      __publicField(this, "map");
       __publicField(this, "boxes", []);
       __publicField(this, "callbacks", []);
       this.position = { ...position };
       this.direction = direction;
       this.distance = distance;
+      this.map = map;
       this.recomputeBoxes();
+    }
+    /**
+     * Number of bounding boxes that were spawned (getter `n`).
+     */
+    get n() {
+      return this.boxes.length;
+    }
+    /**
+     * Returns the point (center of the box) of the i-th box.
+     */
+    points(i) {
+      if (i < 0 || i >= this.boxes.length) {
+        return { ...this.position };
+      }
+      const b = this.boxes[i];
+      return {
+        x: b.x + b.width / 2,
+        y: b.y + b.height / 2
+      };
     }
     onDetection(cb) {
       this.callbacks.push(cb);
@@ -2136,12 +2169,16 @@
       for (let i = 0; i < 10; i++) {
         const px = this.position.x + distanceVector.x / 10 * i;
         const py = this.position.y + distanceVector.y / 10 * i;
-        this.boxes.push({
+        const box = {
           x: px,
           y: py,
           width: 4,
           height: 4
-        });
+        };
+        this.boxes.push(box);
+        if (this.map && isRectCollidingWithMap(this.map, box.x, box.y, box.width, box.height)) {
+          break;
+        }
       }
     }
     checkDetection(player) {
@@ -2157,17 +2194,20 @@
     }
   };
   var ConeOfSight = class {
-    constructor(position, direction, distance, fieldOfView = 45 * Math.PI / 180) {
+    constructor(position, direction, distance, fieldOfView = 45 * Math.PI / 180, map) {
       __publicField(this, "position");
       __publicField(this, "direction");
       __publicField(this, "distance");
       __publicField(this, "fieldOfView");
+      __publicField(this, "map");
       __publicField(this, "lines", []);
+      __publicField(this, "sightPolygon", []);
       __publicField(this, "callbacks", []);
       this.position = { ...position };
       this.direction = direction;
       this.distance = distance;
       this.fieldOfView = fieldOfView;
+      this.map = map;
       this.recomputeLines();
     }
     onDetection(cb) {
@@ -2180,26 +2220,20 @@
       };
     }
     recomputeLines() {
-      const forwardLine = new LineOfSight(
-        this.position,
-        this.direction,
-        this.distance
-      );
-      const plusLine = new LineOfSight(
-        this.position,
-        this.direction + this.fieldOfView / 2,
-        this.distance
-      );
-      const minusLine = new LineOfSight(
-        this.position,
+      const angles = [
         this.direction - this.fieldOfView / 2,
-        this.distance
+        this.direction - this.fieldOfView / 4,
+        this.direction,
+        this.direction + this.fieldOfView / 4,
+        this.direction + this.fieldOfView / 2
+      ];
+      this.lines = angles.map(
+        (ang) => new LineOfSight(this.position, ang, this.distance, this.map)
       );
-      this.lines = [forwardLine, plusLine, minusLine];
-      for (const line of this.lines) {
-        line.onDetection((_player) => {
-        });
-      }
+      this.sightPolygon = [
+        { ...this.position },
+        ...this.lines.map((line) => line.points(line.n - 1))
+      ];
     }
     getAllBoxes() {
       const all = [];
@@ -2376,8 +2410,9 @@
       this.coneOfSight = new ConeOfSight(
         { x: this.windowNpc.x, y: this.windowNpc.y },
         this.npcSightAngle,
-        5 * TILE_SIZE,
-        45 * Math.PI / 180
+        7.5 * TILE_SIZE,
+        45 * Math.PI / 180,
+        this.map
       );
     }
     enter(player) {
@@ -2399,8 +2434,9 @@
       this.coneOfSight = new ConeOfSight(
         { x: this.windowNpc.x, y: this.windowNpc.y },
         this.npcSightAngle,
-        5 * TILE_SIZE,
-        45 * Math.PI / 180
+        7.5 * TILE_SIZE,
+        45 * Math.PI / 180,
+        this.map
       );
     }
     getSolidObstacles() {
@@ -2478,8 +2514,9 @@
         this.coneOfSight = new ConeOfSight(
           { x: this.windowNpc.x, y: this.windowNpc.y },
           this.npcSightAngle,
-          5 * TILE_SIZE,
-          45 * Math.PI / 180
+          7.5 * TILE_SIZE,
+          45 * Math.PI / 180,
+          this.map
         );
       }
       const detected = this.coneOfSight.checkDetection(player);
