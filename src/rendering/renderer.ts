@@ -1138,8 +1138,8 @@ export function renderGame(
       name: 'Arjan' as any,
       bounds: basement.windowNpc,
       facing: basement.windowNpc.facing,
-      hairColor: '#3a2016',
-      shirtColor: '#9c3832',
+      hairColor: '#4e433c',
+      shirtColor: '#423933',
     });
 
     // Olexa standing south of chess board looking north
