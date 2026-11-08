@@ -460,15 +460,13 @@ function updateOutsideLevel(
     return true;
   }
 
-  // Update the dog on the east snow field
-  const dogSpeedMultiplier = state.joystickActive ? 0.5 : 1.0;
+  // Update the dog on the east snow field (constant half-speed across all platforms)
   const caughtByDog = updateDog(
     state.dog,
     state.player,
     dtSeconds,
     state.map,
-    solidObstacles,
-    dogSpeedMultiplier
+    solidObstacles
   );
   if (caughtByDog) {
     resetAfterSnowballHit(state);

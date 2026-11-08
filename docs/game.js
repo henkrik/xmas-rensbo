@@ -1570,7 +1570,7 @@
   // src/entities/dog.ts
   var DOG_START_X = 26.5 * TILE_SIZE;
   var DOG_START_Y = 12.5 * TILE_SIZE;
-  var DOG_MAX_SPEED = 74;
+  var DOG_MAX_SPEED = 37;
   var DOG_ACCELERATION = 95;
   var DOG_DECELERATION = 90;
   var DOG_AGGRO_DISTANCE = 6.5 * TILE_SIZE;
@@ -2703,14 +2703,12 @@
       state.activeDialogue = null;
       return true;
     }
-    const dogSpeedMultiplier = state.joystickActive ? 0.5 : 1;
     const caughtByDog = updateDog(
       state.dog,
       state.player,
       dtSeconds,
       state.map,
-      solidObstacles,
-      dogSpeedMultiplier
+      solidObstacles
     );
     if (caughtByDog) {
       resetAfterSnowballHit(state);

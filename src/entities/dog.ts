@@ -33,8 +33,8 @@ export interface Dog {
 export const DOG_START_X = 26.5 * TILE_SIZE;
 export const DOG_START_Y = 12.5 * TILE_SIZE;
 
-// Roughly the same max speed as Santa (player.speed = 75 px/s)
-export const DOG_MAX_SPEED = 74;
+// Half-speed (37 px/s) across all platforms (desktop & mobile)
+export const DOG_MAX_SPEED = 37;
 // Gradual acceleration/deceleration so the player can sidestep-dodge a charge,
 // but will inevitably be caught if standing still
 export const DOG_ACCELERATION = 95;

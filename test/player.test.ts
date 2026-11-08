@@ -549,7 +549,7 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(state.activeDialogue).toBeNull();
   });
 
-  it('halves dog max speed in joystick mode', () => {
+  it('keeps dog max speed at half-speed (37 px/s) on both keyboard and joystick mode', () => {
     const state = createGameState();
     const input = createEmptyInput();
 
@@ -561,9 +561,11 @@ describe('Player walking & 2x Rensbo map layout', () => {
 
     // Normal keyboard mode
     state.joystickActive = false;
-    updateGameState(state, input, 0.5);
-    expect(state.dog.vx).toBeLessThan(-30);
-    expect(Math.abs(state.dog.vx)).toBeGreaterThan(37); // > halved max speed
+    for (let i = 0; i < 20; i++) {
+      updateGameState(state, input, 0.05);
+      expect(Math.abs(state.dog.vx)).toBeLessThanOrEqual(37.01);
+    }
+    expect(Math.abs(state.dog.vx)).toBeGreaterThan(30);
 
     // Reset and test in Joystick mode
     state.dog.x = DOG_START_X;
@@ -578,6 +580,7 @@ describe('Player walking & 2x Rensbo map layout', () => {
       updateGameState(state, input, 0.05);
       expect(Math.abs(state.dog.vx)).toBeLessThanOrEqual(37.01);
     }
+    expect(Math.abs(state.dog.vx)).toBeGreaterThan(30);
   });
 
   it('shows desktop and mobile tutorial dialogues on initial load and clears them on reset', () => {
