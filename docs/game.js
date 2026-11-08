@@ -538,7 +538,7 @@
   }
 
   // inspiration/secret.txt
-  var secret_default = "Alex -> Arjan\nAnne Marie -> Annelotte\nAnnelotte -> Olexa\nArjan -> Hanneloes\nHanneloes -> Anne Marie\nHenrik -> Sylvester\nOlexa -> Henrik\nSylvester -> Tanja\nTanja -> Alex\nFoo -> Bar\nTesting -> Banana\n";
+  var secret_default = "Alex -> Anne Marie\nAnne Marie -> Olexa\nAnnelotte -> Rosanna\nArjan -> Hanneloes\nDiana -> Alex\nHanneloes -> Annelotte\nHenrik -> Albin\nOlexa -> Arjan\nRosanna -> Simon\nSimon -> Diana\nSylvester -> Henrik\nTanja -> Sylvester\nAlbin -> Tanja\n";
 
   // src/world/tilemap.ts
   var TILE_SIZE = 16;
