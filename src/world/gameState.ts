@@ -513,7 +513,11 @@ export function updateGameState(
       if (
         state.activeDialogue.currentIndex >= state.activeDialogue.lines.length
       ) {
+        const onClose = state.activeDialogue.onClose;
         state.activeDialogue = null;
+        if (onClose) {
+          onClose();
+        }
       }
     }
     return;
@@ -521,8 +525,8 @@ export function updateGameState(
 
   const transitionCtx: LevelTransitionContext = {
     loadLevel: (nextId: LevelId) => loadLevel(state, nextId),
-    openDialogue: (lines: string[]) => {
-      state.activeDialogue = { lines, currentIndex: 0 };
+    openDialogue: (lines: string[], onClose?: () => void) => {
+      state.activeDialogue = { lines, currentIndex: 0, onClose };
     },
   };
 
@@ -533,6 +537,15 @@ export function updateGameState(
     }
   } else if (state.currentLevelId === 'level-basement') {
     const basement = state.levels['level-basement'];
+    const movementLocked = basement.updateCutscene(
+      dtSeconds,
+      state.player,
+      transitionCtx
+    );
+    if (movementLocked) {
+      refreshInteractables(state);
+      return;
+    }
     updatePlayer(
       state.player,
       input,

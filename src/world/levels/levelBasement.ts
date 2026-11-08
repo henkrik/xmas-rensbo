@@ -90,6 +90,15 @@ export const BASEMENT_WINDOW_NPC: Rect & { facing: Direction } = {
   facing: 'down',
 };
 
+/** Person sitting on the toilet in the basement bathroom (facing west). */
+export const BASEMENT_TOILET_NPC: Rect & { facing: Direction } = {
+  x: 21 * TILE_SIZE + 2,
+  y: 9 * TILE_SIZE + 2,
+  width: 12,
+  height: 12,
+  facing: 'left',
+};
+
 /** Locked door on the north wall of the basement hallway (straight north of front door). */
 export const BASEMENT_HALL_NORTH_DOOR_BOUNDS: Rect = {
   x: 15 * TILE_SIZE,
@@ -131,12 +140,20 @@ export const BASEMENT_STAIRS_TRIGGER_BOUNDS: Rect = {
 };
 
 export const USED_STAIRS_STATE_KEY = 'usedStairs';
+export const TOILET_EVENT_TRIGGERED_KEY = 'basementToiletEventTriggered';
+
+export interface ToiletCutsceneState {
+  active: boolean;
+  timer: number;
+}
 
 export class LevelBasement implements GameLevel {
   public readonly id: LevelId = 'level-basement';
   public readonly map: TileMap = BASEMENT_MAP;
   public doors: CollidableDoor[];
   public readonly windowNpc = { ...BASEMENT_WINDOW_NPC };
+  public readonly toiletNpc = { ...BASEMENT_TOILET_NPC };
+  public toiletCutscene: ToiletCutsceneState | null = null;
 
   constructor() {
     this.doors = [
@@ -212,7 +229,11 @@ export class LevelBasement implements GameLevel {
   ): boolean {
     const doorIdx = this.doors.findIndex((d) => d.id === interactableId);
     if (doorIdx !== -1) {
+      const openedDoor = this.doors[doorIdx];
       this.doors.splice(doorIdx, 1);
+      if (openedDoor.id === 'basement-bathroom-door') {
+        this.startToiletCutscene(player);
+      }
       return true;
     }
 
@@ -223,5 +244,44 @@ export class LevelBasement implements GameLevel {
     }
 
     return false;
+  }
+
+  public startToiletCutscene(player: Player): void {
+    if (player.states.get(TOILET_EVENT_TRIGGERED_KEY)) {
+      return;
+    }
+    this.toiletCutscene = {
+      active: true,
+      timer: 0,
+    };
+  }
+
+  public updateCutscene(
+    dtSeconds: number,
+    player: Player,
+    ctx: LevelTransitionContext
+  ): boolean {
+    if (!this.toiletCutscene?.active) {
+      return false;
+    }
+
+    player.isMoving = false;
+    player.walkTimer = 0;
+    this.toiletCutscene.timer += dtSeconds;
+
+    if (this.toiletCutscene.timer >= 2.0) {
+      this.toiletCutscene.active = false;
+      this.toiletCutscene = null;
+      player.states.set(TOILET_EVENT_TRIGGERED_KEY, true);
+      ctx.openDialogue([
+        "What are you doing here?? I know you see me when I'm sleeping but this is not okay.",
+      ], () => {
+        // Player takes damage: reload current level, make Santa blink
+        ctx.loadLevel('level-basement');
+        player.blinkTimer = 2.0; // HIT_BLINK_DURATION_SECONDS
+      });
+    }
+
+    return true;
   }
 }

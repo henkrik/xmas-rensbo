@@ -22,6 +22,7 @@ export interface Interactable {
 export interface DialogueState {
   lines: string[];
   currentIndex: number;
+  onClose?: () => void;
 }
 
 export interface LadderInteractionOptions {

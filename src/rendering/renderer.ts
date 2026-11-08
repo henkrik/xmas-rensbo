@@ -709,6 +709,40 @@ function drawWindowGazingNpc(
   ctx.fillRect(x + 9, y + 14, 3, 1);
 }
 
+function drawToiletNpc(
+  ctx: CanvasRenderingContext2D,
+  npcBounds: Rect
+): void {
+  const x = Math.round(npcBounds.x - 2);
+  const y = Math.round(npcBounds.y - 4);
+
+  // Person sitting on toilet facing west (left)
+  // Hair & head
+  ctx.fillStyle = '#181420';
+  ctx.fillRect(x + 3, y + 1, 7, 6);
+  ctx.fillStyle = '#7a3b22'; // Auburn hair
+  ctx.fillRect(x + 4, y + 2, 5, 4);
+  // Face looking left
+  ctx.fillStyle = '#ffcfab';
+  ctx.fillRect(x + 2, y + 3, 3, 3);
+  ctx.fillStyle = '#181420';
+  ctx.fillRect(x + 3, y + 4, 1, 1); // Eye
+
+  // Torso / shirt (light blue pajama shirt)
+  ctx.fillStyle = '#181420';
+  ctx.fillRect(x + 3, y + 6, 7, 5);
+  ctx.fillStyle = '#72a8d8';
+  ctx.fillRect(x + 4, y + 7, 5, 4);
+
+  // Lower body / bare knees & dropped trousers bunched around ankles
+  ctx.fillStyle = '#ffcfab';
+  ctx.fillRect(x + 2, y + 10, 3, 2); // Bare knees sitting forward
+  ctx.fillStyle = '#404c64'; // Bunched trousers
+  ctx.fillRect(x + 1, y + 12, 5, 3);
+  ctx.fillStyle = '#181420';
+  ctx.fillRect(x + 2, y + 14, 3, 1);
+}
+
 function drawFireplaceAnimation(
   ctx: CanvasRenderingContext2D,
   elapsedTime: number
@@ -975,6 +1009,9 @@ export function renderGame(
     // Character standing by the extra big south windows in the basement living room
     drawWindowGazingNpc(ctx, basement.windowNpc);
 
+    // Person sitting on the toilet in the basement bathroom
+    drawToiletNpc(ctx, basement.toiletNpc);
+
     // Closed doors & black fog-of-war over unopened rooms (e.g. bathroom)
     for (const door of basement.doors) {
       drawClosedDoorAndHiddenMask(ctx, door);
@@ -1060,6 +1097,22 @@ export function renderGame(
       playerDrawX,
       playerDrawY,
       state.levels['level-upstairs'].rosannaCutscene.elapsed
+    );
+  }
+
+  // Draw blinking '!' above the toilet person's head during the basement bathroom toilet cutscene
+  if (
+    state.currentLevelId === 'level-basement' &&
+    state.levels['level-basement'].toiletCutscene?.active
+  ) {
+    const toiletNpc = state.levels['level-basement'].toiletNpc;
+    const npcDrawX = Math.round(toiletNpc.x - (TILE_SIZE - toiletNpc.width) / 2);
+    const npcDrawY = Math.round(toiletNpc.y - (TILE_SIZE - toiletNpc.height));
+    drawBlinkingExclamation(
+      ctx,
+      npcDrawX,
+      npcDrawY,
+      state.levels['level-basement'].toiletCutscene.timer
     );
   }
 

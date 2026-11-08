@@ -40,6 +40,7 @@ import {
   BASEMENT_HALL_NORTH_DOOR_BOUNDS,
   BASEMENT_STAIRS_SPAWN,
   BASEMENT_STAIRS_TRIGGER_BOUNDS,
+  LevelBasement,
   USED_STAIRS_STATE_KEY,
 } from '../src/world/levels/levelBasement';
 import {
@@ -866,12 +867,38 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(state.nearbyInteractable?.id).toBe('basement-bathroom-door');
     expect(state.nearbyInteractable?.promptText).toBe('Open door');
 
-    // Open the bathroom door -> deletes the door and allows walking freely into the bathroom
+    // Open the bathroom door -> deletes the door and triggers toilet cutscene
     applyKeyEvent(input, 'KeyZ', true);
     updateGameState(state, input, 0.01);
     applyKeyEvent(input, 'KeyZ', false);
     expect(state.levels['level-basement'].doors.length).toBe(0);
 
+    // Toilet cutscene is active, locking player movement while exclamation mark blinks
+    const basement = state.levels['level-basement'] as LevelBasement;
+    expect(basement.toiletCutscene?.active).toBe(true);
+    input.up = true;
+    updateGameState(state, input, 0.35);
+    input.up = false;
+    expect(state.player.isMoving).toBe(false);
+
+    // Advance 2 seconds -> dialogue opens
+    updateGameState(state, input, 2.0);
+    expect(state.activeDialogue).not.toBeNull();
+    expect(state.activeDialogue?.lines[0]).toBe(
+      "What are you doing here?? I know you see me when I'm sleeping but this is not okay."
+    );
+
+    // Close dialogue with KeyZ -> reloads level-basement and triggers damage blink
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.activeDialogue).toBeNull();
+    expect(state.currentLevelId).toBe('level-basement');
+    expect(state.player.blinkTimer).toBeGreaterThan(0);
+
+    // Now that the event triggered, door remains open and player can walk around
+    state.player.x = BASEMENT_BATHROOM_DOOR_BOUNDS.x + 2;
+    state.player.y = BASEMENT_BATHROOM_DOOR_BOUNDS.y + TILE_SIZE + 1;
     input.up = true;
     updateGameState(state, input, 0.35);
     input.up = false;

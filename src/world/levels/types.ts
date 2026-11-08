@@ -13,7 +13,7 @@ export interface CollidableDoor {
 
 export interface LevelTransitionContext {
   loadLevel: (levelId: LevelId) => void;
-  openDialogue: (lines: string[]) => void;
+  openDialogue: (lines: string[], onClose?: () => void) => void;
 }
 
 export interface GameLevel {
