@@ -216,10 +216,13 @@ async function startGame(): Promise<void> {
   const initialLevelId = parseLevelQueryParam(searchParams.get('level'));
   const hasLevelOverride = searchParams.has('level');
 
+  const isDebug = searchParams.has('debug');
+
   const state = createGameState({
     isMobile: isMobileDevice,
     showIntroDialogue: !hasLevelOverride,
     initialLevelId,
+    debug: isDebug,
   });
   state.joystickActive = isMobileDevice;
 

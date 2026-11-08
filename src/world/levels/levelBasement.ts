@@ -38,8 +38,8 @@ export const BASEMENT_TILES: TileType[][] = [
   [V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V], // 5
   [V, V, V, V, V, V, W, W, W, W, W, W, W, W, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V], // 6: Library Bookshelf top
   [V, V, V, V, V, V, W, W, W, W, W, W, W, W, V, V, V, V, W, W, W, W, W, V, V, V, V, V, V, V, V, V], // 7: Library Bookshelf base | Bathroom north wall
-  [V, V, V, V, V, V, W, F, F, F, F, F, O, W, V, V, V, V, W, B, B, O, W, V, V, V, V, V, V, V, V, V], // 8: Wood stack (12) | Bathroom toilet (21)
-  [V, V, V, V, V, V, W, O, F, F, F, F, O, W, V, V, V, V, W, O, B, B, W, V, V, V, V, V, V, V, V, V], // 9: Library couch (7) | Wood stack (12) | Sink (19)
+  [V, V, V, V, V, V, W, F, F, F, F, F, O, W, V, V, V, V, W, B, B, B, W, V, V, V, V, V, V, V, V, V], // 8: Wood stack (12) | Bathroom floor (21)
+  [V, V, V, V, V, V, W, O, F, F, F, F, O, W, V, V, V, V, W, O, B, O, W, V, V, V, V, V, V, V, V, V], // 9: Library couch (7) | Wood stack (12) | Sink (19) | Toilet facing west (21)
   [V, V, V, V, V, V, W, O, F, F, F, F, F, W, V, V, V, V, W, O, B, B, W, V, V, V, V, V, V, V, V, V], // 10: Library couch (7) | Sink (19)
   [V, V, V, V, V, V, W, O, F, F, F, O, O, W, V, V, V, V, W, B, B, B, W, V, V, V, V, V, V, V, V, V], // 11: Library couch (7) | Fireplace (11..12)
   [V, V, V, V, V, V, W, F, F, F, F, O, O, W, W, W, W, W, W, W, B, W, W, V, V, V, V, V, V, V, V, V], // 12: Fireplace (11..12) | North Locked Door (15..16) | Bathroom Door (20)

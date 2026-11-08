@@ -79,6 +79,7 @@ export interface GameState {
   nearbyInteractable: Interactable | null;
   activeDialogue: DialogueState | null;
   elapsedTime: number;
+  debugMode: boolean;
 }
 
 function syncOutsideToLevel(state: GameState): void {
@@ -163,6 +164,7 @@ export interface CreateGameStateOptions {
   isMobile?: boolean;
   showIntroDialogue?: boolean;
   initialLevelId?: LevelId;
+  debug?: boolean;
 }
 
 /**
@@ -220,6 +222,7 @@ export function createGameState(
   let isMobile = false;
   let showIntroDialogue = false;
   let initialLevelId: LevelId = 'level-outside';
+  let debugMode = false;
 
   if (mapOrOptions && 'cols' in mapOrOptions && 'rows' in mapOrOptions) {
     map = mapOrOptions as TileMap;
@@ -232,6 +235,9 @@ export function createGameState(
     }
     if (opts.initialLevelId) {
       initialLevelId = opts.initialLevelId;
+    }
+    if (opts.debug !== undefined) {
+      debugMode = opts.debug;
     }
   }
 
@@ -269,6 +275,7 @@ export function createGameState(
     nearbyInteractable: null,
     activeDialogue: showIntroDialogue ? createIntroDialogue(isMobile) : null,
     elapsedTime: 0,
+    debugMode,
   };
 
   debugLog(`Loaded level: ${initialLevelId}`);

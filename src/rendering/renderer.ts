@@ -6,7 +6,9 @@ import { CollidableDoor } from '../world/levels/types';
 import {
   DAMAGED_WIRE_HAZARD,
   GROUND_LADDER_BOUNDS,
+  isSolidTile,
   TILE_SIZE,
+  TileType,
 } from '../world/tilemap';
 import {
   drawPixelText,
@@ -725,6 +727,60 @@ function drawBlinkingExclamation(
   ctx.fillRect(bx + 6, by + 8, 1, 1);
 }
 
+/**
+ * Draws green collision bounding boxes for all collidable objects and the player
+ * when the `?debug` URL option is active.
+ */
+function drawCollisionDebugOutlines(
+  ctx: CanvasRenderingContext2D,
+  state: GameState
+): void {
+  ctx.save();
+  ctx.strokeStyle = '#00ff00';
+  ctx.lineWidth = 1;
+
+  // 1. Solid tiles in the tilemap (excluding outer black void)
+  const { map } = state;
+  for (let r = 0; r < map.rows; r++) {
+    for (let c = 0; c < map.cols; c++) {
+      if (isSolidTile(map, c, r) && map.tiles[r][c] !== TileType.VoidBlack) {
+        ctx.strokeRect(
+          c * map.tileSize + 0.5,
+          r * map.tileSize + 0.5,
+          map.tileSize - 1,
+          map.tileSize - 1
+        );
+      }
+    }
+  }
+
+  // 2. Solid dynamic obstacles for the active level
+  const activeLevel = state.levels[state.currentLevelId];
+  const solidObstacles =
+    state.currentLevelId === 'level-outside'
+      ? [...state.throwers, state.motorcycle]
+      : activeLevel.getSolidObstacles();
+
+  for (const obs of solidObstacles) {
+    ctx.strokeRect(
+      Math.round(obs.x) + 0.5,
+      Math.round(obs.y) + 0.5,
+      obs.width - 1,
+      obs.height - 1
+    );
+  }
+
+  // 3. Player's collision bounding box
+  ctx.strokeRect(
+    Math.round(state.player.x) + 0.5,
+    Math.round(state.player.y) + 0.5,
+    state.player.width - 1,
+    state.player.height - 1
+  );
+
+  ctx.restore();
+}
+
 export function renderGame(
   ctx: CanvasRenderingContext2D,
   state: GameState,
@@ -905,16 +961,16 @@ export function renderGame(
       camera.height
     );
 
-    // If the one-time Kitchen Rosanna cutscene is active, draw the other Santa running east-to-west outside the north windows
+    // If the one-time Kitchen Rosanna cutscene is active, draw the other Santa running west-to-east outside the north windows
     if (upstairs.rosannaCutscene?.active) {
       const cs = upstairs.rosannaCutscene;
       const stepPhase = Math.floor(cs.walkTimer * 10) % 4;
       const frameCol = stepPhase === 1 ? 1 : stepPhase === 3 ? 2 : 0;
-      const leftDirRow = DIRECTION_TO_ROW.left;
+      const rightDirRow = DIRECTION_TO_ROW.right;
       ctx.drawImage(
         assets.santaSprite,
         frameCol * TILE_SIZE,
-        leftDirRow * TILE_SIZE,
+        rightDirRow * TILE_SIZE,
         TILE_SIZE,
         TILE_SIZE,
         Math.round(cs.santaX),
@@ -970,6 +1026,11 @@ export function renderGame(
       playerDrawY,
       state.levels['level-upstairs'].rosannaCutscene.elapsed
     );
+  }
+
+  // Debug overlay: render green collision bounding boxes for all collidable objects and the player
+  if (state.debugMode) {
+    drawCollisionDebugOutlines(ctx, state);
   }
 
   ctx.restore();

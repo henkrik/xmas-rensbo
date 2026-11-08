@@ -41,23 +41,23 @@ export const UPSTAIRS_TILES: TileType[][] = [
   [V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V], // 1
   [V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V], // 2: Exterior strip north of kitchen windows
   [V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V], // 3
-  [V, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, V, V, V, V], // 4: North wall (Dining | Kitchen windows | Shower | Bedroom)
-  [V, W, F, F, O, O, F, F, F, F, F, F, F, F, F, O, W, B, B, B, W, F, F, F, F, F, F, W, V, V, V, V], // 5: Dining table (4..5) | Kitchen | Shower | Bedroom
-  [V, W, O, F, O, O, F, F, F, F, O, O, F, F, F, O, W, B, B, B, W, F, F, F, F, O, O, W, V, V, V, V], // 6: Cupboard (2) | Kitchen Island (10..11) | Double Bed (25..26)
-  [V, W, O, F, O, O, F, F, F, F, O, O, F, F, F, O, W, O, B, B, W, F, F, F, F, O, O, W, V, V, V, V], // 7: Cupboard (2) | Kitchen Island (10..11) | Shower sink (17) | Double Bed (25..26)
-  [V, W, F, F, O, O, F, F, F, F, F, F, F, F, F, O, W, O, B, O, W, F, F, F, F, F, F, W, V, V, V, V], // 8: Dining table (4..5) | Shower sink (17) & toilet (19)
-  [V, W, F, F, O, O, F, F, F, O, O, O, F, F, F, W, W, B, B, B, W, F, F, F, F, F, F, W, V, V, V, V], // 9: Kitchen bar (9..11)
-  [V, W, F, F, F, F, F, F, F, W, O, O, F, F, F, W, W, W, B, W, W, W, W, F, W, W, W, W, W, V, V, V], // 10: The Altar (10..11) | Kitchen arch (12..14) | Shower door (18) | Bedroom door (23)
+  [V, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, V, V, V], // 4: North wall (Dining | Kitchen windows | Shower | Bedroom with window at 24..25)
+  [V, W, F, F, F, F, F, F, F, F, F, F, F, F, F, O, W, B, B, B, W, W, F, F, F, F, F, F, W, V, V, V], // 5: Shortened dining table walk path (4..5) | Shower (17..19) | Bedroom (22..27)
+  [V, W, O, F, O, O, F, F, F, F, O, O, F, F, F, O, W, B, B, B, W, W, F, F, F, F, O, O, W, V, V, V], // 6: Cupboard (2) | Dining Table (4..5) | Island (10..11) | Bed (26..27)
+  [V, W, O, F, O, O, F, F, F, F, O, O, F, F, F, O, W, O, B, B, W, W, F, F, F, F, O, O, W, V, V, V], // 7: Cupboard (2) | Dining Table (4..5) | Shower sink (17) | Bed (26..27)
+  [V, W, F, F, O, O, F, F, F, F, F, F, F, F, F, O, W, O, B, O, W, W, F, F, F, F, F, F, W, V, V, V], // 8: Dining table (4..5) | Shower sink (17) & toilet (19) | Bedroom
+  [V, W, F, F, O, O, F, F, F, O, O, O, F, F, F, W, W, B, B, B, W, W, F, F, F, F, F, F, W, V, V, V], // 9: Kitchen bar (9..11)
+  [V, W, F, F, F, F, F, F, F, W, O, O, F, F, F, W, W, W, B, W, W, W, W, W, F, W, W, W, W, V, V, V], // 10: Altar (10..11) | Arch (12..14) | Shower door (18) | Bedroom door (24)
   [V, W, F, F, O, O, O, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, W, V, V, V], // 11: Colorful Couch (4..6) | Narrow Hallway (rows 11..12) -> Extra Room (26..27)
   [V, W, O, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, W, V, V, V], // 12: Left Colorful Armchair (2) | Narrow Hallway (rows 11..12)
   [V, W, F, F, F, F, F, O, F, F, F, F, F, F, W, T, T, T, T, W, W, F, W, W, W, W, F, F, W, V, V, V], // 13: Right Armchair (7) | Open breathing room (8..13) | Stairs (15..18) | Office door (21)
-  [V, W, O, O, F, F, F, F, F, F, F, F, F, F, W, T, T, T, T, W, F, F, F, F, F, W, F, F, W, V, V, V], // 14: Xmas Tree (2..3) | Open breathing room (8..13) | Stairs | Wider Office (20..24)
-  [V, W, O, O, F, F, F, F, F, W, W, F, W, W, W, T, T, T, T, W, O, F, F, F, F, W, F, F, W, V, V, V], // 15: Xmas Tree (2..3) | Table Room north wall & door (11) | Office side desk (20)
-  [V, W, O, O, F, F, F, F, F, W, F, F, F, F, W, T, T, T, T, W, O, F, F, F, F, W, F, F, W, V, V, V], // 16: Xmas Tree (2..3) | Table Room floor | Stairs trigger (15..18)
-  [V, W, W, W, W, W, W, W, W, W, F, O, O, F, W, T, T, T, T, W, F, F, F, F, F, W, F, F, W, V, V, V], // 17: Living Room south wall (windows at 3..4, 6..7) | Second Kitchen Table (11..12)
-  [V, V, V, V, V, V, V, V, V, W, F, O, O, F, W, W, W, W, W, W, O, O, O, F, F, W, W, W, W, V, V, V], // 18: Second Kitchen Table (11..12) | Office PC desk (20..22) | Extra Room south wall (26..27)
-  [V, V, V, V, V, V, V, V, V, W, F, F, F, F, W, V, V, V, V, W, O, O, O, F, F, W, V, V, V, V, V, V], // 19: Table Room floor | Office PC desk
-  [V, V, V, V, V, V, V, V, V, W, F, F, F, F, W, V, V, V, V, W, W, W, W, W, W, W, V, V, V, V, V, V], // 20: Table Room floor | Office south wall (window at 22..23)
+  [V, W, O, O, F, F, F, F, F, F, F, F, F, F, W, T, T, T, T, W, F, F, F, F, F, W, F, F, W, V, V, V], // 14: Xmas Tree (2..3) | Stairs | Aligned Office (20..24) | Extra Room (26..27)
+  [V, W, O, O, F, F, F, F, F, W, W, F, W, W, W, T, T, T, T, W, O, F, F, F, F, W, F, F, W, V, V, V], // 15: Xmas Tree (2..3) | Table Room door (11) | Office side desk (20)
+  [V, W, O, O, F, F, F, F, F, W, F, F, F, F, W, T, T, T, T, W, O, O, O, F, F, W, F, F, W, V, V, V], // 16: Xmas Tree (2..3) | Table Room floor | Stairs trigger (15..18) | Office PC desk (20..22)
+  [V, W, W, W, W, W, W, W, W, W, F, O, O, F, W, T, T, T, T, W, O, O, O, F, F, W, F, F, W, V, V, V], // 17: Living Room south wall (3..4, 6..7) | Office PC desk/chair (20..22)
+  [V, V, V, V, V, V, V, V, V, W, F, O, O, F, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, V, V, V], // 18: Aligned South Wall across Stairs (15..18), Office (19..25 with window), Extra Room (26..28)
+  [V, V, V, V, V, V, V, V, V, W, F, F, F, F, W, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V], // 19: Table Room floor | Void under aligned office
+  [V, V, V, V, V, V, V, V, V, W, F, F, F, F, W, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V], // 20: Table Room floor
   [V, V, V, V, V, V, V, V, V, W, W, W, W, W, W, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V], // 21: Table Room south wall (windows at 10..13)
   [V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V], // 22
   [V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V, V], // 23
@@ -98,24 +98,24 @@ export const UPSTAIRS_SHOWER_DOOR_BOUNDS: Rect = {
 };
 
 export const UPSTAIRS_SHOWER_HIDDEN_MASK: Rect = {
-  x: 16 * TILE_SIZE,
+  x: 17 * TILE_SIZE,
   y: 4 * TILE_SIZE,
-  width: 5 * TILE_SIZE,
+  width: 4 * TILE_SIZE,
   height: 6 * TILE_SIZE,
 };
 
 /** Closed collidable door to The Bedroom. */
 export const UPSTAIRS_BEDROOM_DOOR_BOUNDS: Rect = {
-  x: 23 * TILE_SIZE,
+  x: 24 * TILE_SIZE,
   y: 10 * TILE_SIZE,
   width: TILE_SIZE,
   height: TILE_SIZE,
 };
 
 export const UPSTAIRS_BEDROOM_HIDDEN_MASK: Rect = {
-  x: 20 * TILE_SIZE,
+  x: 21 * TILE_SIZE,
   y: 4 * TILE_SIZE,
-  width: 8 * TILE_SIZE,
+  width: 7 * TILE_SIZE,
   height: 6 * TILE_SIZE,
 };
 
@@ -128,10 +128,10 @@ export const UPSTAIRS_OFFICE_DOOR_BOUNDS: Rect = {
 };
 
 export const UPSTAIRS_OFFICE_HIDDEN_MASK: Rect = {
-  x: 19 * TILE_SIZE,
+  x: 20 * TILE_SIZE,
   y: 14 * TILE_SIZE,
-  width: 7 * TILE_SIZE,
-  height: 7 * TILE_SIZE,
+  width: 5 * TILE_SIZE,
+  height: 4 * TILE_SIZE,
 };
 
 /** Closed collidable door to the room with the second kitchen table. */
@@ -149,19 +149,19 @@ export const UPSTAIRS_TABLE_ROOM_HIDDEN_MASK: Rect = {
   height: 6 * TILE_SIZE,
 };
 
-/** Trigger region inside "The Kitchen" (cols 9..15, rows 5..9). */
+/** Trigger region inside "The Kitchen" (cols 9..15, rows 5..8, triggered 1 tile further north). */
 export const KITCHEN_TRIGGER_BOUNDS: Rect = {
   x: 9 * TILE_SIZE,
   y: 5 * TILE_SIZE,
   width: 6 * TILE_SIZE,
-  height: 4.5 * TILE_SIZE,
+  height: 3.5 * TILE_SIZE,
 };
 
 export const KITCHEN_ROSANNA_STATE_KEY = 'kitchenRosannaEventTriggered';
-export const ROSANNA_SANTA_START_X = 14.2 * TILE_SIZE;
-export const ROSANNA_SANTA_END_X = 8.2 * TILE_SIZE;
+export const ROSANNA_SANTA_START_X = 8.0 * TILE_SIZE;
+export const ROSANNA_SANTA_END_X = 14.5 * TILE_SIZE;
 export const ROSANNA_SANTA_Y = 2.5 * TILE_SIZE;
-export const ROSANNA_SANTA_SPEED = 56; // px per second running east-to-west outside north windows
+export const ROSANNA_SANTA_SPEED = 56; // px per second running west-to-east outside north windows
 
 export interface RosannaCutsceneState {
   active: boolean;
@@ -274,9 +274,9 @@ export class LevelUpstairs implements GameLevel {
 
       this.rosannaCutscene.elapsed += dtSeconds;
       this.rosannaCutscene.walkTimer += dtSeconds;
-      this.rosannaCutscene.santaX -= ROSANNA_SANTA_SPEED * dtSeconds;
+      this.rosannaCutscene.santaX += ROSANNA_SANTA_SPEED * dtSeconds;
 
-      if (this.rosannaCutscene.santaX <= ROSANNA_SANTA_END_X) {
+      if (this.rosannaCutscene.santaX >= ROSANNA_SANTA_END_X) {
         this.rosannaCutscene.active = false;
         this.rosannaCutscene = null;
         ctx.openDialogue(['... Rosanna???']);

@@ -953,7 +953,7 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(upstairs.rosannaCutscene?.active).toBe(true);
     const initialOtherSantaX = upstairs.rosannaCutscene!.santaX;
 
-    // While the other Santa runs east-to-west outside the north windows, the player cannot move
+    // While the other Santa runs west-to-east outside the north windows, the player cannot move
     const lockedPlayerX = state.player.x;
     const lockedPlayerY = state.player.y;
     input.left = true;
@@ -963,9 +963,9 @@ describe('Player walking & 2x Rensbo map layout', () => {
     input.down = false;
     expect(state.player.x).toBe(lockedPlayerX);
     expect(state.player.y).toBe(lockedPlayerY);
-    expect(upstairs.rosannaCutscene!.santaX).toBeLessThan(initialOtherSantaX);
+    expect(upstairs.rosannaCutscene!.santaX).toBeGreaterThan(initialOtherSantaX);
 
-    // Advance until the other Santa finishes running west and is out of sight
+    // Advance until the other Santa finishes running east and is out of sight
     for (let i = 0; i < 40; i++) {
       updateGameState(state, input, 0.05);
       if (!upstairs.rosannaCutscene) {
@@ -1054,5 +1054,42 @@ describe('Player walking & 2x Rensbo map layout', () => {
     // Christmas tree is at cols 2..3, rows 14..16 (x = 32..64)
     expect(upstairsState.player.x).toBeLessThan(4.5 * TILE_SIZE);
     expect(upstairsState.player.y).toBeGreaterThan(13 * TILE_SIZE);
+  });
+
+  it('allows walking freely along row 5 north of the shortened dining table upstairs', () => {
+    const state = createGameState({
+      initialLevelId: 'level-upstairs',
+      showIntroDialogue: false,
+    });
+    const input = createEmptyInput();
+
+    // Start player at col 3, row 5
+    state.player.x = 3 * TILE_SIZE;
+    state.player.y = 5 * TILE_SIZE;
+
+    // Walk east across row 5 all the way to col 8 past the table (cols 4..5, rows 6..9)
+    input.right = true;
+    for (let i = 0; i < 30; i++) {
+      updateGameState(state, input, 0.05);
+    }
+    input.right = false;
+
+    expect(state.player.x).toBeGreaterThan(7 * TILE_SIZE);
+    expect(Math.round(state.player.y)).toBe(5 * TILE_SIZE);
+  });
+
+  it('initializes debugMode based on options and supports basement toilet/dog bowl collision updates', () => {
+    const normalState = createGameState();
+    expect(normalState.debugMode).toBe(false);
+
+    const debugState = createGameState({ debug: true });
+    expect(debugState.debugMode).toBe(true);
+
+    const basement = debugState.levels['level-basement'];
+    // Col 21, Row 9 is the toilet on the east wall (solid)
+    expect(basement.map.tiles[9][21]).toBe(TileType.FurnitureSolid);
+
+    // Col 18, Row 14 is the dog bowl tile (walkable StoneTileFloor)
+    expect(basement.map.tiles[14][18]).toBe(TileType.StoneTileFloor);
   });
 });
