@@ -1066,7 +1066,7 @@
       return false;
     }
   };
-  var ConeOfSight = class {
+  var _ConeOfSight = class _ConeOfSight {
     constructor(position, direction, distance = DEFAULT_CONE_OF_SIGHT_DISTANCE, fovOrMap = DEFAULT_CONE_OF_SIGHT_FOV, mapOrFov) {
       __publicField(this, "position");
       __publicField(this, "direction");
@@ -1121,6 +1121,9 @@
       return all;
     }
     checkDetection(player) {
+      if (_ConeOfSight.cheatMode) {
+        return false;
+      }
       let detected = false;
       for (const line of this.lines) {
         if (line.checkDetection(player)) {
@@ -1135,6 +1138,8 @@
       return detected;
     }
   };
+  __publicField(_ConeOfSight, "cheatMode", false);
+  var ConeOfSight = _ConeOfSight;
 
   // src/world/levels/levelUpstairs.ts
   var V = 20 /* VoidBlack */;
@@ -1275,6 +1280,12 @@
     y: 17 * TILE_SIZE + 3,
     width: 10,
     height: 10
+  };
+  var UPSTAIRS_XMAS_TREE_BOUNDS = {
+    x: 2 * TILE_SIZE,
+    y: 14 * TILE_SIZE,
+    width: 2 * TILE_SIZE,
+    height: 3 * TILE_SIZE
   };
   var UPSTAIRS_HENRIK_NPC = {
     x: 10 * TILE_SIZE + 2,
@@ -1607,6 +1618,12 @@
           dialogueLines: []
         });
       }
+      list.push({
+        id: "upstairs-xmas-tree",
+        bounds: { ...UPSTAIRS_XMAS_TREE_BOUNDS },
+        promptText: "Save Christmas",
+        dialogueLines: []
+      });
       for (const door of this.doors) {
         list.push({
           id: door.id,
@@ -1633,6 +1650,26 @@
       if (interactableId === "upstairs-simon-present") {
         player.states.set(SIMON_PRESENT_TAKEN_KEY, true);
         ctx.openDialogue(["You picked up Simon's present."]);
+        return true;
+      }
+      if (interactableId === "upstairs-xmas-tree") {
+        if (ctx.fadeWorldToBlack) {
+          ctx.fadeWorldToBlack();
+        }
+        const receiver = ctx.getSecretSantaReceiver ? ctx.getSecretSantaReceiver() : void 0;
+        const finalLine = receiver ?? "Ehm... this is awkward. An error occurred, gift receiver unknown.";
+        ctx.openDialogue(
+          [
+            "CONGRATULATIONS! You have successfully saved Christmas by delivering all presents undetected.",
+            "As a reward for your valiant effort...",
+            "You will learn who your secret santa gift receiver is...",
+            "And that person is...",
+            finalLine
+          ],
+          void 0,
+          void 0,
+          true
+        );
         return true;
       }
       if (interactableId === "upstairs-diana-npc") {
@@ -3071,7 +3108,13 @@
       drawCollisionDebugOutlines(ctx, state);
     }
     ctx.restore();
-    if (state.currentLevelId === "level-outside") {
+    if (state.worldFadedToBlack) {
+      ctx.save();
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      ctx.restore();
+    }
+    if (state.currentLevelId === "level-outside" && !state.worldFadedToBlack) {
       drawSnowfall(ctx, elapsedTime, camera);
     }
     if (activeDialogue) {
@@ -4077,6 +4120,8 @@
     let showIntroDialogue = false;
     let initialLevelId = "level-outside";
     let debugMode = false;
+    let cheatMode = false;
+    let secretSantaDB = null;
     if (mapOrOptions && "cols" in mapOrOptions && "rows" in mapOrOptions) {
       map = mapOrOptions;
     } else if (mapOrOptions && typeof mapOrOptions === "object") {
@@ -4092,7 +4137,14 @@
       if (opts.debug !== void 0) {
         debugMode = opts.debug;
       }
+      if (opts.cheat !== void 0) {
+        cheatMode = opts.cheat;
+      }
+      if (opts.secretSantaDB !== void 0) {
+        secretSantaDB = opts.secretSantaDB;
+      }
     }
+    ConeOfSight.cheatMode = cheatMode;
     const player = createPlayer(PLAYER_START_X, PLAYER_START_Y);
     const levelOutside = new LevelOutside(map);
     const levelBasement = new LevelBasement();
@@ -4126,7 +4178,10 @@
       nearbyInteractable: null,
       activeDialogue: showIntroDialogue ? createIntroDialogue(isMobile) : null,
       elapsedTime: 0,
-      debugMode
+      debugMode,
+      cheatMode,
+      worldFadedToBlack: false,
+      secretSantaDB
     };
     debugLog(`Loaded level: ${initialLevelId}`);
     return state;
@@ -4298,6 +4353,9 @@
     if (state.activeDialogue) {
       state.player.isMoving = false;
       if (zPressed || pointerClick) {
+        if (state.activeDialogue.unclosable && state.activeDialogue.currentIndex >= state.activeDialogue.lines.length - 1) {
+          return;
+        }
         state.activeDialogue.currentIndex += 1;
         if (state.activeDialogue.currentIndex >= state.activeDialogue.lines.length) {
           const onClose = state.activeDialogue.onClose;
@@ -4311,13 +4369,23 @@
     }
     const transitionCtx = {
       loadLevel: (nextId) => loadLevel(state, nextId),
-      openDialogue: (lines, onClose, speakerPortrait) => {
+      openDialogue: (lines, onClose, speakerPortrait, unclosable) => {
         state.activeDialogue = {
           lines,
           currentIndex: 0,
           onClose,
-          speakerPortrait
+          speakerPortrait,
+          unclosable
         };
+      },
+      getSecretSantaReceiver: () => {
+        if (!state.secretSantaDB) return void 0;
+        const playerName = state.secretSantaDB.playerName;
+        if (!playerName) return void 0;
+        return state.secretSantaDB.getGiftReceiverOf(playerName);
+      },
+      fadeWorldToBlack: () => {
+        state.worldFadedToBlack = true;
       }
     };
     if (state.currentLevelId === "level-outside") {
@@ -4571,7 +4639,7 @@
     if (new URLSearchParams(window.location.search).has("debug")) {
       attachDebugConsole(document.getElementById("viewport-frame"));
     }
-    await initSecretSantaDB(secret_default);
+    const secretSantaDB = await initSecretSantaDB(secret_default);
     attachKeyboardListeners(window, input, {
       onToggleJoystick: () => {
         joystick?.toggle();
@@ -4582,11 +4650,14 @@
     const initialLevelId = parseLevelQueryParam(searchParams.get("level"));
     const hasLevelOverride = searchParams.has("level");
     const isDebug = searchParams.has("debug");
+    const isCheat = searchParams.has("cheat");
     const state = createGameState({
       isMobile: isMobileDevice,
       showIntroDialogue: !hasLevelOverride,
       initialLevelId,
-      debug: isDebug
+      debug: isDebug,
+      cheat: isCheat,
+      secretSantaDB
     });
     state.joystickActive = isMobileDevice;
     if (mobileActionBtn) {

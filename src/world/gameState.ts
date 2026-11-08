@@ -1,7 +1,9 @@
 import { debugLog } from '../core/debugConsole';
+import { SecretSantaDB } from '../core/secretSantaDB';
 import { consumeActionPress, InputState } from '../core/input';
 import { updateCat } from '../entities/cat';
 import { createDog, Dog, updateDog } from '../entities/dog';
+import { ConeOfSight } from '../entities/sight';
 import {
   createPlayer,
   Footprint,
@@ -83,6 +85,9 @@ export interface GameState {
   activeDialogue: DialogueState | null;
   elapsedTime: number;
   debugMode: boolean;
+  cheatMode: boolean;
+  worldFadedToBlack: boolean;
+  secretSantaDB: SecretSantaDB | null;
 }
 
 function syncOutsideToLevel(state: GameState): void {
@@ -168,6 +173,8 @@ export interface CreateGameStateOptions {
   showIntroDialogue?: boolean;
   initialLevelId?: LevelId;
   debug?: boolean;
+  cheat?: boolean;
+  secretSantaDB?: SecretSantaDB | null;
 }
 
 /**
@@ -229,6 +236,8 @@ export function createGameState(
   let showIntroDialogue = false;
   let initialLevelId: LevelId = 'level-outside';
   let debugMode = false;
+  let cheatMode = false;
+  let secretSantaDB: SecretSantaDB | null = null;
 
   if (mapOrOptions && 'cols' in mapOrOptions && 'rows' in mapOrOptions) {
     map = mapOrOptions as TileMap;
@@ -245,7 +254,15 @@ export function createGameState(
     if (opts.debug !== undefined) {
       debugMode = opts.debug;
     }
+    if (opts.cheat !== undefined) {
+      cheatMode = opts.cheat;
+    }
+    if (opts.secretSantaDB !== undefined) {
+      secretSantaDB = opts.secretSantaDB;
+    }
   }
+
+  ConeOfSight.cheatMode = cheatMode;
 
   const player = createPlayer(PLAYER_START_X, PLAYER_START_Y);
   const levelOutside = new LevelOutside(map);
@@ -284,6 +301,9 @@ export function createGameState(
     activeDialogue: showIntroDialogue ? createIntroDialogue(isMobile) : null,
     elapsedTime: 0,
     debugMode,
+    cheatMode,
+    worldFadedToBlack: false,
+    secretSantaDB,
   };
 
   debugLog(`Loaded level: ${initialLevelId}`);
@@ -516,6 +536,13 @@ export function updateGameState(
   if (state.activeDialogue) {
     state.player.isMoving = false;
     if (zPressed || pointerClick) {
+      if (
+        state.activeDialogue.unclosable &&
+        state.activeDialogue.currentIndex >= state.activeDialogue.lines.length - 1
+      ) {
+        // Unclosable ending dialogue: stay on final line forever and do not close
+        return;
+      }
       state.activeDialogue.currentIndex += 1;
       if (
         state.activeDialogue.currentIndex >= state.activeDialogue.lines.length
@@ -535,14 +562,25 @@ export function updateGameState(
     openDialogue: (
       lines: string[],
       onClose?: () => void,
-      speakerPortrait?: string
+      speakerPortrait?: string,
+      unclosable?: boolean
     ) => {
       state.activeDialogue = {
         lines,
         currentIndex: 0,
         onClose,
         speakerPortrait,
+        unclosable,
       };
+    },
+    getSecretSantaReceiver: () => {
+      if (!state.secretSantaDB) return undefined;
+      const playerName = state.secretSantaDB.playerName;
+      if (!playerName) return undefined;
+      return state.secretSantaDB.getGiftReceiverOf(playerName);
+    },
+    fadeWorldToBlack: () => {
+      state.worldFadedToBlack = true;
     },
   };
 

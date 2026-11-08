@@ -25,6 +25,7 @@ export interface DialogueState {
   currentIndex: number;
   onClose?: () => void;
   speakerPortrait?: string;
+  unclosable?: boolean;
 }
 
 export interface LadderInteractionOptions {

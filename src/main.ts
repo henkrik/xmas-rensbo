@@ -208,7 +208,7 @@ async function startGame(): Promise<void> {
   }
 
   // Initialize SecretSantaDB and debug log giver/receiver mappings
-  await initSecretSantaDB(secretText);
+  const secretSantaDB = await initSecretSantaDB(secretText);
 
   attachKeyboardListeners(window, input, {
     onToggleJoystick: () => {
@@ -222,12 +222,15 @@ async function startGame(): Promise<void> {
   const hasLevelOverride = searchParams.has('level');
 
   const isDebug = searchParams.has('debug');
+  const isCheat = searchParams.has('cheat');
 
   const state = createGameState({
     isMobile: isMobileDevice,
     showIntroDialogue: !hasLevelOverride,
     initialLevelId,
     debug: isDebug,
+    cheat: isCheat,
+    secretSantaDB,
   });
   state.joystickActive = isMobileDevice;
 

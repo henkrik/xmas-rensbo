@@ -16,8 +16,11 @@ export interface LevelTransitionContext {
   openDialogue: (
     lines: string[],
     onClose?: () => void,
-    speakerPortrait?: string
+    speakerPortrait?: string,
+    unclosable?: boolean
   ) => void;
+  getSecretSantaReceiver?: () => string | undefined;
+  fadeWorldToBlack?: () => void;
 }
 
 export interface GameLevel {

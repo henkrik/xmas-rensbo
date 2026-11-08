@@ -132,6 +132,7 @@ export class LineOfSight {
  * It also computes the "sight polygon" formed by [position, ...line.points(line.n - 1) for each line].
  */
 export class ConeOfSight {
+  public static cheatMode = false;
   public position: Point2D;
   public direction: number;
   public distance: number;
@@ -218,6 +219,9 @@ export class ConeOfSight {
   }
 
   public checkDetection(player: Player): boolean {
+    if (ConeOfSight.cheatMode) {
+      return false;
+    }
     let detected = false;
     for (const line of this.lines) {
       if (line.checkDetection(player)) {

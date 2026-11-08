@@ -26,12 +26,14 @@ import {
 } from '../src/entities/player';
 import { ConeOfSight, LineOfSight } from '../src/entities/sight';
 import { HIT_BLINK_DURATION_SECONDS } from '../src/entities/snowball';
+import { findNearbyInteractable } from '../src/world/interaction';
 import { drawPixelText, measurePixelText } from '../src/rendering/pixelFont';
 import { wrapTextLines } from '../src/rendering/renderer';
 import {
   createGameState,
   loadLevel,
   parseLevelQueryParam,
+  refreshInteractables,
   resetAfterSnowballHit,
   updateGameState,
 } from '../src/world/gameState';
@@ -2107,6 +2109,136 @@ Tanja -> Alex
     const logsNoPid = debugConsole.getLines();
     expect(logsNoPid).toContain(
       'Based on pid, the current player is null who should give a gift to null'
+    );
+  });
+
+  it('mutes ConeOfSight detection when ?cheat is enabled', () => {
+    let detectedWithoutCheat = false;
+    let detectedWithCheat = false;
+
+    const cone = new ConeOfSight(
+      { x: 100, y: 100 },
+      0,
+      100
+    );
+    cone.onDetection(() => {
+      detectedWithoutCheat = true;
+    });
+
+    const player = createPlayer(130, 100);
+
+    ConeOfSight.cheatMode = false;
+    const resNormal = cone.checkDetection(player);
+    expect(resNormal).toBe(true);
+    expect(detectedWithoutCheat).toBe(true);
+
+    const cheatCone = new ConeOfSight(
+      { x: 100, y: 100 },
+      0,
+      100
+    );
+    cheatCone.onDetection(() => {
+      detectedWithCheat = true;
+    });
+
+    ConeOfSight.cheatMode = true;
+    const resCheat = cheatCone.checkDetection(player);
+    expect(resCheat).toBe(false);
+    expect(detectedWithCheat).toBe(false);
+
+    // Also verify gameState creation with cheat: true
+    const state = createGameState({
+      initialLevelId: 'level-upstairs',
+      cheat: true,
+    });
+    expect(state.cheatMode).toBe(true);
+    expect(ConeOfSight.cheatMode).toBe(true);
+  });
+
+  it('allows touching the Christmas tree to "Save Christmas", fading to black and freezing on the final dialogue line', () => {
+    const sampleContent = 'Alex -> Arjan\nHenrik -> Sylvester';
+    const alexPid = btoa('Alex');
+    const secretSantaDB = new SecretSantaDB(sampleContent, alexPid);
+
+    const state = createGameState({
+      initialLevelId: 'level-upstairs',
+      secretSantaDB,
+      cheat: true,
+    });
+
+    expect(state.worldFadedToBlack).toBe(false);
+
+    // Position player right next to the Christmas tree (cols 2..3, rows 14..16 => x: 32..64, y: 224..272)
+    state.player.x = 4 * TILE_SIZE; // x: 64
+    state.player.y = 15 * TILE_SIZE; // y: 240
+    refreshInteractables(state);
+
+    const nearby = findNearbyInteractable(state.player, state.interactables);
+    expect(nearby).not.toBeNull();
+    expect(nearby?.id).toBe('upstairs-xmas-tree');
+    expect(nearby?.promptText).toBe('Save Christmas');
+
+    // Press Z to trigger "Save Christmas"
+    const input = createEmptyInput();
+    input.actionJustPressed = true;
+    input.action = true;
+    updateGameState(state, input, 0.016);
+
+    expect(state.worldFadedToBlack).toBe(true);
+    expect(state.activeDialogue).not.toBeNull();
+    expect(state.activeDialogue?.unclosable).toBe(true);
+    expect(state.activeDialogue?.lines).toEqual([
+      'CONGRATULATIONS! You have successfully saved Christmas by delivering all presents undetected.',
+      'As a reward for your valiant effort...',
+      'You will learn who your secret santa gift receiver is...',
+      'And that person is...',
+      'Arjan',
+    ]);
+    expect(state.activeDialogue?.currentIndex).toBe(0);
+
+    // Advance dialogue to line 1
+    input.actionJustPressed = true;
+    updateGameState(state, input, 0.016);
+    expect(state.activeDialogue?.currentIndex).toBe(1);
+
+    // Advance dialogue to line 2
+    input.actionJustPressed = true;
+    updateGameState(state, input, 0.016);
+    expect(state.activeDialogue?.currentIndex).toBe(2);
+
+    // Advance dialogue to line 3
+    input.actionJustPressed = true;
+    updateGameState(state, input, 0.016);
+    expect(state.activeDialogue?.currentIndex).toBe(3);
+
+    // Advance dialogue to line 4 (final line: "Arjan")
+    input.actionJustPressed = true;
+    updateGameState(state, input, 0.016);
+    expect(state.activeDialogue?.currentIndex).toBe(4);
+    expect(state.activeDialogue?.lines[state.activeDialogue.currentIndex]).toBe('Arjan');
+
+    // Attempting to advance beyond the final line must NOT close the dialogue box and must stay frozen
+    input.actionJustPressed = true;
+    updateGameState(state, input, 0.016);
+    expect(state.activeDialogue).not.toBeNull();
+    expect(state.activeDialogue?.currentIndex).toBe(4);
+    expect(state.activeDialogue?.lines[state.activeDialogue.currentIndex]).toBe('Arjan');
+
+    // Test fallback when gift receiver is unknown / null
+    const dbUnknown = new SecretSantaDB(sampleContent, null);
+    const stateUnknown = createGameState({
+      initialLevelId: 'level-upstairs',
+      secretSantaDB: dbUnknown,
+      cheat: true,
+    });
+    stateUnknown.player.x = 4 * TILE_SIZE;
+    stateUnknown.player.y = 15 * TILE_SIZE;
+    refreshInteractables(stateUnknown);
+
+    input.actionJustPressed = true;
+    updateGameState(stateUnknown, input, 0.016);
+    expect(stateUnknown.activeDialogue?.lines[4]).toBe(
+      'Ehm... this is awkward. An error occurred, gift receiver unknown.'
     );
   });
 });

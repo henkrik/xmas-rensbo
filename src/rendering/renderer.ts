@@ -1531,8 +1531,16 @@ export function renderGame(
 
   ctx.restore();
 
+  // If the world is faded to black (e.g. Save Christmas ending sequence), cover the canvas in black
+  if (state.worldFadedToBlack) {
+    ctx.save();
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.restore();
+  }
+
   // Gentle falling snow overlay across the screen (outdoor level only)
-  if (state.currentLevelId === 'level-outside') {
+  if (state.currentLevelId === 'level-outside' && !state.worldFadedToBlack) {
     drawSnowfall(ctx, elapsedTime, camera);
   }
 

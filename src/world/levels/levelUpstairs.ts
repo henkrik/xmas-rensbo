@@ -169,6 +169,14 @@ export const UPSTAIRS_SIMON_PRESENT_BOUNDS: Rect = {
   height: 10,
 };
 
+/** Christmas Tree interactable bounds (cols 2..3, rows 14..16). */
+export const UPSTAIRS_XMAS_TREE_BOUNDS: Rect = {
+  x: 2 * TILE_SIZE,
+  y: 14 * TILE_SIZE,
+  width: 2 * TILE_SIZE,
+  height: 3 * TILE_SIZE,
+};
+
 /** Henrik & Tanja in table room (left and right of table at cols 11..12, row 17). */
 export const UPSTAIRS_HENRIK_NPC: Rect & { facing: Direction } = {
   x: 10 * TILE_SIZE + 2,
@@ -564,6 +572,14 @@ export class LevelUpstairs implements GameLevel {
       });
     }
 
+    // Christmas Tree interactable (Save Christmas)
+    list.push({
+      id: 'upstairs-xmas-tree',
+      bounds: { ...UPSTAIRS_XMAS_TREE_BOUNDS },
+      promptText: 'Save Christmas',
+      dialogueLines: [],
+    });
+
     for (const door of this.doors) {
       list.push({
         id: door.id,
@@ -598,6 +614,28 @@ export class LevelUpstairs implements GameLevel {
     if (interactableId === 'upstairs-simon-present') {
       player.states.set(SIMON_PRESENT_TAKEN_KEY, true);
       ctx.openDialogue(["You picked up Simon's present."]);
+      return true;
+    }
+
+    if (interactableId === 'upstairs-xmas-tree') {
+      if (ctx.fadeWorldToBlack) {
+        ctx.fadeWorldToBlack();
+      }
+      const receiver = ctx.getSecretSantaReceiver ? ctx.getSecretSantaReceiver() : undefined;
+      const finalLine =
+        receiver ?? 'Ehm... this is awkward. An error occurred, gift receiver unknown.';
+      ctx.openDialogue(
+        [
+          'CONGRATULATIONS! You have successfully saved Christmas by delivering all presents undetected.',
+          'As a reward for your valiant effort...',
+          'You will learn who your secret santa gift receiver is...',
+          'And that person is...',
+          finalLine,
+        ],
+        undefined,
+        undefined,
+        true
+      );
       return true;
     }
 
