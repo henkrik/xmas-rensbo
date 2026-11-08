@@ -46,17 +46,23 @@ import {
 } from '../src/world/levels/levelBasement';
 import {
   ARJAN_KEY_STATE_KEY,
+  DIANA_DISTRACTED_KEY,
+  DIANA_PRESENT_TAKEN_KEY,
   KITCHEN_ROSANNA_STATE_KEY,
   KITCHEN_TRIGGER_BOUNDS,
   LevelUpstairs,
+  SIMON_DISTRACTED_KEY,
+  SIMON_PRESENT_TAKEN_KEY,
   UPSTAIRS_ALBIN_START_Y,
   UPSTAIRS_BEDROOM_DOOR_BOUNDS,
   UPSTAIRS_BEDROOM_HIDDEN_MASK,
   UPSTAIRS_COMPUTER_BOUNDS,
   UPSTAIRS_CUPBOARD_BOUNDS,
+  UPSTAIRS_DIANA_PRESENT_BOUNDS,
   UPSTAIRS_OFFICE_DOOR_BOUNDS,
   UPSTAIRS_OFFICE_HIDDEN_MASK,
   UPSTAIRS_SHOWER_DOOR_BOUNDS,
+  UPSTAIRS_SIMON_PRESENT_BOUNDS,
   UPSTAIRS_STAIRS_SPAWN,
   UPSTAIRS_STAIRS_TRIGGER_BOUNDS,
   UPSTAIRS_TABLE_ROOM_DOOR_BOUNDS,
@@ -1774,7 +1780,7 @@ describe('Player walking & 2x Rensbo map layout', () => {
   });
 
   it('detects Santa in upstairs living room via Diana and Simon cones of sight', () => {
-    // 1. Diana detection (looking south)
+    // 1. Diana detection (looking towards Christmas tree)
     const stateDiana = createGameState({
       initialLevelId: 'level-upstairs',
       showIntroDialogue: false,
@@ -1782,7 +1788,7 @@ describe('Player walking & 2x Rensbo map layout', () => {
     const input = createEmptyInput();
     const upstairsDiana = stateDiana.levels['level-upstairs'] as LevelUpstairs;
 
-    const dianaBox = upstairsDiana.dianaCone.getAllBoxes()[3];
+    const dianaBox = upstairsDiana.dianaCone!.getAllBoxes()[3];
     stateDiana.player.x = dianaBox.x - 2;
     stateDiana.player.y = dianaBox.y - 2;
     updateGameState(stateDiana, input, 0.01);
@@ -1799,15 +1805,14 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(stateDiana.currentLevelId).toBe('level-upstairs');
     expect(stateDiana.player.blinkTimer).toBeGreaterThan(0);
 
-    // 2. Simon detection (looking west)
+    // 2. Simon detection (looking towards Christmas tree)
     const stateSimon = createGameState({
       initialLevelId: 'level-upstairs',
       showIntroDialogue: false,
     });
     const upstairsSimon = stateSimon.levels['level-upstairs'] as LevelUpstairs;
 
-    // In Simon's cone of sight east of Diana's cone (e.g. line 2 center line, box 1: x=110, y=234)
-    const simonBox = upstairsSimon.simonCone.lines[2].boxes[1];
+    const simonBox = upstairsSimon.simonCone!.getAllBoxes()[3];
     stateSimon.player.x = simonBox.x - 2;
     stateSimon.player.y = simonBox.y - 2;
     updateGameState(stateSimon, input, 0.01);
@@ -1868,5 +1873,160 @@ describe('Player walking & 2x Rensbo map layout', () => {
     applyKeyEvent(input, 'KeyZ', false);
     expect(state.currentLevelId).toBe('level-upstairs');
     expect(state.player.blinkTimer).toBeGreaterThan(0);
+  });
+
+  it('supports inspecting, picking up presents, and distracting Diana and Simon', () => {
+    const state = createGameState({
+      initialLevelId: 'level-upstairs',
+      showIntroDialogue: false,
+    });
+    const input = createEmptyInput();
+    const upstairs = state.levels['level-upstairs'] as LevelUpstairs;
+
+    // 1. Approach Diana from behind without her present -> "Inspect" option appears
+    state.player.x = upstairs.dianaNpc.x;
+    state.player.y = upstairs.dianaNpc.y - state.player.height - 2;
+    updateGameState(state, input, 0.01);
+
+    expect(state.nearbyInteractable?.id).toBe('upstairs-diana-npc');
+    expect(state.nearbyInteractable?.promptText).toBe('Inspect');
+
+    // Press Z -> "Hmm... I have to find something to distract Diana with..."
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+
+    expect(state.activeDialogue).not.toBeNull();
+    expect(state.activeDialogue?.lines[0]).toBe(
+      'Hmm... I have to find something to distract Diana with...'
+    );
+
+    // Dismiss dialogue
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.activeDialogue).toBeNull();
+
+    // 2. Approach Simon from behind without his present -> "Inspect" option appears
+    state.player.x = upstairs.simonNpc.x + upstairs.simonNpc.width + 2;
+    state.player.y = upstairs.simonNpc.y;
+    updateGameState(state, input, 0.01);
+
+    expect(state.nearbyInteractable?.id).toBe('upstairs-simon-npc');
+    expect(state.nearbyInteractable?.promptText).toBe('Inspect');
+
+    // Press Z -> "Hmm... I have to find something to distract Simon with..."
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+
+    expect(state.activeDialogue).not.toBeNull();
+    expect(state.activeDialogue?.lines[0]).toBe(
+      'Hmm... I have to find something to distract Simon with...'
+    );
+
+    // Dismiss dialogue
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.activeDialogue).toBeNull();
+
+    // 3. Take Diana's Present from the bedroom
+    state.player.x = UPSTAIRS_DIANA_PRESENT_BOUNDS.x;
+    state.player.y =
+      UPSTAIRS_DIANA_PRESENT_BOUNDS.y + UPSTAIRS_DIANA_PRESENT_BOUNDS.height + 2;
+    updateGameState(state, input, 0.01);
+
+    expect(state.nearbyInteractable?.id).toBe('upstairs-diana-present');
+    expect(state.nearbyInteractable?.promptText).toBe("Take Diana's Present");
+
+    // Press Z to pick it up
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+
+    expect(state.player.states.get(DIANA_PRESENT_TAKEN_KEY)).toBe(true);
+    expect(state.activeDialogue?.lines[0]).toBe("You picked up Diana's Present.");
+
+    // Dismiss dialogue
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.activeDialogue).toBeNull();
+
+    // 4. Take Simon's Present from the office southeast corner
+    state.player.x = UPSTAIRS_SIMON_PRESENT_BOUNDS.x;
+    state.player.y =
+      UPSTAIRS_SIMON_PRESENT_BOUNDS.y - state.player.height - 2;
+    updateGameState(state, input, 0.01);
+
+    expect(state.nearbyInteractable?.id).toBe('upstairs-simon-present');
+    expect(state.nearbyInteractable?.promptText).toBe("Take Simon's Present");
+
+    // Press Z to pick it up
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+
+    expect(state.player.states.get(SIMON_PRESENT_TAKEN_KEY)).toBe(true);
+    expect(state.activeDialogue?.lines[0]).toBe("You picked up Simon's present.");
+
+    // Dismiss dialogue
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.activeDialogue).toBeNull();
+
+    // 5. Now return to Diana with her present -> "Give present" option appears
+    state.player.x = upstairs.dianaNpc.x;
+    state.player.y = upstairs.dianaNpc.y - state.player.height - 2;
+    updateGameState(state, input, 0.01);
+
+    expect(state.nearbyInteractable?.id).toBe('upstairs-diana-npc');
+    expect(state.nearbyInteractable?.promptText).toBe('Give present');
+
+    // Press Z to give present -> Diana distracted, cone deleted!
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+
+    expect(state.player.states.get(DIANA_DISTRACTED_KEY)).toBe(true);
+    expect(upstairs.dianaCone).toBeNull();
+    expect(state.activeDialogue?.speakerPortrait).toBe('Diana');
+
+    // Dismiss dialogue
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.activeDialogue).toBeNull();
+
+    // 6. Return to Simon with his present -> "Give present" option appears
+    state.player.x = upstairs.simonNpc.x + upstairs.simonNpc.width + 2;
+    state.player.y = upstairs.simonNpc.y;
+    updateGameState(state, input, 0.01);
+
+    expect(state.nearbyInteractable?.id).toBe('upstairs-simon-npc');
+    expect(state.nearbyInteractable?.promptText).toBe('Give present');
+
+    // Press Z to give present -> Simon distracted, cone deleted!
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+
+    expect(state.player.states.get(SIMON_DISTRACTED_KEY)).toBe(true);
+    expect(upstairs.simonCone).toBeNull();
+    expect(state.activeDialogue?.speakerPortrait).toBe('Simon');
+
+    // Dismiss dialogue
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.activeDialogue).toBeNull();
+
+    // 7. Verify neither Diana nor Simon detects the player even right in front of them
+    state.player.x = 48; // where the cone used to look
+    state.player.y = 248;
+    updateGameState(state, input, 0.01);
+    expect(state.activeDialogue).toBeNull();
   });
 });

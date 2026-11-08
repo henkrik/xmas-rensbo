@@ -3,7 +3,15 @@ import { Cat } from '../entities/cat';
 import { Dog } from '../entities/dog';
 import { Direction, Footprint, Rect } from '../entities/player';
 import { GameState, MotorcycleState } from '../world/gameState';
-import { UPSTAIRS_ALBIN_X } from '../world/levels/levelUpstairs';
+import {
+  DIANA_DISTRACTED_KEY,
+  DIANA_PRESENT_TAKEN_KEY,
+  SIMON_DISTRACTED_KEY,
+  SIMON_PRESENT_TAKEN_KEY,
+  UPSTAIRS_ALBIN_X,
+  UPSTAIRS_DIANA_PRESENT_BOUNDS,
+  UPSTAIRS_SIMON_PRESENT_BOUNDS,
+} from '../world/levels/levelUpstairs';
 import { CollidableDoor } from '../world/levels/types';
 import {
   DAMAGED_WIRE_HAZARD,
@@ -174,14 +182,17 @@ function drawPortrait(
 
 function drawPersonNpc(
   ctx: CanvasRenderingContext2D,
-  npc: PersonNpc
+  npc: PersonNpc,
+  options?: { isSitting?: boolean; hasLapPresent?: boolean }
 ): void {
   const x = Math.round(npc.bounds.x - 2);
   const y = Math.round(npc.bounds.y - 4);
+  const isSitting = options?.isSitting === true;
+  const hasLapPresent = options?.hasLapPresent === true;
 
   // Soft floor shadow
   ctx.fillStyle = 'rgba(12, 10, 16, 0.4)';
-  ctx.fillRect(x + 3, y + 13, 10, 3);
+  ctx.fillRect(x + 2, y + 13, 12, 3);
 
   // Hair & head outline
   ctx.fillStyle = '#181420';
@@ -202,13 +213,71 @@ function drawPersonNpc(
   ctx.fillStyle = npc.shirtColor;
   ctx.fillRect(x + 4, y + 8, 8, 3);
 
-  // Trousers & boots
-  ctx.fillStyle = '#2c3e5a';
-  ctx.fillRect(x + 4, y + 11, 3, 3);
-  ctx.fillRect(x + 9, y + 11, 3, 3);
+  if (isSitting) {
+    // Sitting pose: legs bent forward sideways/knees
+    ctx.fillStyle = '#181420';
+    ctx.fillRect(x + 3, y + 11, 10, 3);
+    ctx.fillStyle = '#2c3e5a';
+    ctx.fillRect(x + 4, y + 11, 8, 2);
+    // Shoes tucked under
+    ctx.fillStyle = '#181420';
+    ctx.fillRect(x + 3, y + 13, 3, 2);
+    ctx.fillRect(x + 10, y + 13, 3, 2);
+
+    if (hasLapPresent) {
+      // Draw wrapped Christmas present resting in their lap (red box with gold ribbon)
+      drawChristmasPresent(ctx, x + 3, y + 8, 10, 8);
+    }
+  } else {
+    // Standing pose: Trousers & boots
+    ctx.fillStyle = '#2c3e5a';
+    ctx.fillRect(x + 4, y + 11, 3, 3);
+    ctx.fillRect(x + 9, y + 11, 3, 3);
+    ctx.fillStyle = '#181420';
+    ctx.fillRect(x + 4, y + 14, 3, 1);
+    ctx.fillRect(x + 9, y + 14, 3, 1);
+  }
+}
+
+/**
+ * Draws a wrapped Christmas present with ribbon and bow.
+ */
+function drawChristmasPresent(
+  ctx: CanvasRenderingContext2D,
+  px: number,
+  py: number,
+  pw: number,
+  ph: number,
+  boxColor: string = '#d62828',
+  ribbonColor: string = '#ffd166'
+): void {
+  const x = Math.round(px);
+  const y = Math.round(py);
+
+  // Soft floor shadow
+  ctx.fillStyle = 'rgba(12, 10, 16, 0.4)';
+  ctx.fillRect(x + 1, y + ph - 1, pw - 2, 2);
+
+  // Dark outline
   ctx.fillStyle = '#181420';
-  ctx.fillRect(x + 4, y + 14, 3, 1);
-  ctx.fillRect(x + 9, y + 14, 3, 1);
+  ctx.fillRect(x, y, pw, ph);
+
+  // Present box color
+  ctx.fillStyle = boxColor;
+  ctx.fillRect(x + 1, y + 1, pw - 2, ph - 2);
+
+  // Ribbon cross (vertical & horizontal stripe)
+  const midX = x + Math.floor(pw / 2);
+  const midY = y + Math.floor(ph / 2);
+  ctx.fillStyle = ribbonColor;
+  ctx.fillRect(midX - 1, y + 1, 2, ph - 2);
+  ctx.fillRect(x + 1, midY - 1, pw - 2, 2);
+
+  // Golden bow on top
+  ctx.fillStyle = '#ffee54';
+  ctx.fillRect(midX - 2, y - 1, 4, 2);
+  ctx.fillStyle = '#181420';
+  ctx.fillRect(midX - 1, y - 2, 2, 1);
 }
 
 function drawDialogueBox(
@@ -1251,21 +1320,68 @@ export function renderGame(
       shirtColor: '#783858',
     });
 
-    // Diana & Simon in living room
-    drawPersonNpc(ctx, {
-      name: 'Diana' as any,
-      bounds: upstairs.dianaNpc,
-      facing: 'down',
-      hairColor: '#2a1a14',
-      shirtColor: '#3a6288',
-    });
-    drawPersonNpc(ctx, {
-      name: 'Simon' as any,
-      bounds: upstairs.simonNpc,
-      facing: 'left',
-      hairColor: '#583822',
-      shirtColor: '#647038',
-    });
+    // Diana's Present on the floor in bedroom (cols 25..26, row 8) if not taken
+    if (!state.player.states.get(DIANA_PRESENT_TAKEN_KEY)) {
+      drawChristmasPresent(
+        ctx,
+        UPSTAIRS_DIANA_PRESENT_BOUNDS.x,
+        UPSTAIRS_DIANA_PRESENT_BOUNDS.y,
+        UPSTAIRS_DIANA_PRESENT_BOUNDS.width,
+        UPSTAIRS_DIANA_PRESENT_BOUNDS.height,
+        '#d62828', // red wrapping
+        '#ffd166'  // golden ribbon
+      );
+    }
+
+    // Simon's Present in office southeast corner (col 24, row 17) if not taken
+    if (!state.player.states.get(SIMON_PRESENT_TAKEN_KEY)) {
+      drawChristmasPresent(
+        ctx,
+        UPSTAIRS_SIMON_PRESENT_BOUNDS.x,
+        UPSTAIRS_SIMON_PRESENT_BOUNDS.y,
+        UPSTAIRS_SIMON_PRESENT_BOUNDS.width,
+        UPSTAIRS_SIMON_PRESENT_BOUNDS.height,
+        '#2a75d3', // festive blue wrapping
+        '#ffee54'  // bright gold ribbon
+      );
+    }
+
+    // Diana & Simon in living room (sitting down with present in lap if distracted!)
+    const isDianaDistracted = Boolean(
+      state.player.states.get(DIANA_DISTRACTED_KEY)
+    );
+    drawPersonNpc(
+      ctx,
+      {
+        name: 'Diana' as any,
+        bounds: upstairs.dianaNpc,
+        facing: 'down',
+        hairColor: '#2a1a14',
+        shirtColor: '#3a6288',
+      },
+      {
+        isSitting: isDianaDistracted,
+        hasLapPresent: isDianaDistracted,
+      }
+    );
+
+    const isSimonDistracted = Boolean(
+      state.player.states.get(SIMON_DISTRACTED_KEY)
+    );
+    drawPersonNpc(
+      ctx,
+      {
+        name: 'Simon' as any,
+        bounds: upstairs.simonNpc,
+        facing: 'left',
+        hairColor: '#583822',
+        shirtColor: '#647038',
+      },
+      {
+        isSitting: isSimonDistracted,
+        hasLapPresent: isSimonDistracted,
+      }
+    );
 
     // Anne-Marie in bedroom
     drawPersonNpc(ctx, {
@@ -1298,7 +1414,7 @@ export function renderGame(
     ];
 
     for (const cone of upstairsCones) {
-      if (cone?.sightPolygon.length > 2) {
+      if (cone && cone.sightPolygon.length > 2) {
         ctx.save();
         ctx.fillStyle = 'rgba(255, 250, 205, 0.20)';
         ctx.beginPath();

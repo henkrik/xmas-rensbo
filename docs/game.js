@@ -1154,6 +1154,22 @@
   var UPSTAIRS_ALBIN_X = 7 * TILE_SIZE + 2;
   var UPSTAIRS_ALBIN_SPEED = 15;
   var UPSTAIRS_INTRO_STATE_KEY = "upstairsIntroTriggered";
+  var DIANA_PRESENT_TAKEN_KEY = "upstairsDianaPresentTaken";
+  var SIMON_PRESENT_TAKEN_KEY = "upstairsSimonPresentTaken";
+  var DIANA_DISTRACTED_KEY = "upstairsDianaDistracted";
+  var SIMON_DISTRACTED_KEY = "upstairsSimonDistracted";
+  var UPSTAIRS_DIANA_PRESENT_BOUNDS = {
+    x: 25.5 * TILE_SIZE + 2,
+    y: 8 * TILE_SIZE + 4,
+    width: 10,
+    height: 10
+  };
+  var UPSTAIRS_SIMON_PRESENT_BOUNDS = {
+    x: 24 * TILE_SIZE + 3,
+    y: 17 * TILE_SIZE + 3,
+    width: 10,
+    height: 10
+  };
   var UPSTAIRS_HENRIK_NPC = {
     x: 10 * TILE_SIZE + 2,
     y: 17 * TILE_SIZE + 2,
@@ -1265,9 +1281,9 @@
       __publicField(this, "tanjaNpc", { ...UPSTAIRS_TANJA_NPC });
       __publicField(this, "tanjaCone");
       __publicField(this, "dianaNpc", { ...UPSTAIRS_DIANA_NPC });
-      __publicField(this, "dianaCone");
+      __publicField(this, "dianaCone", null);
       __publicField(this, "simonNpc", { ...UPSTAIRS_SIMON_NPC });
-      __publicField(this, "simonCone");
+      __publicField(this, "simonCone", null);
       __publicField(this, "anneMarieNpc", { ...UPSTAIRS_ANNE_MARIE_NPC });
       __publicField(this, "anneMarieAngle", -Math.PI / 2);
       // Facing north initially
@@ -1317,17 +1333,23 @@
         void 0,
         this.map
       );
+      const dianaTreeAngle = Math.atan2(
+        15.5 * TILE_SIZE - (this.dianaNpc.y + TILE_SIZE / 2),
+        3 * TILE_SIZE - (this.dianaNpc.x + TILE_SIZE / 2)
+      );
       this.dianaCone = new ConeOfSight(
         { x: this.dianaNpc.x + TILE_SIZE / 2, y: this.dianaNpc.y + TILE_SIZE / 2 },
-        Math.PI / 2,
-        // south
+        dianaTreeAngle,
         void 0,
         this.map
       );
+      const simonTreeAngle = Math.atan2(
+        15.5 * TILE_SIZE - (this.simonNpc.y + TILE_SIZE / 2),
+        3 * TILE_SIZE - (this.simonNpc.x + TILE_SIZE / 2)
+      );
       this.simonCone = new ConeOfSight(
         { x: this.simonNpc.x + TILE_SIZE / 2, y: this.simonNpc.y + TILE_SIZE / 2 },
-        Math.PI,
-        // west
+        simonTreeAngle,
         void 0,
         this.map
       );
@@ -1367,18 +1389,34 @@
         void 0,
         this.map
       );
-      this.dianaCone = new ConeOfSight(
-        { x: this.dianaNpc.x + TILE_SIZE / 2, y: this.dianaNpc.y + TILE_SIZE / 2 },
-        Math.PI / 2,
-        void 0,
-        this.map
-      );
-      this.simonCone = new ConeOfSight(
-        { x: this.simonNpc.x + TILE_SIZE / 2, y: this.simonNpc.y + TILE_SIZE / 2 },
-        Math.PI,
-        void 0,
-        this.map
-      );
+      if (!player.states.get(DIANA_DISTRACTED_KEY)) {
+        const dianaTreeAngle = Math.atan2(
+          15.5 * TILE_SIZE - (this.dianaNpc.y + TILE_SIZE / 2),
+          3 * TILE_SIZE - (this.dianaNpc.x + TILE_SIZE / 2)
+        );
+        this.dianaCone = new ConeOfSight(
+          { x: this.dianaNpc.x + TILE_SIZE / 2, y: this.dianaNpc.y + TILE_SIZE / 2 },
+          dianaTreeAngle,
+          void 0,
+          this.map
+        );
+      } else {
+        this.dianaCone = null;
+      }
+      if (!player.states.get(SIMON_DISTRACTED_KEY)) {
+        const simonTreeAngle = Math.atan2(
+          15.5 * TILE_SIZE - (this.simonNpc.y + TILE_SIZE / 2),
+          3 * TILE_SIZE - (this.simonNpc.x + TILE_SIZE / 2)
+        );
+        this.simonCone = new ConeOfSight(
+          { x: this.simonNpc.x + TILE_SIZE / 2, y: this.simonNpc.y + TILE_SIZE / 2 },
+          simonTreeAngle,
+          void 0,
+          this.map
+        );
+      } else {
+        this.simonCone = null;
+      }
       this.anneMarieAngle = -Math.PI / 2;
       this.anneMarieTimer = 0;
       this.anneMarieCone = new ConeOfSight(
@@ -1400,7 +1438,7 @@
         ...this.doors.map((d) => d.bounds)
       ];
     }
-    getInteractables(_player) {
+    getInteractables(player) {
       const list = [
         {
           id: "upstairs-stairs-down",
@@ -1425,6 +1463,40 @@
           ]
         }
       ];
+      if (!player?.states.get(DIANA_PRESENT_TAKEN_KEY)) {
+        list.push({
+          id: "upstairs-diana-present",
+          bounds: { ...UPSTAIRS_DIANA_PRESENT_BOUNDS },
+          promptText: "Take Diana's Present",
+          dialogueLines: []
+        });
+      }
+      if (!player?.states.get(SIMON_PRESENT_TAKEN_KEY)) {
+        list.push({
+          id: "upstairs-simon-present",
+          bounds: { ...UPSTAIRS_SIMON_PRESENT_BOUNDS },
+          promptText: "Take Simon's Present",
+          dialogueLines: []
+        });
+      }
+      if (!player?.states.get(DIANA_DISTRACTED_KEY)) {
+        const hasDianaPresent = Boolean(player?.states.get(DIANA_PRESENT_TAKEN_KEY));
+        list.push({
+          id: "upstairs-diana-npc",
+          bounds: { ...this.dianaNpc },
+          promptText: hasDianaPresent ? "Give present" : "Inspect",
+          dialogueLines: []
+        });
+      }
+      if (!player?.states.get(SIMON_DISTRACTED_KEY)) {
+        const hasSimonPresent = Boolean(player?.states.get(SIMON_PRESENT_TAKEN_KEY));
+        list.push({
+          id: "upstairs-simon-npc",
+          bounds: { ...this.simonNpc },
+          promptText: hasSimonPresent ? "Give present" : "Inspect",
+          dialogueLines: []
+        });
+      }
       for (const door of this.doors) {
         list.push({
           id: door.id,
@@ -1441,6 +1513,50 @@
         ctx.openDialogue([
           "You found a hidden compartment containing a key... it's Arjan's key!"
         ]);
+        return true;
+      }
+      if (interactableId === "upstairs-diana-present") {
+        player.states.set(DIANA_PRESENT_TAKEN_KEY, true);
+        ctx.openDialogue(["You picked up Diana's Present."]);
+        return true;
+      }
+      if (interactableId === "upstairs-simon-present") {
+        player.states.set(SIMON_PRESENT_TAKEN_KEY, true);
+        ctx.openDialogue(["You picked up Simon's present."]);
+        return true;
+      }
+      if (interactableId === "upstairs-diana-npc") {
+        const hasDianaPresent = Boolean(player.states.get(DIANA_PRESENT_TAKEN_KEY));
+        if (hasDianaPresent) {
+          player.states.set(DIANA_DISTRACTED_KEY, true);
+          this.dianaCone = null;
+          ctx.openDialogue(
+            ["Thank you, Santa! I will cherish this present forever."],
+            void 0,
+            "Diana"
+          );
+        } else {
+          ctx.openDialogue([
+            "Hmm... I have to find something to distract Diana with..."
+          ]);
+        }
+        return true;
+      }
+      if (interactableId === "upstairs-simon-npc") {
+        const hasSimonPresent = Boolean(player.states.get(SIMON_PRESENT_TAKEN_KEY));
+        if (hasSimonPresent) {
+          player.states.set(SIMON_DISTRACTED_KEY, true);
+          this.simonCone = null;
+          ctx.openDialogue(
+            ["A present?! For me? Thank you, Santa!"],
+            void 0,
+            "Simon"
+          );
+        } else {
+          ctx.openDialogue([
+            "Hmm... I have to find something to distract Simon with..."
+          ]);
+        }
         return true;
       }
       const doorIdx = this.doors.findIndex((d) => d.id === interactableId);
@@ -1564,7 +1680,7 @@
           return;
         }
       }
-      if (this.dianaCone.checkDetection(player)) {
+      if (this.dianaCone && this.dianaCone.checkDetection(player)) {
         this.triggerDetection(
           ctx,
           player,
@@ -1573,7 +1689,7 @@
         );
         return;
       }
-      if (this.simonCone.checkDetection(player)) {
+      if (this.simonCone && this.simonCone.checkDetection(player)) {
         this.triggerDetection(
           ctx,
           player,
@@ -1869,11 +1985,13 @@
     );
     ctx.restore();
   }
-  function drawPersonNpc(ctx, npc) {
+  function drawPersonNpc(ctx, npc, options) {
     const x = Math.round(npc.bounds.x - 2);
     const y = Math.round(npc.bounds.y - 4);
+    const isSitting = options?.isSitting === true;
+    const hasLapPresent = options?.hasLapPresent === true;
     ctx.fillStyle = "rgba(12, 10, 16, 0.4)";
-    ctx.fillRect(x + 3, y + 13, 10, 3);
+    ctx.fillRect(x + 2, y + 13, 12, 3);
     ctx.fillStyle = "#181420";
     ctx.fillRect(x + 4, y + 1, 8, 6);
     ctx.fillStyle = npc.hairColor;
@@ -1887,12 +2005,44 @@
     ctx.fillRect(x + 3, y + 7, 10, 5);
     ctx.fillStyle = npc.shirtColor;
     ctx.fillRect(x + 4, y + 8, 8, 3);
-    ctx.fillStyle = "#2c3e5a";
-    ctx.fillRect(x + 4, y + 11, 3, 3);
-    ctx.fillRect(x + 9, y + 11, 3, 3);
+    if (isSitting) {
+      ctx.fillStyle = "#181420";
+      ctx.fillRect(x + 3, y + 11, 10, 3);
+      ctx.fillStyle = "#2c3e5a";
+      ctx.fillRect(x + 4, y + 11, 8, 2);
+      ctx.fillStyle = "#181420";
+      ctx.fillRect(x + 3, y + 13, 3, 2);
+      ctx.fillRect(x + 10, y + 13, 3, 2);
+      if (hasLapPresent) {
+        drawChristmasPresent(ctx, x + 3, y + 8, 10, 8);
+      }
+    } else {
+      ctx.fillStyle = "#2c3e5a";
+      ctx.fillRect(x + 4, y + 11, 3, 3);
+      ctx.fillRect(x + 9, y + 11, 3, 3);
+      ctx.fillStyle = "#181420";
+      ctx.fillRect(x + 4, y + 14, 3, 1);
+      ctx.fillRect(x + 9, y + 14, 3, 1);
+    }
+  }
+  function drawChristmasPresent(ctx, px, py, pw, ph, boxColor = "#d62828", ribbonColor = "#ffd166") {
+    const x = Math.round(px);
+    const y = Math.round(py);
+    ctx.fillStyle = "rgba(12, 10, 16, 0.4)";
+    ctx.fillRect(x + 1, y + ph - 1, pw - 2, 2);
     ctx.fillStyle = "#181420";
-    ctx.fillRect(x + 4, y + 14, 3, 1);
-    ctx.fillRect(x + 9, y + 14, 3, 1);
+    ctx.fillRect(x, y, pw, ph);
+    ctx.fillStyle = boxColor;
+    ctx.fillRect(x + 1, y + 1, pw - 2, ph - 2);
+    const midX = x + Math.floor(pw / 2);
+    const midY = y + Math.floor(ph / 2);
+    ctx.fillStyle = ribbonColor;
+    ctx.fillRect(midX - 1, y + 1, 2, ph - 2);
+    ctx.fillRect(x + 1, midY - 1, pw - 2, 2);
+    ctx.fillStyle = "#ffee54";
+    ctx.fillRect(midX - 2, y - 1, 4, 2);
+    ctx.fillStyle = "#181420";
+    ctx.fillRect(midX - 1, y - 2, 2, 1);
   }
   function drawDialogueBox(ctx, text, zKeySprite, showZKey = true, speakerPortrait, portraitsAtlas) {
     ctx.save();
@@ -2628,20 +2778,66 @@
         hairColor: "#743c20",
         shirtColor: "#783858"
       });
-      drawPersonNpc(ctx, {
-        name: "Diana",
-        bounds: upstairs.dianaNpc,
-        facing: "down",
-        hairColor: "#2a1a14",
-        shirtColor: "#3a6288"
-      });
-      drawPersonNpc(ctx, {
-        name: "Simon",
-        bounds: upstairs.simonNpc,
-        facing: "left",
-        hairColor: "#583822",
-        shirtColor: "#647038"
-      });
+      if (!state.player.states.get(DIANA_PRESENT_TAKEN_KEY)) {
+        drawChristmasPresent(
+          ctx,
+          UPSTAIRS_DIANA_PRESENT_BOUNDS.x,
+          UPSTAIRS_DIANA_PRESENT_BOUNDS.y,
+          UPSTAIRS_DIANA_PRESENT_BOUNDS.width,
+          UPSTAIRS_DIANA_PRESENT_BOUNDS.height,
+          "#d62828",
+          // red wrapping
+          "#ffd166"
+          // golden ribbon
+        );
+      }
+      if (!state.player.states.get(SIMON_PRESENT_TAKEN_KEY)) {
+        drawChristmasPresent(
+          ctx,
+          UPSTAIRS_SIMON_PRESENT_BOUNDS.x,
+          UPSTAIRS_SIMON_PRESENT_BOUNDS.y,
+          UPSTAIRS_SIMON_PRESENT_BOUNDS.width,
+          UPSTAIRS_SIMON_PRESENT_BOUNDS.height,
+          "#2a75d3",
+          // festive blue wrapping
+          "#ffee54"
+          // bright gold ribbon
+        );
+      }
+      const isDianaDistracted = Boolean(
+        state.player.states.get(DIANA_DISTRACTED_KEY)
+      );
+      drawPersonNpc(
+        ctx,
+        {
+          name: "Diana",
+          bounds: upstairs.dianaNpc,
+          facing: "down",
+          hairColor: "#2a1a14",
+          shirtColor: "#3a6288"
+        },
+        {
+          isSitting: isDianaDistracted,
+          hasLapPresent: isDianaDistracted
+        }
+      );
+      const isSimonDistracted = Boolean(
+        state.player.states.get(SIMON_DISTRACTED_KEY)
+      );
+      drawPersonNpc(
+        ctx,
+        {
+          name: "Simon",
+          bounds: upstairs.simonNpc,
+          facing: "left",
+          hairColor: "#583822",
+          shirtColor: "#647038"
+        },
+        {
+          isSitting: isSimonDistracted,
+          hasLapPresent: isSimonDistracted
+        }
+      );
       drawPersonNpc(ctx, {
         name: "Anne-Marie",
         bounds: upstairs.anneMarieNpc,
@@ -2667,7 +2863,7 @@
         ...isBedroomDoorOpen ? [upstairs.anneMarieCone] : []
       ];
       for (const cone of upstairsCones) {
-        if (cone?.sightPolygon.length > 2) {
+        if (cone && cone.sightPolygon.length > 2) {
           ctx.save();
           ctx.fillStyle = "rgba(255, 250, 205, 0.20)";
           ctx.beginPath();
@@ -3707,7 +3903,7 @@
       syncOutsideToLevel(state);
     }
     const activeLevel = getActiveLevel(state);
-    state.interactables = activeLevel.getInteractables();
+    state.interactables = activeLevel.getInteractables(state.player);
     const isBusyOutside = state.currentLevelId === "level-outside" && (state.climbing !== null || state.motorcycle.status === "driving" || state.electrocutionTimer > 0);
     const isBusyUpstairs = state.currentLevelId === "level-upstairs" && state.levels["level-upstairs"].rosannaCutscene?.active === true;
     state.nearbyInteractable = isBusyOutside || isBusyUpstairs ? null : findNearbyInteractable(state.player, state.interactables);
@@ -3810,7 +4006,7 @@
       climbing: levelOutside.climbing,
       electrocutionTimer: levelOutside.electrocutionTimer,
       joystickActive: false,
-      interactables: activeLevel.getInteractables(),
+      interactables: activeLevel.getInteractables(player),
       nearbyInteractable: null,
       activeDialogue: showIntroDialogue ? createIntroDialogue(isMobile) : null,
       elapsedTime: 0,

@@ -143,6 +143,28 @@ export const UPSTAIRS_ALBIN_X = 7 * TILE_SIZE + 2;
 export const UPSTAIRS_ALBIN_SPEED = 15; // px/s
 export const UPSTAIRS_INTRO_STATE_KEY = 'upstairsIntroTriggered';
 
+/** Present item pickup and distracted states */
+export const DIANA_PRESENT_TAKEN_KEY = 'upstairsDianaPresentTaken';
+export const SIMON_PRESENT_TAKEN_KEY = 'upstairsSimonPresentTaken';
+export const DIANA_DISTRACTED_KEY = 'upstairsDianaDistracted';
+export const SIMON_DISTRACTED_KEY = 'upstairsSimonDistracted';
+
+/** Diana's present on the floor in upstairs bedroom, 1 tile south of the bed (cols 25..26, row 8). */
+export const UPSTAIRS_DIANA_PRESENT_BOUNDS: Rect = {
+  x: 25.5 * TILE_SIZE + 2,
+  y: 8 * TILE_SIZE + 4,
+  width: 10,
+  height: 10,
+};
+
+/** Simon's present inside the office in the southeast corner (col 24, row 17). */
+export const UPSTAIRS_SIMON_PRESENT_BOUNDS: Rect = {
+  x: 24 * TILE_SIZE + 3,
+  y: 17 * TILE_SIZE + 3,
+  width: 10,
+  height: 10,
+};
+
 /** Henrik & Tanja in table room (left and right of table at cols 11..12, row 17). */
 export const UPSTAIRS_HENRIK_NPC: Rect & { facing: Direction } = {
   x: 10 * TILE_SIZE + 2,
@@ -289,10 +311,10 @@ export class LevelUpstairs implements GameLevel {
   public tanjaCone: ConeOfSight;
 
   public readonly dianaNpc = { ...UPSTAIRS_DIANA_NPC };
-  public dianaCone: ConeOfSight;
+  public dianaCone: ConeOfSight | null = null;
 
   public readonly simonNpc = { ...UPSTAIRS_SIMON_NPC };
-  public simonCone: ConeOfSight;
+  public simonCone: ConeOfSight | null = null;
 
   public readonly anneMarieNpc = { ...UPSTAIRS_ANNE_MARIE_NPC };
   public anneMarieAngle: number = -Math.PI / 2; // Facing north initially
@@ -347,16 +369,26 @@ export class LevelUpstairs implements GameLevel {
       this.map
     );
 
+    // Diana faces the Christmas tree (down-left)
+    const dianaTreeAngle = Math.atan2(
+      15.5 * TILE_SIZE - (this.dianaNpc.y + TILE_SIZE / 2),
+      3.0 * TILE_SIZE - (this.dianaNpc.x + TILE_SIZE / 2)
+    );
     this.dianaCone = new ConeOfSight(
       { x: this.dianaNpc.x + TILE_SIZE / 2, y: this.dianaNpc.y + TILE_SIZE / 2 },
-      Math.PI / 2, // south
+      dianaTreeAngle,
       undefined,
       this.map
     );
 
+    // Simon faces the Christmas tree (left / slightly down-left)
+    const simonTreeAngle = Math.atan2(
+      15.5 * TILE_SIZE - (this.simonNpc.y + TILE_SIZE / 2),
+      3.0 * TILE_SIZE - (this.simonNpc.x + TILE_SIZE / 2)
+    );
     this.simonCone = new ConeOfSight(
       { x: this.simonNpc.x + TILE_SIZE / 2, y: this.simonNpc.y + TILE_SIZE / 2 },
-      Math.PI, // west
+      simonTreeAngle,
       undefined,
       this.map
     );
@@ -403,19 +435,35 @@ export class LevelUpstairs implements GameLevel {
       this.map
     );
 
-    this.dianaCone = new ConeOfSight(
-      { x: this.dianaNpc.x + TILE_SIZE / 2, y: this.dianaNpc.y + TILE_SIZE / 2 },
-      Math.PI / 2,
-      undefined,
-      this.map
-    );
+    if (!player.states.get(DIANA_DISTRACTED_KEY)) {
+      const dianaTreeAngle = Math.atan2(
+        15.5 * TILE_SIZE - (this.dianaNpc.y + TILE_SIZE / 2),
+        3.0 * TILE_SIZE - (this.dianaNpc.x + TILE_SIZE / 2)
+      );
+      this.dianaCone = new ConeOfSight(
+        { x: this.dianaNpc.x + TILE_SIZE / 2, y: this.dianaNpc.y + TILE_SIZE / 2 },
+        dianaTreeAngle,
+        undefined,
+        this.map
+      );
+    } else {
+      this.dianaCone = null;
+    }
 
-    this.simonCone = new ConeOfSight(
-      { x: this.simonNpc.x + TILE_SIZE / 2, y: this.simonNpc.y + TILE_SIZE / 2 },
-      Math.PI,
-      undefined,
-      this.map
-    );
+    if (!player.states.get(SIMON_DISTRACTED_KEY)) {
+      const simonTreeAngle = Math.atan2(
+        15.5 * TILE_SIZE - (this.simonNpc.y + TILE_SIZE / 2),
+        3.0 * TILE_SIZE - (this.simonNpc.x + TILE_SIZE / 2)
+      );
+      this.simonCone = new ConeOfSight(
+        { x: this.simonNpc.x + TILE_SIZE / 2, y: this.simonNpc.y + TILE_SIZE / 2 },
+        simonTreeAngle,
+        undefined,
+        this.map
+      );
+    } else {
+      this.simonCone = null;
+    }
 
     this.anneMarieAngle = -Math.PI / 2;
     this.anneMarieTimer = 0;
@@ -440,7 +488,7 @@ export class LevelUpstairs implements GameLevel {
     ];
   }
 
-  public getInteractables(_player?: Player): Interactable[] {
+  public getInteractables(player?: Player): Interactable[] {
     const list: Interactable[] = [
       {
         id: 'upstairs-stairs-down',
@@ -466,6 +514,48 @@ export class LevelUpstairs implements GameLevel {
       },
     ];
 
+    // Diana's Present in bedroom (if not already taken)
+    if (!player?.states.get(DIANA_PRESENT_TAKEN_KEY)) {
+      list.push({
+        id: 'upstairs-diana-present',
+        bounds: { ...UPSTAIRS_DIANA_PRESENT_BOUNDS },
+        promptText: "Take Diana's Present",
+        dialogueLines: [],
+      });
+    }
+
+    // Simon's Present in office (if not already taken)
+    if (!player?.states.get(SIMON_PRESENT_TAKEN_KEY)) {
+      list.push({
+        id: 'upstairs-simon-present',
+        bounds: { ...UPSTAIRS_SIMON_PRESENT_BOUNDS },
+        promptText: "Take Simon's Present",
+        dialogueLines: [],
+      });
+    }
+
+    // Diana NPC interaction (Inspect or Give present)
+    if (!player?.states.get(DIANA_DISTRACTED_KEY)) {
+      const hasDianaPresent = Boolean(player?.states.get(DIANA_PRESENT_TAKEN_KEY));
+      list.push({
+        id: 'upstairs-diana-npc',
+        bounds: { ...this.dianaNpc },
+        promptText: hasDianaPresent ? 'Give present' : 'Inspect',
+        dialogueLines: [],
+      });
+    }
+
+    // Simon NPC interaction (Inspect or Give present)
+    if (!player?.states.get(SIMON_DISTRACTED_KEY)) {
+      const hasSimonPresent = Boolean(player?.states.get(SIMON_PRESENT_TAKEN_KEY));
+      list.push({
+        id: 'upstairs-simon-npc',
+        bounds: { ...this.simonNpc },
+        promptText: hasSimonPresent ? 'Give present' : 'Inspect',
+        dialogueLines: [],
+      });
+    }
+
     for (const door of this.doors) {
       list.push({
         id: door.id,
@@ -488,6 +578,54 @@ export class LevelUpstairs implements GameLevel {
       ctx.openDialogue([
         "You found a hidden compartment containing a key... it's Arjan's key!",
       ]);
+      return true;
+    }
+
+    if (interactableId === 'upstairs-diana-present') {
+      player.states.set(DIANA_PRESENT_TAKEN_KEY, true);
+      ctx.openDialogue(["You picked up Diana's Present."]);
+      return true;
+    }
+
+    if (interactableId === 'upstairs-simon-present') {
+      player.states.set(SIMON_PRESENT_TAKEN_KEY, true);
+      ctx.openDialogue(["You picked up Simon's present."]);
+      return true;
+    }
+
+    if (interactableId === 'upstairs-diana-npc') {
+      const hasDianaPresent = Boolean(player.states.get(DIANA_PRESENT_TAKEN_KEY));
+      if (hasDianaPresent) {
+        player.states.set(DIANA_DISTRACTED_KEY, true);
+        this.dianaCone = null;
+        ctx.openDialogue(
+          ['Thank you, Santa! I will cherish this present forever.'],
+          undefined,
+          'Diana'
+        );
+      } else {
+        ctx.openDialogue([
+          'Hmm... I have to find something to distract Diana with...',
+        ]);
+      }
+      return true;
+    }
+
+    if (interactableId === 'upstairs-simon-npc') {
+      const hasSimonPresent = Boolean(player.states.get(SIMON_PRESENT_TAKEN_KEY));
+      if (hasSimonPresent) {
+        player.states.set(SIMON_DISTRACTED_KEY, true);
+        this.simonCone = null;
+        ctx.openDialogue(
+          ['A present?! For me? Thank you, Santa!'],
+          undefined,
+          'Simon'
+        );
+      } else {
+        ctx.openDialogue([
+          'Hmm... I have to find something to distract Simon with...',
+        ]);
+      }
       return true;
     }
 
@@ -645,7 +783,7 @@ export class LevelUpstairs implements GameLevel {
     }
 
     // 3. Diana & Simon in living room
-    if (this.dianaCone.checkDetection(player)) {
+    if (this.dianaCone && this.dianaCone.checkDetection(player)) {
       this.triggerDetection(
         ctx,
         player,
@@ -655,7 +793,7 @@ export class LevelUpstairs implements GameLevel {
       return;
     }
 
-    if (this.simonCone.checkDetection(player)) {
+    if (this.simonCone && this.simonCone.checkDetection(player)) {
       this.triggerDetection(
         ctx,
         player,

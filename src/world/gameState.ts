@@ -120,7 +120,7 @@ export function refreshInteractables(state: GameState): void {
     syncOutsideToLevel(state);
   }
   const activeLevel = getActiveLevel(state);
-  state.interactables = activeLevel.getInteractables();
+  state.interactables = activeLevel.getInteractables(state.player);
 
   const isBusyOutside =
     state.currentLevelId === 'level-outside' &&
@@ -279,7 +279,7 @@ export function createGameState(
     climbing: levelOutside.climbing,
     electrocutionTimer: levelOutside.electrocutionTimer,
     joystickActive: false,
-    interactables: activeLevel.getInteractables(),
+    interactables: activeLevel.getInteractables(player),
     nearbyInteractable: null,
     activeDialogue: showIntroDialogue ? createIntroDialogue(isMobile) : null,
     elapsedTime: 0,
