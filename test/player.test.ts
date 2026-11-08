@@ -2064,7 +2064,13 @@ Sylvester -> Tanja
 Tanja -> Alex
 `;
 
-    const db: SecretSantaDB = await initSecretSantaDB(sampleContent);
+    // Initialize with a playerId encoded for "Alex" -> btoa("Alex") = "QWxleA=="
+    const alexPid = btoa('Alex');
+    const db: SecretSantaDB = await initSecretSantaDB(sampleContent, alexPid);
+
+    expect(db.playerId).toBe(alexPid);
+    expect(db.playerName).toBe('Alex');
+    expect(db.toPlayerId('Alex')).toBe(alexPid);
 
     expect(db.giftGivers).toEqual([
       'Alex',
@@ -2085,8 +2091,22 @@ Tanja -> Alex
     expect(db.getGiftReceiverOf('Unknown')).toBeUndefined();
 
     const logs = debugConsole.getLines();
-    expect(logs).toContain('Secret Santa: Alex -> Arjan');
-    expect(logs).toContain('Secret Santa: Henrik -> Sylvester');
-    expect(logs).toContain('Secret Santa: Tanja -> Alex');
+    expect(logs).toContain(`Alex (${alexPid}) -> Arjan`);
+    expect(logs).toContain(`Henrik (${btoa('Henrik')}) -> Sylvester`);
+    expect(logs).toContain(`Tanja (${btoa('Tanja')}) -> Alex`);
+    expect(logs).toContain(
+      'Based on pid, the current player is Alex who should give a gift to Arjan'
+    );
+
+    // Test with null playerId
+    debugConsole.clear();
+    const dbNoPid = new SecretSantaDB(sampleContent, null);
+    expect(dbNoPid.playerId).toBeNull();
+    expect(dbNoPid.playerName).toBeNull();
+    dbNoPid.debugLogAll();
+    const logsNoPid = debugConsole.getLines();
+    expect(logsNoPid).toContain(
+      'Based on pid, the current player is null who should give a gift to null'
+    );
   });
 });

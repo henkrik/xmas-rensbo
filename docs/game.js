@@ -436,11 +436,32 @@
 
   // src/core/secretSantaDB.ts
   var SecretSantaDB = class {
-    constructor(content) {
+    constructor(content, playerId = null) {
       __publicField(this, "giverToReceiver", /* @__PURE__ */ new Map());
+      __publicField(this, "playerId", null);
+      this.playerId = playerId;
       if (content) {
         this.loadFromText(content);
       }
+    }
+    /**
+     * Base64 decodes the playerId. Returns atob(playerId) if playerId is non-null, null otherwise.
+     */
+    get playerName() {
+      if (!this.playerId) {
+        return null;
+      }
+      try {
+        return atob(this.playerId);
+      } catch {
+        return null;
+      }
+    }
+    /**
+     * Base64 encodes a name string using btoa.
+     */
+    toPlayerId(name) {
+      return btoa(name);
     }
     /**
      * Parses non-empty lines formatted as "Name1 -> Name2" and populates the map.
@@ -474,16 +495,25 @@
       return this.giverToReceiver.get(giftGiver);
     }
     /**
-     * Debug logs each gift giver's name and who they give presents to according to this map.
+     * Debug logs each gift giver's name and who they give presents to according to this map
+     * in the format: "Gift Giver (PlayerID) -> Gift Receiver"
+     * Followed by:
+     * "Based on pid, the current player is <playerName> who should give a gift to <receiver>"
      */
     debugLogAll() {
       for (const giver of this.giftGivers) {
         const receiver = this.getGiftReceiverOf(giver);
-        debugLog(`Secret Santa: ${giver} -> ${receiver}`);
+        const pid = this.toPlayerId(giver);
+        debugLog(`${giver} (${pid}) -> ${receiver}`);
       }
+      const currentName = this.playerName;
+      const receiverOfPlayer = currentName ? this.getGiftReceiverOf(currentName) : void 0;
+      debugLog(
+        `Based on pid, the current player is ${currentName ?? "null"} who should give a gift to ${receiverOfPlayer ?? "null"}`
+      );
     }
   };
-  async function initSecretSantaDB(initialContent) {
+  async function initSecretSantaDB(initialContent, playerId) {
     let content = initialContent;
     if (content === void 0 && typeof fetch === "function") {
       try {
@@ -494,7 +524,15 @@
       } catch {
       }
     }
-    const db = new SecretSantaDB(content);
+    let pid = playerId;
+    if (pid === void 0) {
+      if (typeof window !== "undefined" && window.location?.search) {
+        pid = new URLSearchParams(window.location.search).get("pid");
+      } else {
+        pid = null;
+      }
+    }
+    const db = new SecretSantaDB(content, pid);
     db.debugLogAll();
     return db;
   }
