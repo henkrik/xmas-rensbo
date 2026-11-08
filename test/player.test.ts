@@ -44,10 +44,13 @@ import {
   USED_STAIRS_STATE_KEY,
 } from '../src/world/levels/levelBasement';
 import {
+  ARJAN_KEY_STATE_KEY,
   KITCHEN_ROSANNA_STATE_KEY,
   KITCHEN_TRIGGER_BOUNDS,
   UPSTAIRS_BEDROOM_DOOR_BOUNDS,
   UPSTAIRS_BEDROOM_HIDDEN_MASK,
+  UPSTAIRS_COMPUTER_BOUNDS,
+  UPSTAIRS_CUPBOARD_BOUNDS,
   UPSTAIRS_OFFICE_DOOR_BOUNDS,
   UPSTAIRS_OFFICE_HIDDEN_MASK,
   UPSTAIRS_SHOWER_DOOR_BOUNDS,
@@ -945,7 +948,7 @@ describe('Player walking & 2x Rensbo map layout', () => {
     const input = createEmptyInput();
     const upstairs = state.levels['level-upstairs'];
 
-    // 1. Shower, Bedroom, Office, and Table Room doors start closed and are deleted when opened
+    // 1. Shower, Bedroom, Office, and Table Room doors start closed
     expect(upstairs.doors.map((d) => d.id)).toEqual([
       'upstairs-shower-door',
       'upstairs-bedroom-door',
@@ -971,10 +974,55 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(tableRoomDoor.hiddenRegions).toEqual(UPSTAIRS_TABLE_ROOM_HIDDEN_MASKS);
     expect(tableRoomDoor.hiddenRegions.length).toBe(3);
 
+    // Opening office door without key gives locked dialogue:
+    state.player.x = UPSTAIRS_OFFICE_DOOR_BOUNDS.x + 2;
+    state.player.y = UPSTAIRS_OFFICE_DOOR_BOUNDS.y - 14;
+    updateGameState(state, input, 0.01);
+    expect(state.nearbyInteractable?.id).toBe('upstairs-office-door');
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.activeDialogue?.lines[0]).toBe(
+      'The office is locked... hmm, where would Arjan hide a key?'
+    );
+    // Dismiss dialogue
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(upstairs.doors.some((d) => d.id === 'upstairs-office-door')).toBe(true);
+
+    // Inspect cupboard next to dining table -> finds Arjan's key
+    state.player.x = UPSTAIRS_CUPBOARD_BOUNDS.x + TILE_SIZE + 2;
+    state.player.y = UPSTAIRS_CUPBOARD_BOUNDS.y + 4;
+    updateGameState(state, input, 0.01);
+    expect(state.nearbyInteractable?.id).toBe('upstairs-dining-cupboard');
+    expect(state.nearbyInteractable?.promptText).toBe('Inspect');
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.activeDialogue?.lines[0]).toBe(
+      "You found a hidden compartment containing a key... it's Arjan's key!"
+    );
+    expect(state.player.states.get(ARJAN_KEY_STATE_KEY)).toBe(true);
+    // Dismiss dialogue
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+
+    // With the key, the office door opens
+    state.player.x = UPSTAIRS_OFFICE_DOOR_BOUNDS.x + 2;
+    state.player.y = UPSTAIRS_OFFICE_DOOR_BOUNDS.y - 14;
+    updateGameState(state, input, 0.01);
+    expect(state.nearbyInteractable?.id).toBe('upstairs-office-door');
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(upstairs.doors.some((d) => d.id === 'upstairs-office-door')).toBe(false);
+
+    // Open other doors: shower, bedroom, table room
     for (const [doorId, bounds, offsetY] of [
       ['upstairs-shower-door', UPSTAIRS_SHOWER_DOOR_BOUNDS, TILE_SIZE + 2],
       ['upstairs-bedroom-door', UPSTAIRS_BEDROOM_DOOR_BOUNDS, TILE_SIZE + 2],
-      ['upstairs-office-door', UPSTAIRS_OFFICE_DOOR_BOUNDS, -14],
       ['upstairs-table-room-door', UPSTAIRS_TABLE_ROOM_DOOR_BOUNDS, -14],
     ] as const) {
       state.player.x = bounds.x + 2;
@@ -989,6 +1037,39 @@ describe('Player walking & 2x Rensbo map layout', () => {
     }
 
     expect(upstairs.doors.length).toBe(0);
+
+    // Inspect PC in the office -> "Start PC" and 3 dialogue messages
+    state.player.x = UPSTAIRS_COMPUTER_BOUNDS.x + 2;
+    state.player.y = UPSTAIRS_COMPUTER_BOUNDS.y + TILE_SIZE + 2;
+    updateGameState(state, input, 0.01);
+    expect(state.nearbyInteractable?.id).toBe('upstairs-office-pc');
+    expect(state.nearbyInteractable?.promptText).toBe('Start PC');
+
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.activeDialogue?.lines).toEqual([
+      'Hmm... is this where Arjan pretends to work? It\'s just a bunch of pictures of Anne-Marie.',
+      'Hey there\'s actually a python script here, shall we run it?',
+      'You are now addicted to Olexa\'s text-based christmas adventure.',
+    ]);
+    expect(state.activeDialogue?.currentIndex).toBe(0);
+
+    // Advance dialogue
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.activeDialogue?.currentIndex).toBe(1);
+
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.activeDialogue?.currentIndex).toBe(2);
+
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.activeDialogue).toBeNull();
 
     // 2. Hallway connects directly to the Extra Room on the east without any wall or door blocking it
     state.player.x = 23 * TILE_SIZE;

@@ -2539,6 +2539,19 @@
     width: 5 * TILE_SIZE,
     height: 5 * TILE_SIZE
   };
+  var UPSTAIRS_CUPBOARD_BOUNDS = {
+    x: 2 * TILE_SIZE,
+    y: 6 * TILE_SIZE,
+    width: TILE_SIZE,
+    height: 2 * TILE_SIZE
+  };
+  var UPSTAIRS_COMPUTER_BOUNDS = {
+    x: 21 * TILE_SIZE,
+    y: 16 * TILE_SIZE,
+    width: TILE_SIZE,
+    height: TILE_SIZE
+  };
+  var ARJAN_KEY_STATE_KEY = "upstairsArjanKey";
   var UPSTAIRS_TABLE_ROOM_DOOR_BOUNDS = {
     x: 11 * TILE_SIZE,
     y: 15 * TILE_SIZE,
@@ -2624,13 +2637,29 @@
         ...this.doors.map((d) => d.bounds)
       ];
     }
-    getInteractables() {
+    getInteractables(_player) {
       const list = [
         {
           id: "upstairs-stairs-down",
           bounds: { ...UPSTAIRS_STAIRS_TRIGGER_BOUNDS },
           promptText: "Walk downstairs",
           dialogueLines: []
+        },
+        {
+          id: "upstairs-dining-cupboard",
+          bounds: { ...UPSTAIRS_CUPBOARD_BOUNDS },
+          promptText: "Inspect",
+          dialogueLines: []
+        },
+        {
+          id: "upstairs-office-pc",
+          bounds: { ...UPSTAIRS_COMPUTER_BOUNDS },
+          promptText: "Start PC",
+          dialogueLines: [
+            "Hmm... is this where Arjan pretends to work? It's just a bunch of pictures of Anne-Marie.",
+            "Hey there's actually a python script here, shall we run it?",
+            "You are now addicted to Olexa's text-based christmas adventure."
+          ]
         }
       ];
       for (const door of this.doors) {
@@ -2643,9 +2672,26 @@
       }
       return list;
     }
-    handleInteraction(interactableId, _player, ctx) {
+    handleInteraction(interactableId, player, ctx) {
+      if (interactableId === "upstairs-dining-cupboard") {
+        player.states.set(ARJAN_KEY_STATE_KEY, true);
+        ctx.openDialogue([
+          "You found a hidden compartment containing a key... it's Arjan's key!"
+        ]);
+        return true;
+      }
       const doorIdx = this.doors.findIndex((d) => d.id === interactableId);
       if (doorIdx !== -1) {
+        const door = this.doors[doorIdx];
+        if (door.id === "upstairs-office-door") {
+          const hasKey = Boolean(player.states.get(ARJAN_KEY_STATE_KEY));
+          if (!hasKey) {
+            ctx.openDialogue([
+              "The office is locked... hmm, where would Arjan hide a key?"
+            ]);
+            return true;
+          }
+        }
         this.doors.splice(doorIdx, 1);
         return true;
       }

@@ -135,6 +135,24 @@ export const UPSTAIRS_OFFICE_HIDDEN_MASK: Rect = {
   height: 5 * TILE_SIZE,
 };
 
+/** Cupboard in dining room next to the long table (col 2, rows 6..7). */
+export const UPSTAIRS_CUPBOARD_BOUNDS: Rect = {
+  x: 2 * TILE_SIZE,
+  y: 6 * TILE_SIZE,
+  width: TILE_SIZE,
+  height: 2 * TILE_SIZE,
+};
+
+/** Computer on desk in the office (col 21, row 16). */
+export const UPSTAIRS_COMPUTER_BOUNDS: Rect = {
+  x: 21 * TILE_SIZE,
+  y: 16 * TILE_SIZE,
+  width: TILE_SIZE,
+  height: TILE_SIZE,
+};
+
+export const ARJAN_KEY_STATE_KEY = 'upstairsArjanKey';
+
 /** Closed collidable door to the room with the second kitchen table. */
 export const UPSTAIRS_TABLE_ROOM_DOOR_BOUNDS: Rect = {
   x: 11 * TILE_SIZE,
@@ -249,13 +267,29 @@ export class LevelUpstairs implements GameLevel {
     ];
   }
 
-  public getInteractables(): Interactable[] {
+  public getInteractables(_player?: Player): Interactable[] {
     const list: Interactable[] = [
       {
         id: 'upstairs-stairs-down',
         bounds: { ...UPSTAIRS_STAIRS_TRIGGER_BOUNDS },
         promptText: 'Walk downstairs',
         dialogueLines: [],
+      },
+      {
+        id: 'upstairs-dining-cupboard',
+        bounds: { ...UPSTAIRS_CUPBOARD_BOUNDS },
+        promptText: 'Inspect',
+        dialogueLines: [],
+      },
+      {
+        id: 'upstairs-office-pc',
+        bounds: { ...UPSTAIRS_COMPUTER_BOUNDS },
+        promptText: 'Start PC',
+        dialogueLines: [
+          'Hmm... is this where Arjan pretends to work? It\'s just a bunch of pictures of Anne-Marie.',
+          'Hey there\'s actually a python script here, shall we run it?',
+          'You are now addicted to Olexa\'s text-based christmas adventure.',
+        ],
       },
     ];
 
@@ -273,11 +307,30 @@ export class LevelUpstairs implements GameLevel {
 
   public handleInteraction(
     interactableId: string,
-    _player: Player,
+    player: Player,
     ctx: LevelTransitionContext
   ): boolean {
+    if (interactableId === 'upstairs-dining-cupboard') {
+      player.states.set(ARJAN_KEY_STATE_KEY, true);
+      ctx.openDialogue([
+        "You found a hidden compartment containing a key... it's Arjan's key!",
+      ]);
+      return true;
+    }
+
     const doorIdx = this.doors.findIndex((d) => d.id === interactableId);
     if (doorIdx !== -1) {
+      const door = this.doors[doorIdx];
+      if (door.id === 'upstairs-office-door') {
+        const hasKey = Boolean(player.states.get(ARJAN_KEY_STATE_KEY));
+        if (!hasKey) {
+          ctx.openDialogue([
+            'The office is locked... hmm, where would Arjan hide a key?',
+          ]);
+          return true;
+        }
+      }
+
       this.doors.splice(doorIdx, 1);
       return true;
     }
