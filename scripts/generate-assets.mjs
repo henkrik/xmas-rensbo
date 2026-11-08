@@ -1896,16 +1896,54 @@ function drawBathroomTileFloor(canvas, cStart, rStart, cEnd, rEnd) {
   }
 }
 
-function drawInteriorWallTile(canvas, col, row) {
+function drawInteriorWallTile(
+  canvas,
+  col,
+  row,
+  hasWallAbove = false,
+  hasWallBelow = false,
+  hasWallLeft = false,
+  hasWallRight = false
+) {
   const x = col * 16;
   const y = row * 16;
-  // Dark slate-wood wall top with subtle bevel & wainscoting trim
-  canvas.fillRect(x, y, 16, 16, [68, 62, 78, 255]);
-  canvas.fillRect(x + 1, y + 1, 14, 14, [86, 78, 98, 255]);
-  canvas.fillRect(x + 2, y + 2, 12, 10, [102, 92, 114, 255]);
-  // Baseboard / wainscoting edge at bottom of wall tile
-  canvas.fillRect(x, y + 13, 16, 2, [132, 110, 88, 255]);
-  canvas.fillRect(x, y + 15, 16, 1, [28, 24, 34, 255]);
+
+  // 1. Fill base with wall color
+  canvas.fillRect(x, y, 16, 16, [86, 78, 98, 255]);
+
+  // Main wall panel interior:
+  // If wall continues above, start at y (no top seam line)
+  const topY = hasWallAbove ? y : y + 2;
+  // If wall continues below, extend all the way through y + 15 (no bottom baseboard or dark border)
+  const botY = hasWallBelow ? y + 16 : y + 13;
+  const leftX = hasWallLeft ? x : x + 2;
+  const rightX = hasWallRight ? x + 16 : x + 14;
+
+  canvas.fillRect(leftX, topY, rightX - leftX, botY - topY, [102, 92, 114, 255]);
+
+  // Top edge outline & bevel if no wall above
+  if (!hasWallAbove) {
+    canvas.fillRect(x, y, 16, 1, [68, 62, 78, 255]);
+    canvas.fillRect(x, y + 1, 16, 1, [86, 78, 98, 255]);
+  }
+
+  // Left edge outline & bevel if no wall to the left
+  if (!hasWallLeft) {
+    canvas.fillRect(x, y, 1, 16, [68, 62, 78, 255]);
+    canvas.fillRect(x + 1, y, 1, 16, [86, 78, 98, 255]);
+  }
+
+  // Right edge outline & bevel if no wall to the right
+  if (!hasWallRight) {
+    canvas.fillRect(x + 15, y, 1, 16, [68, 62, 78, 255]);
+    canvas.fillRect(x + 14, y, 1, 16, [86, 78, 98, 255]);
+  }
+
+  // Bottom baseboard and dark border: ONLY if no wall below!
+  if (!hasWallBelow) {
+    canvas.fillRect(x, y + 13, 16, 2, [132, 110, 88, 255]);
+    canvas.fillRect(x, y + 15, 16, 1, [28, 24, 34, 255]);
+  }
 }
 
 function drawNeutralCouchVertical(canvas, cStart, rStart, cEnd, rEnd) {
@@ -2021,7 +2059,19 @@ function generateBasementPng() {
   for (let r = 6; r <= 20; r++) {
     for (let c = 6; c <= 22; c++) {
       if (BASEMENT_MAP_MATRIX_FOR_PNG[r]?.[c] === 21) {
-        drawInteriorWallTile(canvas, c, r);
+        const hasWallAbove = BASEMENT_MAP_MATRIX_FOR_PNG[r - 1]?.[c] === 21;
+        const hasWallBelow = BASEMENT_MAP_MATRIX_FOR_PNG[r + 1]?.[c] === 21;
+        const hasWallLeft = BASEMENT_MAP_MATRIX_FOR_PNG[r]?.[c - 1] === 21;
+        const hasWallRight = BASEMENT_MAP_MATRIX_FOR_PNG[r]?.[c + 1] === 21;
+        drawInteriorWallTile(
+          canvas,
+          c,
+          r,
+          hasWallAbove,
+          hasWallBelow,
+          hasWallLeft,
+          hasWallRight
+        );
       }
     }
   }
@@ -2347,8 +2397,8 @@ const UPSTAIRS_TILES_MATRIX = [
   [0, 1, 5, 2, 5, 5, 2, 2, 2, 2, 5, 5, 2, 2, 2, 5, 1, 3, 3, 3, 1, 1, 2, 2, 2, 2, 5, 5, 1, 0, 0, 0], // 6: Cupboard (2) | Dining Table (4..5) | Island (10..11) | Bed (26..27)
   [0, 1, 5, 2, 5, 5, 2, 2, 2, 2, 5, 5, 2, 2, 2, 5, 1, 5, 3, 3, 1, 1, 2, 2, 2, 2, 5, 5, 1, 0, 0, 0], // 7: Cupboard (2) | Dining Table (4..5) | Shower sink (17) | Bed (26..27)
   [0, 1, 2, 2, 5, 5, 2, 2, 2, 2, 2, 2, 2, 2, 2, 5, 1, 5, 3, 5, 1, 1, 2, 2, 2, 2, 2, 2, 1, 0, 0, 0], // 8: Dining table (4..5) | Shower sink (17) & toilet (19) | Bedroom
-  [0, 1, 2, 2, 5, 5, 2, 2, 2, 5, 5, 5, 2, 2, 2, 1, 1, 3, 3, 3, 1, 1, 2, 2, 2, 2, 2, 2, 1, 0, 0, 0], // 9: Kitchen bar (9..11)
-  [0, 1, 2, 2, 2, 2, 2, 2, 2, 1, 5, 5, 2, 2, 2, 1, 1, 1, 3, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 0, 0, 0], // 10: Altar (10..11) | Arch (12..14) | Shower door (18) | Bedroom door (24)
+  [0, 1, 2, 2, 5, 5, 2, 2, 2, 1, 1, 1, 1, 2, 2, 1, 1, 3, 3, 3, 1, 1, 2, 2, 2, 2, 2, 2, 1, 0, 0, 0], // 9: North wall of altar alcove (9..12) | Kitchen entrance (13..14)
+  [0, 1, 2, 2, 2, 2, 2, 2, 2, 1, 5, 5, 1, 2, 2, 1, 1, 1, 3, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 0, 0, 0], // 10: Altar (10..11) | Altar east wall (12) | Kitchen entrance (13..14) | Shower door (18) | Bedroom door (24)
   [0, 1, 2, 2, 5, 5, 5, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0, 0, 0], // 11: Colorful Couch (4..6) | Narrow Hallway (rows 11..12) -> Extra Room (26..27)
   [0, 1, 5, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0, 0, 0], // 12: Left Colorful Armchair (2) | Narrow Hallway (rows 11..12)
   [0, 1, 2, 2, 2, 2, 2, 5, 2, 2, 2, 2, 2, 2, 1, 4, 4, 4, 4, 1, 1, 2, 1, 1, 1, 1, 2, 2, 1, 0, 0, 0], // 13: Right Armchair (7) | Open breathing room (8..13) | Stairs (15..18) | Office door (21)
@@ -2389,15 +2439,30 @@ function generateUpstairsPng() {
   for (let r = 0; r < 28; r++) {
     for (let c = 0; c < 32; c++) {
       const tile = UPSTAIRS_TILES_MATRIX[r][c];
-      if (tile === 2 || tile === 5) {
-        // WoodFloor or Furniture (floor drawn underneath furniture so zero black holes)
-        drawWoodPlankFloor(canvas, c, r, c, r);
-      } else if (tile === 3) {
-        // BathroomTileFloor
+      const isBathroomTile =
+        tile === 3 ||
+        (c >= 17 && c <= 19 && r >= 5 && r <= 9);
+      if (isBathroomTile) {
+        // BathroomTileFloor (including sink and toilet in the shower/bathroom room)
         drawBathroomTileFloor(canvas, c, r, c, r);
+      } else if (tile === 2 || tile === 5) {
+        // WoodFloor or Furniture in wood floor rooms (floor drawn underneath furniture so zero black holes)
+        drawWoodPlankFloor(canvas, c, r, c, r);
       } else if (tile === 1) {
         // InteriorWall
-        drawInteriorWallTile(canvas, c, r);
+        const hasWallAbove = r > 0 && UPSTAIRS_TILES_MATRIX[r - 1][c] === 1;
+        const hasWallBelow = r < 27 && UPSTAIRS_TILES_MATRIX[r + 1][c] === 1;
+        const hasWallLeft = c > 0 && UPSTAIRS_TILES_MATRIX[r][c - 1] === 1;
+        const hasWallRight = c < 31 && UPSTAIRS_TILES_MATRIX[r][c + 1] === 1;
+        drawInteriorWallTile(
+          canvas,
+          c,
+          r,
+          hasWallAbove,
+          hasWallBelow,
+          hasWallLeft,
+          hasWallRight
+        );
       }
     }
   }
@@ -2453,11 +2518,8 @@ function generateUpstairsPng() {
     canvas.fillRect(sx + 3, sy + 34, 8, 10, [132, 152, 172, 255]);
     canvas.fillRect(sx + 3, sy + 46, 8, 10, [132, 152, 172, 255]);
   }
-  // Kitchen Bar Counter (cols 9..11, row 9) & The Altar (cols 10..11, row 10)
-  canvas.fillRect(9 * 16 + 1, 9 * 16 + 3, 3 * 16 - 2, 10, [138, 88, 48, 255]);
-  canvas.strokeRect(9 * 16 + 1, 9 * 16 + 3, 3 * 16 - 2, 10, [46, 28, 14, 255]);
+  // The Altar (cols 10..11, row 10): ornate table with oval mirror & twin candles
   {
-    // The Altar (cols 10..11, row 10): ornate table with oval mirror & twin candles
     const ax = 10 * 16 + 2;
     const ay = 10 * 16 + 2;
     canvas.fillRect(ax, ay, 28, 12, [116, 68, 38, 255]);

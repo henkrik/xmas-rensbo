@@ -1112,4 +1112,41 @@ describe('Player walking & 2x Rensbo map layout', () => {
     // Col 18, Row 14 is the dog bowl tile (walkable StoneTileFloor)
     expect(basement.map.tiles[14][18]).toBe(TileType.StoneTileFloor);
   });
+
+  it('updates the upstairs altar alcove walls and kitchen entrance walkability', () => {
+    const state = createGameState({
+      initialLevelId: 'level-upstairs',
+      showIntroDialogue: false,
+    });
+    const upstairs = state.levels['level-upstairs'];
+
+    // Row 9 (north & northwest & northeast of altar): cols 9..12 are wall tiles
+    expect(upstairs.map.tiles[9][9]).toBe(TileType.InteriorWall);
+    expect(upstairs.map.tiles[9][10]).toBe(TileType.InteriorWall);
+    expect(upstairs.map.tiles[9][11]).toBe(TileType.InteriorWall);
+    expect(upstairs.map.tiles[9][12]).toBe(TileType.InteriorWall);
+
+    // Row 10: col 12 (east of altar) is a wall tile
+    expect(upstairs.map.tiles[10][12]).toBe(TileType.InteriorWall);
+    // Altar itself at cols 10..11, row 10
+    expect(upstairs.map.tiles[10][10]).toBe(TileType.FurnitureSolid);
+    expect(upstairs.map.tiles[10][11]).toBe(TileType.FurnitureSolid);
+
+    // Kitchen entrance is 2 tiles wide at cols 13..14
+    expect(upstairs.map.tiles[10][13]).toBe(TileType.WoodFloor);
+    expect(upstairs.map.tiles[10][14]).toBe(TileType.WoodFloor);
+    expect(upstairs.map.tiles[9][13]).toBe(TileType.WoodFloor);
+    expect(upstairs.map.tiles[9][14]).toBe(TileType.WoodFloor);
+
+    // Walking up through the kitchen entrance from hallway (row 11) to kitchen (row 8)
+    const input = createEmptyInput();
+    state.player.x = 13.5 * TILE_SIZE;
+    state.player.y = 11 * TILE_SIZE;
+    input.up = true;
+    for (let i = 0; i < 20; i++) {
+      updateGameState(state, input, 0.05);
+    }
+    input.up = false;
+    expect(state.player.y).toBeLessThan(9 * TILE_SIZE);
+  });
 });

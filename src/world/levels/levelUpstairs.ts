@@ -46,8 +46,8 @@ export const UPSTAIRS_TILES: TileType[][] = [
   [V, W, O, F, O, O, F, F, F, F, O, O, F, F, F, O, W, B, B, B, W, W, F, F, F, F, O, O, W, V, V, V], // 6: Cupboard (2) | Dining Table (4..5) | Island (10..11) | Bed (26..27)
   [V, W, O, F, O, O, F, F, F, F, O, O, F, F, F, O, W, O, B, B, W, W, F, F, F, F, O, O, W, V, V, V], // 7: Cupboard (2) | Dining Table (4..5) | Shower sink (17) | Bed (26..27)
   [V, W, F, F, O, O, F, F, F, F, F, F, F, F, F, O, W, O, B, O, W, W, F, F, F, F, F, F, W, V, V, V], // 8: Dining table (4..5) | Shower sink (17) & toilet (19) | Bedroom
-  [V, W, F, F, O, O, F, F, F, O, O, O, F, F, F, W, W, B, B, B, W, W, F, F, F, F, F, F, W, V, V, V], // 9: Kitchen bar (9..11)
-  [V, W, F, F, F, F, F, F, F, W, O, O, F, F, F, W, W, W, B, W, W, W, W, W, F, W, W, W, W, V, V, V], // 10: Altar (10..11) | Arch (12..14) | Shower door (18) | Bedroom door (24)
+  [V, W, F, F, O, O, F, F, F, W, W, W, W, F, F, W, W, B, B, B, W, W, F, F, F, F, F, F, W, V, V, V], // 9: North wall of altar alcove (9..12) | Kitchen entrance (13..14)
+  [V, W, F, F, F, F, F, F, F, W, O, O, W, F, F, W, W, W, B, W, W, W, W, W, F, W, W, W, W, V, V, V], // 10: Altar (10..11) | Altar east wall (12) | Kitchen entrance (13..14) | Shower door (18) | Bedroom door (24)
   [V, W, F, F, O, O, O, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, W, V, V, V], // 11: Colorful Couch (4..6) | Narrow Hallway (rows 11..12) -> Extra Room (26..27)
   [V, W, O, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, F, W, V, V, V], // 12: Left Colorful Armchair (2) | Narrow Hallway (rows 11..12)
   [V, W, F, F, F, F, F, O, F, F, F, F, F, F, W, T, T, T, T, W, W, F, W, W, W, W, F, F, W, V, V, V], // 13: Right Armchair (7) | Open breathing room (8..13) | Stairs (15..18) | Office door (21)
