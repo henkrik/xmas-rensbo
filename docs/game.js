@@ -1297,41 +1297,41 @@
         }
       ];
       this.albinCone = new ConeOfSight(
-        { x: UPSTAIRS_ALBIN_X, y: this.albinY },
+        { x: UPSTAIRS_ALBIN_X + TILE_SIZE / 2, y: this.albinY + TILE_SIZE / 2 },
         Math.PI / 2,
         // south
         void 0,
         this.map
       );
       this.henrikCone = new ConeOfSight(
-        { x: this.henrikNpc.x, y: this.henrikNpc.y },
+        { x: this.henrikNpc.x + TILE_SIZE / 2, y: this.henrikNpc.y + TILE_SIZE / 2 },
         this.henrikAngle,
         void 0,
         this.map
       );
       this.tanjaCone = new ConeOfSight(
-        { x: this.tanjaNpc.x, y: this.tanjaNpc.y },
+        { x: this.tanjaNpc.x + TILE_SIZE / 2, y: this.tanjaNpc.y + TILE_SIZE / 2 },
         -Math.PI / 2,
         // north
         void 0,
         this.map
       );
       this.dianaLine = new LineOfSight(
-        { x: this.dianaNpc.x, y: this.dianaNpc.y },
+        { x: this.dianaNpc.x + TILE_SIZE / 2, y: this.dianaNpc.y + TILE_SIZE / 2 },
         Math.PI / 2,
         // south
         120,
         this.map
       );
       this.simonLine = new LineOfSight(
-        { x: this.simonNpc.x, y: this.simonNpc.y },
+        { x: this.simonNpc.x + TILE_SIZE / 2, y: this.simonNpc.y + TILE_SIZE / 2 },
         Math.PI,
         // west
         120,
         this.map
       );
       this.anneMarieCone = new ConeOfSight(
-        { x: this.anneMarieNpc.x, y: this.anneMarieNpc.y },
+        { x: this.anneMarieNpc.x + TILE_SIZE / 2, y: this.anneMarieNpc.y + TILE_SIZE / 2 },
         this.anneMarieAngle,
         void 0,
         this.map
@@ -1347,7 +1347,7 @@
       this.albinY = UPSTAIRS_ALBIN_START_Y;
       this.albinDir = 1;
       this.albinCone = new ConeOfSight(
-        { x: UPSTAIRS_ALBIN_X, y: this.albinY },
+        { x: UPSTAIRS_ALBIN_X + TILE_SIZE / 2, y: this.albinY + TILE_SIZE / 2 },
         Math.PI / 2,
         void 0,
         this.map
@@ -1355,25 +1355,25 @@
       this.henrikAngle = Math.PI / 2;
       this.henrikTimer = 0;
       this.henrikCone = new ConeOfSight(
-        { x: this.henrikNpc.x, y: this.henrikNpc.y },
+        { x: this.henrikNpc.x + TILE_SIZE / 2, y: this.henrikNpc.y + TILE_SIZE / 2 },
         this.henrikAngle,
         void 0,
         this.map
       );
       this.tanjaCone = new ConeOfSight(
-        { x: this.tanjaNpc.x, y: this.tanjaNpc.y },
+        { x: this.tanjaNpc.x + TILE_SIZE / 2, y: this.tanjaNpc.y + TILE_SIZE / 2 },
         -Math.PI / 2,
         void 0,
         this.map
       );
       this.dianaLine = new LineOfSight(
-        { x: this.dianaNpc.x, y: this.dianaNpc.y },
+        { x: this.dianaNpc.x + TILE_SIZE / 2, y: this.dianaNpc.y + TILE_SIZE / 2 },
         Math.PI / 2,
         120,
         this.map
       );
       this.simonLine = new LineOfSight(
-        { x: this.simonNpc.x, y: this.simonNpc.y },
+        { x: this.simonNpc.x + TILE_SIZE / 2, y: this.simonNpc.y + TILE_SIZE / 2 },
         Math.PI,
         120,
         this.map
@@ -1381,7 +1381,7 @@
       this.anneMarieAngle = -Math.PI / 2;
       this.anneMarieTimer = 0;
       this.anneMarieCone = new ConeOfSight(
-        { x: this.anneMarieNpc.x, y: this.anneMarieNpc.y },
+        { x: this.anneMarieNpc.x + TILE_SIZE / 2, y: this.anneMarieNpc.y + TILE_SIZE / 2 },
         this.anneMarieAngle,
         void 0,
         this.map
@@ -1515,7 +1515,7 @@
       }
       const albinAngle = this.albinDir === 1 ? Math.PI / 2 : -Math.PI / 2;
       this.albinCone = new ConeOfSight(
-        { x: UPSTAIRS_ALBIN_X, y: this.albinY },
+        { x: UPSTAIRS_ALBIN_X + TILE_SIZE / 2, y: this.albinY + TILE_SIZE / 2 },
         albinAngle,
         void 0,
         this.map
@@ -1538,7 +1538,7 @@
           this.henrikTimer -= 3;
           this.henrikAngle -= Math.PI / 4;
           this.henrikCone = new ConeOfSight(
-            { x: this.henrikNpc.x, y: this.henrikNpc.y },
+            { x: this.henrikNpc.x + TILE_SIZE / 2, y: this.henrikNpc.y + TILE_SIZE / 2 },
             this.henrikAngle,
             void 0,
             this.map
@@ -1590,7 +1590,7 @@
           this.anneMarieTimer -= 3;
           this.anneMarieAngle += Math.PI / 4;
           this.anneMarieCone = new ConeOfSight(
-            { x: this.anneMarieNpc.x, y: this.anneMarieNpc.y },
+            { x: this.anneMarieNpc.x + TILE_SIZE / 2, y: this.anneMarieNpc.y + TILE_SIZE / 2 },
             this.anneMarieAngle,
             void 0,
             this.map
@@ -3256,13 +3256,13 @@
         }
       ];
       this.coneOfSight = new ConeOfSight(
-        { x: this.windowNpc.x, y: this.windowNpc.y },
+        { x: this.windowNpc.x + TILE_SIZE / 2, y: this.windowNpc.y + TILE_SIZE / 2 },
         this.npcSightAngle,
         void 0,
         this.map
       );
       this.olexaConeOfSight = new ConeOfSight(
-        { x: this.olexaNpc.x, y: this.olexaNpc.y },
+        { x: this.olexaNpc.x + TILE_SIZE / 2, y: this.olexaNpc.y + TILE_SIZE / 2 },
         -Math.PI / 2,
         // Looking north
         void 0,
@@ -3286,13 +3286,13 @@
       this.npcSightTimer = 0;
       this.intruderDetected = false;
       this.coneOfSight = new ConeOfSight(
-        { x: this.windowNpc.x, y: this.windowNpc.y },
+        { x: this.windowNpc.x + TILE_SIZE / 2, y: this.windowNpc.y + TILE_SIZE / 2 },
         this.npcSightAngle,
         void 0,
         this.map
       );
       this.olexaConeOfSight = new ConeOfSight(
-        { x: this.olexaNpc.x, y: this.olexaNpc.y },
+        { x: this.olexaNpc.x + TILE_SIZE / 2, y: this.olexaNpc.y + TILE_SIZE / 2 },
         -Math.PI / 2,
         void 0,
         this.map
@@ -3372,7 +3372,7 @@
         this.npcSightTimer -= 2;
         this.npcSightAngle += Math.PI / 4;
         this.coneOfSight = new ConeOfSight(
-          { x: this.windowNpc.x, y: this.windowNpc.y },
+          { x: this.windowNpc.x + TILE_SIZE / 2, y: this.windowNpc.y + TILE_SIZE / 2 },
           this.npcSightAngle,
           void 0,
           this.map

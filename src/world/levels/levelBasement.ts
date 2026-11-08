@@ -180,13 +180,13 @@ export class LevelBasement implements GameLevel {
       },
     ];
     this.coneOfSight = new ConeOfSight(
-      { x: this.windowNpc.x, y: this.windowNpc.y },
+      { x: this.windowNpc.x + TILE_SIZE / 2, y: this.windowNpc.y + TILE_SIZE / 2 },
       this.npcSightAngle,
       undefined,
       this.map
     );
     this.olexaConeOfSight = new ConeOfSight(
-      { x: this.olexaNpc.x, y: this.olexaNpc.y },
+      { x: this.olexaNpc.x + TILE_SIZE / 2, y: this.olexaNpc.y + TILE_SIZE / 2 },
       -Math.PI / 2, // Looking north
       undefined,
       this.map
@@ -212,13 +212,13 @@ export class LevelBasement implements GameLevel {
     this.npcSightTimer = 0;
     this.intruderDetected = false;
     this.coneOfSight = new ConeOfSight(
-      { x: this.windowNpc.x, y: this.windowNpc.y },
+      { x: this.windowNpc.x + TILE_SIZE / 2, y: this.windowNpc.y + TILE_SIZE / 2 },
       this.npcSightAngle,
       undefined,
       this.map
     );
     this.olexaConeOfSight = new ConeOfSight(
-      { x: this.olexaNpc.x, y: this.olexaNpc.y },
+      { x: this.olexaNpc.x + TILE_SIZE / 2, y: this.olexaNpc.y + TILE_SIZE / 2 },
       -Math.PI / 2,
       undefined,
       this.map
@@ -317,7 +317,7 @@ export class LevelBasement implements GameLevel {
       // Spawn new cone of sight that is +45 degrees from where the NPC was looking previously
       this.npcSightAngle += Math.PI / 4;
       this.coneOfSight = new ConeOfSight(
-        { x: this.windowNpc.x, y: this.windowNpc.y },
+        { x: this.windowNpc.x + TILE_SIZE / 2, y: this.windowNpc.y + TILE_SIZE / 2 },
         this.npcSightAngle,
         undefined,
         this.map

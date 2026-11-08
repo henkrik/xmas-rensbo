@@ -326,42 +326,42 @@ export class LevelUpstairs implements GameLevel {
     ];
 
     this.albinCone = new ConeOfSight(
-      { x: UPSTAIRS_ALBIN_X, y: this.albinY },
+      { x: UPSTAIRS_ALBIN_X + TILE_SIZE / 2, y: this.albinY + TILE_SIZE / 2 },
       Math.PI / 2, // south
       undefined,
       this.map
     );
 
     this.henrikCone = new ConeOfSight(
-      { x: this.henrikNpc.x, y: this.henrikNpc.y },
+      { x: this.henrikNpc.x + TILE_SIZE / 2, y: this.henrikNpc.y + TILE_SIZE / 2 },
       this.henrikAngle,
       undefined,
       this.map
     );
 
     this.tanjaCone = new ConeOfSight(
-      { x: this.tanjaNpc.x, y: this.tanjaNpc.y },
+      { x: this.tanjaNpc.x + TILE_SIZE / 2, y: this.tanjaNpc.y + TILE_SIZE / 2 },
       -Math.PI / 2, // north
       undefined,
       this.map
     );
 
     this.dianaLine = new LineOfSight(
-      { x: this.dianaNpc.x, y: this.dianaNpc.y },
+      { x: this.dianaNpc.x + TILE_SIZE / 2, y: this.dianaNpc.y + TILE_SIZE / 2 },
       Math.PI / 2, // south
       120,
       this.map
     );
 
     this.simonLine = new LineOfSight(
-      { x: this.simonNpc.x, y: this.simonNpc.y },
+      { x: this.simonNpc.x + TILE_SIZE / 2, y: this.simonNpc.y + TILE_SIZE / 2 },
       Math.PI, // west
       120,
       this.map
     );
 
     this.anneMarieCone = new ConeOfSight(
-      { x: this.anneMarieNpc.x, y: this.anneMarieNpc.y },
+      { x: this.anneMarieNpc.x + TILE_SIZE / 2, y: this.anneMarieNpc.y + TILE_SIZE / 2 },
       this.anneMarieAngle,
       undefined,
       this.map
@@ -380,7 +380,7 @@ export class LevelUpstairs implements GameLevel {
     this.albinY = UPSTAIRS_ALBIN_START_Y;
     this.albinDir = 1;
     this.albinCone = new ConeOfSight(
-      { x: UPSTAIRS_ALBIN_X, y: this.albinY },
+      { x: UPSTAIRS_ALBIN_X + TILE_SIZE / 2, y: this.albinY + TILE_SIZE / 2 },
       Math.PI / 2,
       undefined,
       this.map
@@ -389,28 +389,28 @@ export class LevelUpstairs implements GameLevel {
     this.henrikAngle = Math.PI / 2;
     this.henrikTimer = 0;
     this.henrikCone = new ConeOfSight(
-      { x: this.henrikNpc.x, y: this.henrikNpc.y },
+      { x: this.henrikNpc.x + TILE_SIZE / 2, y: this.henrikNpc.y + TILE_SIZE / 2 },
       this.henrikAngle,
       undefined,
       this.map
     );
 
     this.tanjaCone = new ConeOfSight(
-      { x: this.tanjaNpc.x, y: this.tanjaNpc.y },
+      { x: this.tanjaNpc.x + TILE_SIZE / 2, y: this.tanjaNpc.y + TILE_SIZE / 2 },
       -Math.PI / 2,
       undefined,
       this.map
     );
 
     this.dianaLine = new LineOfSight(
-      { x: this.dianaNpc.x, y: this.dianaNpc.y },
+      { x: this.dianaNpc.x + TILE_SIZE / 2, y: this.dianaNpc.y + TILE_SIZE / 2 },
       Math.PI / 2,
       120,
       this.map
     );
 
     this.simonLine = new LineOfSight(
-      { x: this.simonNpc.x, y: this.simonNpc.y },
+      { x: this.simonNpc.x + TILE_SIZE / 2, y: this.simonNpc.y + TILE_SIZE / 2 },
       Math.PI,
       120,
       this.map
@@ -419,7 +419,7 @@ export class LevelUpstairs implements GameLevel {
     this.anneMarieAngle = -Math.PI / 2;
     this.anneMarieTimer = 0;
     this.anneMarieCone = new ConeOfSight(
-      { x: this.anneMarieNpc.x, y: this.anneMarieNpc.y },
+      { x: this.anneMarieNpc.x + TILE_SIZE / 2, y: this.anneMarieNpc.y + TILE_SIZE / 2 },
       this.anneMarieAngle,
       undefined,
       this.map
@@ -588,7 +588,7 @@ export class LevelUpstairs implements GameLevel {
     // Cone faces north (-PI/2) when walking north, south (PI/2) when walking south
     const albinAngle = this.albinDir === 1 ? Math.PI / 2 : -Math.PI / 2;
     this.albinCone = new ConeOfSight(
-      { x: UPSTAIRS_ALBIN_X, y: this.albinY },
+      { x: UPSTAIRS_ALBIN_X + TILE_SIZE / 2, y: this.albinY + TILE_SIZE / 2 },
       albinAngle,
       undefined,
       this.map
@@ -615,7 +615,7 @@ export class LevelUpstairs implements GameLevel {
         // rotates 45 degrees counter-clockwise (-PI/4)
         this.henrikAngle -= Math.PI / 4;
         this.henrikCone = new ConeOfSight(
-          { x: this.henrikNpc.x, y: this.henrikNpc.y },
+          { x: this.henrikNpc.x + TILE_SIZE / 2, y: this.henrikNpc.y + TILE_SIZE / 2 },
           this.henrikAngle,
           undefined,
           this.map
@@ -675,7 +675,7 @@ export class LevelUpstairs implements GameLevel {
         // rotates 45 degrees
         this.anneMarieAngle += Math.PI / 4;
         this.anneMarieCone = new ConeOfSight(
-          { x: this.anneMarieNpc.x, y: this.anneMarieNpc.y },
+          { x: this.anneMarieNpc.x + TILE_SIZE / 2, y: this.anneMarieNpc.y + TILE_SIZE / 2 },
           this.anneMarieAngle,
           undefined,
           this.map
