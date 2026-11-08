@@ -1,6 +1,10 @@
 import { Cat, createCat } from '../../entities/cat';
 import { Direction, Player, Rect, rectsIntersect } from '../../entities/player';
-import { ConeOfSight } from '../../entities/sight';
+import {
+  ConeOfSight,
+  DEFAULT_CONE_OF_SIGHT_DISTANCE,
+  DEFAULT_CONE_OF_SIGHT_FOV,
+} from '../../entities/sight';
 import { Interactable } from '../interaction';
 import { MAP_COLS, MAP_ROWS, TILE_SIZE, TileMap, TileType } from '../tilemap';
 import { CollidableDoor, GameLevel, LevelId, LevelTransitionContext } from './types';
@@ -369,7 +373,7 @@ export class LevelUpstairs implements GameLevel {
       this.map
     );
 
-    // Diana faces the Christmas tree (down-left)
+    // Diana faces the Christmas tree (down-left) with a 50% wider field of view
     const dianaTreeAngle = Math.atan2(
       15.5 * TILE_SIZE - (this.dianaNpc.y + TILE_SIZE / 2),
       3.0 * TILE_SIZE - (this.dianaNpc.x + TILE_SIZE / 2)
@@ -377,11 +381,12 @@ export class LevelUpstairs implements GameLevel {
     this.dianaCone = new ConeOfSight(
       { x: this.dianaNpc.x + TILE_SIZE / 2, y: this.dianaNpc.y + TILE_SIZE / 2 },
       dianaTreeAngle,
-      undefined,
-      this.map
+      DEFAULT_CONE_OF_SIGHT_DISTANCE,
+      this.map,
+      DEFAULT_CONE_OF_SIGHT_FOV * 1.5
     );
 
-    // Simon faces the Christmas tree (left / slightly down-left)
+    // Simon faces the Christmas tree (left / slightly down-left) with a 50% wider field of view
     const simonTreeAngle = Math.atan2(
       15.5 * TILE_SIZE - (this.simonNpc.y + TILE_SIZE / 2),
       3.0 * TILE_SIZE - (this.simonNpc.x + TILE_SIZE / 2)
@@ -389,8 +394,9 @@ export class LevelUpstairs implements GameLevel {
     this.simonCone = new ConeOfSight(
       { x: this.simonNpc.x + TILE_SIZE / 2, y: this.simonNpc.y + TILE_SIZE / 2 },
       simonTreeAngle,
-      undefined,
-      this.map
+      DEFAULT_CONE_OF_SIGHT_DISTANCE,
+      this.map,
+      DEFAULT_CONE_OF_SIGHT_FOV * 1.5
     );
 
     this.anneMarieCone = new ConeOfSight(
@@ -443,8 +449,9 @@ export class LevelUpstairs implements GameLevel {
       this.dianaCone = new ConeOfSight(
         { x: this.dianaNpc.x + TILE_SIZE / 2, y: this.dianaNpc.y + TILE_SIZE / 2 },
         dianaTreeAngle,
-        undefined,
-        this.map
+        DEFAULT_CONE_OF_SIGHT_DISTANCE,
+        this.map,
+        DEFAULT_CONE_OF_SIGHT_FOV * 1.5
       );
     } else {
       this.dianaCone = null;
@@ -458,8 +465,9 @@ export class LevelUpstairs implements GameLevel {
       this.simonCone = new ConeOfSight(
         { x: this.simonNpc.x + TILE_SIZE / 2, y: this.simonNpc.y + TILE_SIZE / 2 },
         simonTreeAngle,
-        undefined,
-        this.map
+        DEFAULT_CONE_OF_SIGHT_DISTANCE,
+        this.map,
+        DEFAULT_CONE_OF_SIGHT_FOV * 1.5
       );
     } else {
       this.simonCone = null;
@@ -599,7 +607,10 @@ export class LevelUpstairs implements GameLevel {
         player.states.set(DIANA_DISTRACTED_KEY, true);
         this.dianaCone = null;
         ctx.openDialogue(
-          ['Thank you, Santa! I will cherish this present forever.'],
+          [
+            'Hmm? A present...?',
+            "Diana is completely distracted. They won't stop me reaching the tree now.",
+          ],
           undefined,
           'Diana'
         );
@@ -617,7 +628,10 @@ export class LevelUpstairs implements GameLevel {
         player.states.set(SIMON_DISTRACTED_KEY, true);
         this.simonCone = null;
         ctx.openDialogue(
-          ['A present?! For me? Thank you, Santa!'],
+          [
+            'Hmm? A present...?',
+            "Simon is completely distracted. They won't stop me reaching the tree now.",
+          ],
           undefined,
           'Simon'
         );

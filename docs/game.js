@@ -1340,8 +1340,9 @@
       this.dianaCone = new ConeOfSight(
         { x: this.dianaNpc.x + TILE_SIZE / 2, y: this.dianaNpc.y + TILE_SIZE / 2 },
         dianaTreeAngle,
-        void 0,
-        this.map
+        DEFAULT_CONE_OF_SIGHT_DISTANCE,
+        this.map,
+        DEFAULT_CONE_OF_SIGHT_FOV * 1.5
       );
       const simonTreeAngle = Math.atan2(
         15.5 * TILE_SIZE - (this.simonNpc.y + TILE_SIZE / 2),
@@ -1350,8 +1351,9 @@
       this.simonCone = new ConeOfSight(
         { x: this.simonNpc.x + TILE_SIZE / 2, y: this.simonNpc.y + TILE_SIZE / 2 },
         simonTreeAngle,
-        void 0,
-        this.map
+        DEFAULT_CONE_OF_SIGHT_DISTANCE,
+        this.map,
+        DEFAULT_CONE_OF_SIGHT_FOV * 1.5
       );
       this.anneMarieCone = new ConeOfSight(
         { x: this.anneMarieNpc.x + TILE_SIZE / 2, y: this.anneMarieNpc.y + TILE_SIZE / 2 },
@@ -1397,8 +1399,9 @@
         this.dianaCone = new ConeOfSight(
           { x: this.dianaNpc.x + TILE_SIZE / 2, y: this.dianaNpc.y + TILE_SIZE / 2 },
           dianaTreeAngle,
-          void 0,
-          this.map
+          DEFAULT_CONE_OF_SIGHT_DISTANCE,
+          this.map,
+          DEFAULT_CONE_OF_SIGHT_FOV * 1.5
         );
       } else {
         this.dianaCone = null;
@@ -1411,8 +1414,9 @@
         this.simonCone = new ConeOfSight(
           { x: this.simonNpc.x + TILE_SIZE / 2, y: this.simonNpc.y + TILE_SIZE / 2 },
           simonTreeAngle,
-          void 0,
-          this.map
+          DEFAULT_CONE_OF_SIGHT_DISTANCE,
+          this.map,
+          DEFAULT_CONE_OF_SIGHT_FOV * 1.5
         );
       } else {
         this.simonCone = null;
@@ -1531,7 +1535,10 @@
           player.states.set(DIANA_DISTRACTED_KEY, true);
           this.dianaCone = null;
           ctx.openDialogue(
-            ["Thank you, Santa! I will cherish this present forever."],
+            [
+              "Hmm? A present...?",
+              "Diana is completely distracted. They won't stop me reaching the tree now."
+            ],
             void 0,
             "Diana"
           );
@@ -1548,7 +1555,10 @@
           player.states.set(SIMON_DISTRACTED_KEY, true);
           this.simonCone = null;
           ctx.openDialogue(
-            ["A present?! For me? Thank you, Santa!"],
+            [
+              "Hmm? A present...?",
+              "Simon is completely distracted. They won't stop me reaching the tree now."
+            ],
             void 0,
             "Simon"
           );

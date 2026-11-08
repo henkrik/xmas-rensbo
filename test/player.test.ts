@@ -1993,6 +1993,15 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(state.player.states.get(DIANA_DISTRACTED_KEY)).toBe(true);
     expect(upstairs.dianaCone).toBeNull();
     expect(state.activeDialogue?.speakerPortrait).toBe('Diana');
+    expect(state.activeDialogue?.lines[0]).toBe('Hmm? A present...?');
+    expect(state.activeDialogue?.lines[1]).toBe(
+      "Diana is completely distracted. They won't stop me reaching the tree now."
+    );
+
+    // Advance dialogue line 2
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
 
     // Dismiss dialogue
     applyKeyEvent(input, 'KeyZ', true);
@@ -2016,6 +2025,15 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(state.player.states.get(SIMON_DISTRACTED_KEY)).toBe(true);
     expect(upstairs.simonCone).toBeNull();
     expect(state.activeDialogue?.speakerPortrait).toBe('Simon');
+    expect(state.activeDialogue?.lines[0]).toBe('Hmm? A present...?');
+    expect(state.activeDialogue?.lines[1]).toBe(
+      "Simon is completely distracted. They won't stop me reaching the tree now."
+    );
+
+    // Advance dialogue line 2
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
 
     // Dismiss dialogue
     applyKeyEvent(input, 'KeyZ', true);
