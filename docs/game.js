@@ -1152,7 +1152,8 @@
   var UPSTAIRS_ALBIN_START_Y = 5 * TILE_SIZE + 2;
   var UPSTAIRS_ALBIN_END_Y = 9 * TILE_SIZE + 2;
   var UPSTAIRS_ALBIN_X = 7 * TILE_SIZE + 2;
-  var UPSTAIRS_ALBIN_SPEED = 30;
+  var UPSTAIRS_ALBIN_SPEED = 15;
+  var UPSTAIRS_INTRO_STATE_KEY = "upstairsIntroTriggered";
   var UPSTAIRS_HENRIK_NPC = {
     x: 10 * TILE_SIZE + 2,
     y: 17 * TILE_SIZE + 2,
@@ -1534,8 +1535,8 @@
       );
       if (isTableRoomDoorOpen) {
         this.henrikTimer += dtSeconds;
-        if (this.henrikTimer >= 3) {
-          this.henrikTimer -= 3;
+        if (this.henrikTimer >= 1) {
+          this.henrikTimer -= 1;
           this.henrikAngle -= Math.PI / 4;
           this.henrikCone = new ConeOfSight(
             { x: this.henrikNpc.x + TILE_SIZE / 2, y: this.henrikNpc.y + TILE_SIZE / 2 },
@@ -1586,8 +1587,8 @@
       );
       if (isBedroomDoorOpen) {
         this.anneMarieTimer += dtSeconds;
-        if (this.anneMarieTimer >= 3) {
-          this.anneMarieTimer -= 3;
+        if (this.anneMarieTimer >= 1) {
+          this.anneMarieTimer -= 1;
           this.anneMarieAngle += Math.PI / 4;
           this.anneMarieCone = new ConeOfSight(
             { x: this.anneMarieNpc.x + TILE_SIZE / 2, y: this.anneMarieNpc.y + TILE_SIZE / 2 },
@@ -3251,6 +3252,7 @@
   };
   var USED_STAIRS_STATE_KEY = "usedStairs";
   var TOILET_EVENT_TRIGGERED_KEY = "basementToiletEventTriggered";
+  var BASEMENT_CHIMNEY_INTRO_STATE_KEY = "basementChimneyIntroTriggered";
   var LevelBasement = class {
     constructor() {
       __publicField(this, "id", "level-basement");
@@ -3368,6 +3370,12 @@
       if (interactableId === "basement-stairs-up") {
         player.states.set(USED_STAIRS_STATE_KEY, true);
         ctx.loadLevel("level-upstairs");
+        if (!player.states.get(UPSTAIRS_INTRO_STATE_KEY)) {
+          player.states.set(UPSTAIRS_INTRO_STATE_KEY, true);
+          ctx.openDialogue([
+            "Hmm... so I believe the Christmas tree is to the left, but I must not be seen!"
+          ]);
+        }
         return true;
       }
       return false;
@@ -3541,6 +3549,13 @@
       }
       if (interactableId === "roof-chimney") {
         ctx.loadLevel("level-basement");
+        if (!player.states.get(BASEMENT_CHIMNEY_INTRO_STATE_KEY)) {
+          player.states.set(BASEMENT_CHIMNEY_INTRO_STATE_KEY, true);
+          ctx.openDialogue([
+            "Okay... I'm inside the house. And I'm Santa. Needless to say NOBODY MUST SEE ME.",
+            "I have to get to the Christmas tree in time for Christmas."
+          ]);
+        }
         return true;
       }
       return false;

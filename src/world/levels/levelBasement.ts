@@ -2,6 +2,7 @@ import { Direction, Player, Rect } from '../../entities/player';
 import { ConeOfSight } from '../../entities/sight';
 import { Interactable } from '../interaction';
 import { MAP_COLS, MAP_ROWS, TILE_SIZE, TileMap, TileType } from '../tilemap';
+import { UPSTAIRS_INTRO_STATE_KEY } from './levelUpstairs';
 import { CollidableDoor, GameLevel, LevelId, LevelTransitionContext } from './types';
 
 const V = TileType.VoidBlack;
@@ -151,6 +152,7 @@ export const BASEMENT_STAIRS_TRIGGER_BOUNDS: Rect = {
 
 export const USED_STAIRS_STATE_KEY = 'usedStairs';
 export const TOILET_EVENT_TRIGGERED_KEY = 'basementToiletEventTriggered';
+export const BASEMENT_CHIMNEY_INTRO_STATE_KEY = 'basementChimneyIntroTriggered';
 
 export interface ToiletCutsceneState {
   active: boolean;
@@ -286,6 +288,12 @@ export class LevelBasement implements GameLevel {
     if (interactableId === 'basement-stairs-up') {
       player.states.set(USED_STAIRS_STATE_KEY, true);
       ctx.loadLevel('level-upstairs');
+      if (!player.states.get(UPSTAIRS_INTRO_STATE_KEY)) {
+        player.states.set(UPSTAIRS_INTRO_STATE_KEY, true);
+        ctx.openDialogue([
+          'Hmm... so I believe the Christmas tree is to the left, but I must not be seen!',
+        ]);
+      }
       return true;
     }
 

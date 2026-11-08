@@ -18,6 +18,7 @@ import {
   TILE_SIZE,
   TileMap,
 } from '../tilemap';
+import { BASEMENT_CHIMNEY_INTRO_STATE_KEY } from './levelBasement';
 import { GameLevel, LevelId, LevelTransitionContext } from './types';
 
 export interface ClimbingState {
@@ -131,6 +132,13 @@ export class LevelOutside implements GameLevel {
     }
     if (interactableId === 'roof-chimney') {
       ctx.loadLevel('level-basement');
+      if (!player.states.get(BASEMENT_CHIMNEY_INTRO_STATE_KEY)) {
+        player.states.set(BASEMENT_CHIMNEY_INTRO_STATE_KEY, true);
+        ctx.openDialogue([
+          "Okay... I'm inside the house. And I'm Santa. Needless to say NOBODY MUST SEE ME.",
+          'I have to get to the Christmas tree in time for Christmas.',
+        ]);
+      }
       return true;
     }
     return false;

@@ -140,7 +140,8 @@ export const UPSTAIRS_OFFICE_HIDDEN_MASK: Rect = {
 export const UPSTAIRS_ALBIN_START_Y = 5 * TILE_SIZE + 2;
 export const UPSTAIRS_ALBIN_END_Y = 9 * TILE_SIZE + 2;
 export const UPSTAIRS_ALBIN_X = 7 * TILE_SIZE + 2;
-export const UPSTAIRS_ALBIN_SPEED = 30; // px/s
+export const UPSTAIRS_ALBIN_SPEED = 15; // px/s
+export const UPSTAIRS_INTRO_STATE_KEY = 'upstairsIntroTriggered';
 
 /** Henrik & Tanja in table room (left and right of table at cols 11..12, row 17). */
 export const UPSTAIRS_HENRIK_NPC: Rect & { facing: Direction } = {
@@ -610,8 +611,8 @@ export class LevelUpstairs implements GameLevel {
     );
     if (isTableRoomDoorOpen) {
       this.henrikTimer += dtSeconds;
-      if (this.henrikTimer >= 3.0) {
-        this.henrikTimer -= 3.0;
+      if (this.henrikTimer >= 1.0) {
+        this.henrikTimer -= 1.0;
         // rotates 45 degrees counter-clockwise (-PI/4)
         this.henrikAngle -= Math.PI / 4;
         this.henrikCone = new ConeOfSight(
@@ -670,8 +671,8 @@ export class LevelUpstairs implements GameLevel {
     );
     if (isBedroomDoorOpen) {
       this.anneMarieTimer += dtSeconds;
-      if (this.anneMarieTimer >= 3.0) {
-        this.anneMarieTimer -= 3.0;
+      if (this.anneMarieTimer >= 1.0) {
+        this.anneMarieTimer -= 1.0;
         // rotates 45 degrees
         this.anneMarieAngle += Math.PI / 4;
         this.anneMarieCone = new ConeOfSight(

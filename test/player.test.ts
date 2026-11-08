@@ -410,6 +410,27 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(state.currentLevelId).toBe('level-basement');
     expect(state.player.x).toBe(BASEMENT_FIREPLACE_SPAWN.x);
     expect(state.player.y).toBe(BASEMENT_FIREPLACE_SPAWN.y);
+
+    // Chimney intro dialogue line 1
+    expect(state.activeDialogue).not.toBeNull();
+    expect(state.activeDialogue?.lines[state.activeDialogue.currentIndex]).toBe(
+      "Okay... I'm inside the house. And I'm Santa. Needless to say NOBODY MUST SEE ME."
+    );
+
+    // Press Z -> Chimney intro dialogue line 2
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.activeDialogue).not.toBeNull();
+    expect(state.activeDialogue?.lines[state.activeDialogue.currentIndex]).toBe(
+      'I have to get to the Christmas tree in time for Christmas.'
+    );
+
+    // Press Z -> Closes dialogue
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.activeDialogue).toBeNull();
   });
 
   it('lets Santa "Z: drive" the motorcycle east into the trees where it crashes and Santa spawns next to it blinking without resetting the map', () => {
@@ -995,6 +1016,15 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(state.player.states.get(USED_STAIRS_STATE_KEY)).toBe(true);
     expect(state.player.x).toBe(UPSTAIRS_STAIRS_SPAWN.x);
     expect(state.player.y).toBe(UPSTAIRS_STAIRS_SPAWN.y);
+    expect(state.activeDialogue).not.toBeNull();
+    expect(state.activeDialogue?.lines[0]).toBe(
+      'Hmm... so I believe the Christmas tree is to the left, but I must not be seen!'
+    );
+    // Dismiss upstairs intro dialogue
+    applyKeyEvent(input, 'KeyZ', true);
+    updateGameState(state, input, 0.01);
+    applyKeyEvent(input, 'KeyZ', false);
+    expect(state.activeDialogue).toBeNull();
 
     // 5. Walk back downstairs from `level-upstairs` -> spawns Santa on the stairs in `level-basement` (not by the fireplace!)
     state.player.x = UPSTAIRS_STAIRS_TRIGGER_BOUNDS.x + 8;
@@ -1631,8 +1661,8 @@ describe('Player walking & 2x Rensbo map layout', () => {
     expect(upstairs.albinDir).toBe(1); // Walking south
     expect(upstairs.albinCone.direction).toBeCloseTo(Math.PI / 2);
 
-    // Advance 3 seconds: Albin moves at 30 px/s, travels > 64px, reaches end, reverses to walking north (-Math.PI / 2)
-    updateGameState(state, input, 3.0);
+    // Advance 6 seconds: Albin moves at 15 px/s, travels > 64px, reaches end, reverses to walking north (-Math.PI / 2)
+    updateGameState(state, input, 6.0);
     expect(upstairs.albinDir).toBe(-1);
     expect(upstairs.albinCone.direction).toBeCloseTo(-Math.PI / 2);
 
@@ -1694,10 +1724,10 @@ describe('Player walking & 2x Rensbo map layout', () => {
       upstairs.doors.some((d) => d.id === 'upstairs-table-room-door')
     ).toBe(false);
 
-    // 3. Henrik rotates 45 degrees counter-clockwise every 3 seconds
-    updateGameState(state, input, 1.5);
+    // 3. Henrik rotates 45 degrees counter-clockwise every 1 second
+    updateGameState(state, input, 0.5);
     expect(upstairs.henrikAngle).toBeCloseTo(Math.PI / 2);
-    updateGameState(state, input, 1.6); // Total 3.1s -> rotates by -Math.PI / 4
+    updateGameState(state, input, 0.6); // Total 1.1s -> rotates by -Math.PI / 4
     expect(upstairs.henrikAngle).toBeCloseTo(Math.PI / 2 - Math.PI / 4);
 
     // 4. Henrik detects Santa
@@ -1815,9 +1845,9 @@ describe('Player walking & 2x Rensbo map layout', () => {
       (d) => d.id !== 'upstairs-bedroom-door'
     );
 
-    // 3. Rotates 45 degrees (+Math.PI / 4) every 3 seconds
+    // 3. Rotates 45 degrees (+Math.PI / 4) every 1 second
     expect(upstairs.anneMarieAngle).toBeCloseTo(-Math.PI / 2);
-    updateGameState(state, input, 3.1);
+    updateGameState(state, input, 1.1);
     expect(upstairs.anneMarieAngle).toBeCloseTo(-Math.PI / 2 + Math.PI / 4);
 
     // 4. Detects Santa
